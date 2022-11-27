@@ -21,10 +21,9 @@ fi
 
 
 # Calculated stuff
+INSTALLDIR="${INSTALLBASE}/${NAME}"
 LOGIN="${INSTALLUSER}@${INSTALLHOST}"
 FULLENDPOINT="${LOGIN}:${INSTALLDIR}"
-FULLEXE="${INSTALLDIR}/${NAME}"
-INSTALLDIR="${INSTALLBASE}/${NAME}"
 
 # This is ridiculous. cargo is... ugh
 if [ "$BUILDTYPE" = "release" ]
@@ -50,8 +49,9 @@ SSHCMD=". /home/${INSTALLUSER}/.cargo/env; cd ${INSTALLDIR}; cargo build ${BUILD
 
 if [ "$1" = "run" ]
 then
-    echo "ALSO Running ${FULLEXE}"
-    SSHCMD="${SSHCMD} && echo \"Running ${NAME}...\" && ./target/${BUILDTYPE}/${NAME}"
+    PRODUCT="./target/${BUILDTYPE}/${NAME}"
+    echo "ALSO Running ${PRODUCT}"
+    SSHCMD="${SSHCMD} && echo \"Running ${NAME}...\" && ${PRODUCT}"
 fi
 
 ssh -t -p ${INSTALLPORT} ${LOGIN} "${SSHCMD}"
