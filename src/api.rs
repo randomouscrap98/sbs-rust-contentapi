@@ -1,21 +1,25 @@
 use std::fmt;
 
 use rocket::{http::Status, serde::DeserializeOwned};
-use serde::{Serialize, Deserialize};
+use serde::Serialize;
 use crate::context::Context;
 use crate::forms;
+use crate::api_data::*;
 
 use rocket::response::status::Custom as RocketCustom;
 
+//These are the specific types of errosr we'll care about from the api
 pub enum ApiError
 {
-    Network(String),
-    Usage(String),
-    User(Option<reqwest::StatusCode>, String)
+    Network(String),    //Is the API reachable?
+    Usage(String),      //Did I (the programmer) use it correctly?
+    User(Option<reqwest::StatusCode>, String) //Did the user submit proper data?
 }
 
 impl ApiError
 {
+    //This is the implementation of "display". Since I have multiple display formats,
+    //I wanted there to be consistent functions.
     pub fn get_to_string(&self) -> String {
         match self {
             ApiError::Network(s) => format!("Network Error: {}", s),
@@ -41,18 +45,19 @@ impl fmt::Display for ApiError
     }
 }
 
+//Generate the simple closure for map_error for when the API is unreachable
+macro_rules! network_error {
+    () => {
+       |err| ApiError::Network(String::from(format!("Server unavailable: {}", err)))
+    };
+}
+
 //Generate the simple closure for map_error when reading the body of a response. These should not
 //actually happen and indicate an error with the API, so I'm fine just outputting a general
 //error with additional info.
 macro_rules! parse_error {
     ($endpoint:expr) => {
        |err| ApiError::Usage(String::from(format!("Could not parse result/body from {}: response error: {}!", $endpoint, err)))
-    };
-}
-
-macro_rules! network_error {
-    () => {
-       |err| ApiError::Network(String::from(format!("Server unavailable: {}", err)))
     };
 }
 
@@ -64,6 +69,7 @@ macro_rules! rocket_error {
     };
 }
 
+//Once a response comes back from the API, figure out the appropriate errors or data to parse and return
 macro_rules! handle_response {
     ($response:ident, $endpoint:expr) => 
     {
@@ -82,23 +88,6 @@ macro_rules! handle_response {
             }
         }
     };
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct About
-{
-    version: String,
-    environment: String,
-    runtime: String,
-    contact: String
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct User
-{
-    id: u64,
-    username: String,
-    avatar: String
 }
 
 

@@ -11,6 +11,7 @@ use rocket_dyn_templates::{Template, context};
 
 mod config;
 mod api;
+mod api_data;
 mod context;
 mod forms;
 
@@ -56,7 +57,6 @@ async fn login_get(config: &State<config::Config>, jar: &CookieJar<'_>) -> Resul
 #[post("/login", data = "<login>")]
 async fn login_post(login: Form<forms::Login<'_>>, config: &State<config::Config>, jar: &CookieJar<'_>) -> Result<MultiResponse, RocketCustom<String>> {
     let context = context::Context::new(config, jar);
-
     match api::post_login(&context, &login).await
     {
         Ok(result) => {
@@ -72,8 +72,7 @@ async fn login_post(login: Form<forms::Login<'_>>, config: &State<config::Config
 }
 
 #[get("/logout")]
-fn logout_get(config: &State<config::Config>, jar: &CookieJar<'_>) -> Redirect
-{
+fn logout_get(config: &State<config::Config>, jar: &CookieJar<'_>) -> Redirect {
     jar.remove(Cookie::named(config.token_cookie_key.clone()));
     my_redirect!(config, "/")
 }
