@@ -28,9 +28,9 @@ FULLENDPOINT="${LOGIN}:${INSTALLDIR}"
 # This is ridiculous. cargo is... ugh
 if [ "$BUILDTYPE" = "release" ]
 then
-    BUILDPARAM="--release"
+   BUILDPARAM="--release"
 else
-    BUILDPARAM=""
+   BUILDPARAM=""
 fi
 
 # RSYNC options:
@@ -49,9 +49,13 @@ SSHCMD=". /home/${INSTALLUSER}/.cargo/env; cd ${INSTALLDIR}; cargo build ${BUILD
 
 if [ "$1" = "run" ]
 then
-    PRODUCT="./target/${BUILDTYPE}/${NAME}"
-    echo "ALSO Running ${PRODUCT}"
-    SSHCMD="${SSHCMD} && echo \"Running ${NAME}...\" && ${PRODUCT}"
+   PRODUCT="./target/${BUILDTYPE}/${NAME}"
+   # If choosing a profile, set it first before calling the product
+   if [ -n "$INSTALLPROFILE" ]; then
+      PRODUCT="ROCKET_PROFILE=${INSTALLPROFILE} ${PRODUCT}"
+   fi
+   echo "ALSO Running ${PRODUCT}"
+   SSHCMD="${SSHCMD} && echo \"Running ${NAME}...\" && ${PRODUCT}"
 fi
 
 ssh -t -p ${INSTALLPORT} ${LOGIN} "${SSHCMD}"

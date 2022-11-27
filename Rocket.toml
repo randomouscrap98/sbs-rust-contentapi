@@ -14,3 +14,9 @@ api_fileraw = "https://oboy.smilebasicsource.com/sbs/contentapi/images"
 # The rest is whatever
 token_cookie_key = "sbs_contentapi_token"
 port = 5010
+
+[oboy]
+
+api_endpoint = "http://localhost:5000/api"
+api_fileraw = "https://oboy.smilebasicsource.com/api/file/raw"
+token_cookie_key = "sbs_oboy_contentapi_token"
