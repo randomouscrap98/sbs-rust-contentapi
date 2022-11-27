@@ -1,0 +1,12 @@
+{{! This is defining the partial to use for the layout we're importing way down there}}
+{{#*inline "page"}}
+<section>
+    <h1>Hello, this is the index!</h1>
+</section>
+{{/inline}}
+{{! 
+    This is the actual page render, the above is just defining the part that goes into it.
+    weird kind of inversion of control, I wasn't into it at first but now I can see there
+    are some benefits (like keeping the details of layouts outside of code) 
+}}
+{{>layout}}

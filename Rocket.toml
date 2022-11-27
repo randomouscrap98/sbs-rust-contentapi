@@ -1,0 +1,12 @@
+[default]
+
+# This is the contentapi endpoint for the frontend, should point to SBS!
+api_endpoint = "http://localhost:5010/api"
+
+# This is the full url for where the root of the frontend lives, in case 
+# you're behind a proxy or something (you are)
+http_root = "https://oboy.smilebasicsource.com/sbs-dev"
+
+# The rest is whatever
+token_cookie_key = "sbs_contentapi_token"
+port = 5010

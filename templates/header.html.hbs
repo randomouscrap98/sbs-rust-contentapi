@@ -1,0 +1,10 @@
+<header>
+    <nav>
+        <a href="{{base_data.http_root}}">Home</a>
+        {{#if user}}
+        <a href="{{base_data.http_root}}/logout">Logout {{user.username}}</a>
+        {{else}}
+        <a href="{{base_data.http_root}}/login">Login</a>
+        {{/if}}
+    </nav>
+</header>
