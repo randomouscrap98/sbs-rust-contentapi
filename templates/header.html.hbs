@@ -1,10 +1,10 @@
 <header>
     <nav>
-        <a href="{{base_data.http_root}}">Home</a>
+        <a href="{{http_root}}">Home</a>
         {{#if user}}
-        <a href="{{base_data.http_root}}/logout">Logout {{user.username}}</a>
+        <a href="{{http_root}}/logout">Logout {{user.username}}</a>
         {{else}}
-        <a href="{{base_data.http_root}}/login">Login</a>
+        <a href="{{http_root}}/login">Login</a>
         {{/if}}
     </nav>
 </header>
