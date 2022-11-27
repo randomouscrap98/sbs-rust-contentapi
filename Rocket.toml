@@ -5,7 +5,11 @@ api_endpoint = "http://localhost:5001/api"
 
 # This is the full url for where the root of the frontend lives, in case 
 # you're behind a proxy or something (you are)
-http_root = "https://oboy.smilebasicsource.com/sbs/dev"
+http_root = "https://oboy.smilebasicsource.com/sbs"
+
+# The special locations in the api that are exposed that you can access directly,
+# such as the raw image provider
+api_fileraw = "https://oboy.smilebasicsource.com/sbs/contentapi/images"
 
 # The rest is whatever
 token_cookie_key = "sbs_contentapi_token"

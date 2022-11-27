@@ -14,6 +14,7 @@ mod api;
 mod api_data;
 mod context;
 mod forms;
+mod hbs_custom;
 
 macro_rules! my_redirect {
     ($config:ident, $location:expr) => {
@@ -29,6 +30,9 @@ macro_rules! basic_template{
     }) => {
         Template::render($template, context! {
             http_root : $context.config.http_root.clone(),
+            http_static : format!("{}/static", &$context.config.http_root),
+            http_resources : format!("{}/static.resources", &$context.config.http_root),
+            api_fileraw : $context.config.api_fileraw.clone(),
             user: api::get_user_safe(&$context).await,
             api_about: api::get_about_rocket(&$context).await?,
             $($field_name: $field_value,)*
@@ -84,4 +88,7 @@ fn rocket() -> _ { //What is _ in the return??
         .mount("/static", FileServer::from("static/"))
         .attach(Template::fairing())
         .attach(AdHoc::config::<config::Config>())
+        .attach(Template::custom(|engines| {
+            hbs_custom::customize(&mut engines.handlebars);
+        }))
 }

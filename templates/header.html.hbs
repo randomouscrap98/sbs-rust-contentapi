@@ -1,10 +1,15 @@
 <header>
     <nav>
-        <a href="{{http_root}}">Home</a>
+        <a href="{{http_root}}"><img src="{{http_resources}}/icon.png"></a>
+        <a href="{{http_root}}/activity">Activity</a>
+        <a href="{{http_root}}/search">Browse</a>
+        <a href="{{http_root}}/forum">Forums</a>
+    </nav>
+    <div id="header-user">
         {{#if user}}
-        <a href="{{http_root}}/logout">Logout {{user.username}}</a>
+        <a href="{{http_root}}/userhome"></a>
         {{else}}
         <a href="{{http_root}}/login">Login</a>
         {{/if}}
-    </nav>
+    </div>
 </header>

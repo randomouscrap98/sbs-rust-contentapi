@@ -1,3 +1,40 @@
+/* The main layout file */
+
+/* all the css variables to control common document constants */
+:root {
+    --bg_header: #444;
+    --tc_header: #EEE;
+}
+
+/* ----------------------------- *
+ *     BODY / LAYOUT STUFF       *
+ * ----------------------------- */
+
+/* The body needs to get out of the way */
+body {
+    font-family: sans-serif;
+    padding: 0;
+    margin: 0;
+    border: none;
+    width: 100%;
+}
+
+header {
+    background: var(--bg_header);
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    color: var(--tc_header);
+}
+
+nav {
+    display: flex;
+    flex: none;
+}
+
+/*header a, header a:visited {
+    color: var(--tc_header);
+}*/
 
 /* ----------------------------- *
  *     BASIC / GENERIC STUFF     *
@@ -5,4 +42,9 @@
 
 .error {
     color: darkred;
+}
+
+.plainlink {
+    text-decoration: none;
+    cursor: pointer;
 }

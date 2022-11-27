@@ -6,6 +6,7 @@ pub struct Config
 {
     pub api_endpoint: String,
     pub http_root: String,
+    pub api_fileraw : String,
     pub token_cookie_key: String
 }
 
