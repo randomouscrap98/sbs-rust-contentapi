@@ -18,19 +18,21 @@ body {
     margin: 0;
     border: none;
     width: 100%;
-    min-height: 100%;
+    min-height: 100vh; /* this doesn't work on mobile */
+    display: flex;
+    flex-direction: column;
 }
 
 header {
     background: var(--bg_header);
-    width: 100%;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
     color: var(--tc_header);
-    box-sizing: border-box;
-    padding: 0.25em;
     flex-wrap: wrap;
+}
+
+footer {
+    background: var(--bg_header);
+    color: var(--tc_header);
+    margin-top: auto;
 }
 
 /* Links are ugh */
@@ -94,4 +96,13 @@ nav > * {
 .plainlink {
     text-decoration: none;
     cursor: pointer;
+}
+
+.controlbar {
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    padding: 0.25em;
+    width: 100%;
 }
