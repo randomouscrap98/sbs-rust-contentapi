@@ -24,17 +24,41 @@ header {
     width: 100%;
     overflow: hidden;
     display: flex;
+    /*justify-content: space-between; /* not sure about this one */
+    align-items: center;
     color: var(--tc_header);
+    box-sizing: border-box;
+    padding: 0.25em;
+    flex-wrap: wrap;
 }
+
+/* Links are ugh */
+header a, header a:visited { color: var(--tc_header); }
 
 nav {
     display: flex;
+    align-items: center;
     flex: none;
 }
 
-/*header a, header a:visited {
-    color: var(--tc_header);
-}*/
+/* ----------------------------- *
+ *     SPECIFIC LAYOUT STUFF     *
+ * ----------------------------- */
+
+header img {
+    width: 2em;
+    display: block;
+    border-radius: 0.4em;
+}
+
+nav > * {
+    margin-right: 0.5em;
+}
+
+#header-user {
+    margin-left: auto;
+}
+
 
 /* ----------------------------- *
  *     BASIC / GENERIC STUFF     *

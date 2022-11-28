@@ -38,10 +38,12 @@ generate_helper!{imagelink_helper, h, out, ctx, {
     if let Some(hash) = get_param!(h, 0, as_str) {
         if let Some(fileroot) = get_data!(ctx, FILERAWKEY, as_str) {
             let query = api_data::QueryImage {
-                hash: String::from(hash), 
+                //hash: String::from(hash), 
                 size: get_param!(h, 1, as_i64),
                 crop: get_param!(h, 2, as_bool)
             };
+            println!("Query struct: {:?}", query);
+            println!("H params: {:?}", h.params());
             match serde_qs::to_string(&query) {
                 Ok(querystring) => {
                     let link = format!("{}/{}?{}", fileroot, hash, querystring);
@@ -56,6 +58,7 @@ generate_helper!{imagelink_helper, h, out, ctx, {
     }
 }}
 
+// Where we register all the helpers
 pub fn customize(hbs: &mut Handlebars) {
     hbs.register_helper("imagelink", Box::new(imagelink_helper));
 }

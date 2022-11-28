@@ -31,7 +31,7 @@ macro_rules! basic_template{
         Template::render($template, context! {
             http_root : $context.config.http_root.clone(),
             http_static : format!("{}/static", &$context.config.http_root),
-            http_resources : format!("{}/static.resources", &$context.config.http_root),
+            http_resources : format!("{}/static/resources", &$context.config.http_root),
             api_fileraw : $context.config.api_fileraw.clone(),
             user: api::get_user_safe(&$context).await,
             api_about: api::get_about_rocket(&$context).await?,
@@ -82,11 +82,10 @@ fn logout_get(config: &State<config::Config>, jar: &CookieJar<'_>) -> Redirect {
 }
 
 #[launch]
-fn rocket() -> _ { //What is _ in the return??
+fn rocket() -> _ {
     rocket::build()
         .mount("/", routes![index_get, login_get, login_post, logout_get])
         .mount("/static", FileServer::from("static/"))
-        .attach(Template::fairing())
         .attach(AdHoc::config::<config::Config>())
         .attach(Template::custom(|engines| {
             hbs_custom::customize(&mut engines.handlebars);

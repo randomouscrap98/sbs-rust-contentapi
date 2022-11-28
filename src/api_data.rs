@@ -20,20 +20,9 @@ pub struct User
 
 
 // These are query parameter data
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct QueryImage
 {
-    pub hash: String,
     pub size: Option<i64>,
     pub crop: Option<bool>
-}
-
-impl QueryImage {
-    pub fn new(hash: &str) -> Self {
-        Self {
-            hash : String::from(hash),
-            size: None,
-            crop: None
-        }
-    }
 }
