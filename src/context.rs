@@ -1,7 +1,7 @@
 
 use std::net::IpAddr;
 
-use rocket::outcome::{try_outcome, IntoOutcome, Outcome};
+use rocket::outcome::Outcome;
 use reqwest::Client;
 use rocket::{http::CookieJar, request::FromRequest};
 use crate::config::Config;
@@ -35,10 +35,8 @@ impl<'r> FromRequest<'r> for Context {
 
     async fn from_request(request: &'r rocket::Request<'_>) -> rocket::request::Outcome<Self, Self::Error> {
         //Assuming not expensive
-        //let config = try_outcome!(request.guard::<rocket::State<Config>>().await);
-        //let config = //request.rocket().state::<Config>().or_forward(());//request.guard::<&rocket::State<Config>>().await;
-        let jar = request.cookies(); //try_outcome!(request.guard::<&CookieJar<'_>>().await);
-        let ip = request.client_ip(); //try_outcome!(request.guard::<&CookieJar<'_>>().await);
+        let jar = request.cookies(); 
+        let ip = request.client_ip(); 
         
         //I honestly don't know how to do this, I'm going crazy
         if let Some(config) = request.rocket().state::<Config>() {
@@ -46,19 +44,7 @@ impl<'r> FromRequest<'r> for Context {
         }
         else {
             //IDK, the example had it
-            Outcome::Forward(())//Failure("Couldn't pull config?")
+            Outcome::Forward(())
         }
-        //.map(|config| Context::new(config, jar, ip)).or_forward(())
-
-        //let context = request.local_cache_async(async {
-        //    let jar = request.guard::<&rocket::State<Config>>().await.succeeded()?;
-        //    request.cookies()
-        //        .get_private("user_id")
-        //        .and_then(|cookie| cookie.value().parse().ok())
-        //        .and_then(|id| db.get_user(id).ok())
-        //}).await;
-
-        //context.as_ref().or_forward(())
-        //rocket::outcome::Outcome::Success(Context::new(config, jar, ip))
     }
 }
