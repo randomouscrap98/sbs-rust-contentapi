@@ -68,10 +68,6 @@ header img {
     border-radius: 0.4em;
 }
 
-nav > * {
-    margin-right: 0.5em;
-}
-
 #header-user {
     margin-left: auto;
 }
@@ -106,4 +102,8 @@ nav > * {
     box-sizing: border-box;
     padding: 0.25em;
     width: 100%;
+}
+
+.smallseparate > * {
+    margin-right: 0.5em;
 }

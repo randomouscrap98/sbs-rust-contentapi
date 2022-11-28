@@ -1,4 +1,6 @@
 
+use std::net::{IpAddr, SocketAddr};
+
 use reqwest::Client;
 use rocket::http::CookieJar;
 use crate::config::Config;
@@ -8,18 +10,20 @@ pub struct Context
 {
     pub config: Config,
     pub client: Client,
-    pub user_token: Option<String>
+    pub user_token: Option<String>,
+    pub client_ip: IpAddr 
 }
 
 impl Context
 {
-    pub fn new(config: &Config, jar: &CookieJar<'_>) -> Self
+    pub fn new<'a>(config: &Config, jar: &CookieJar<'_>, ip: IpAddr) -> Self
     {
         Self
         {
             client: reqwest::Client::new(),
             config: config.clone(),
-            user_token: jar.get(&config.token_cookie_key).and_then(|cookie| Some(String::from(cookie.value())))
+            user_token: jar.get(&config.token_cookie_key).and_then(|cookie| Some(String::from(cookie.value()))),
+            client_ip: ip
         }
     }
 }
