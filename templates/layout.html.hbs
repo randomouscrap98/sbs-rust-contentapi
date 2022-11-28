@@ -2,10 +2,18 @@
 <html>
 <head>
     <link rel="stylesheet" href="{{http_root}}/static/layout.css">
+    <style>
+        body {
+            background-repeat: repeat;
+            background-image: url("{{http_resources}}/sb-tile.png");
+        }
+    </style>
 </head>
 <body>
     {{>header}}
+    <main>
     {{>page}}
+    </main>
     {{>footer}}
 </body>
 </html>

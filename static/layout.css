@@ -4,6 +4,7 @@
 :root {
     --bg_header: #444;
     --tc_header: #EEE;
+    --bg_section: white;
 }
 
 /* ----------------------------- *
@@ -17,6 +18,7 @@ body {
     margin: 0;
     border: none;
     width: 100%;
+    min-height: 100%;
 }
 
 header {
@@ -24,7 +26,6 @@ header {
     width: 100%;
     overflow: hidden;
     display: flex;
-    /*justify-content: space-between; /* not sure about this one */
     align-items: center;
     color: var(--tc_header);
     box-sizing: border-box;
@@ -41,12 +42,25 @@ nav {
     flex: none;
 }
 
+main {
+    padding: 1em;
+}
+
+section {
+    padding: 1em;
+    background: var(--bg_section);
+    max-width: 80em;
+    margin: 1em auto;
+    border-radius: 1em;
+}
+
+
 /* ----------------------------- *
  *     SPECIFIC LAYOUT STUFF     *
  * ----------------------------- */
 
 header img {
-    width: 2em;
+    width: 1.75em;
     display: block;
     border-radius: 0.4em;
 }
@@ -57,6 +71,15 @@ nav > * {
 
 #header-user {
     margin-left: auto;
+}
+
+#header-user a {
+    display: flex;
+    align-items: center;
+}
+
+#header-user a > * {
+    margin-left: 0.5em;
 }
 
 
