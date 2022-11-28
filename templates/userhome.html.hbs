@@ -1,0 +1,11 @@
+{{#*inline "page"}}
+<section>
+    {{#if user}}
+    <h1>{{user.username}}</h1>
+    <a href="{{http_root}}/logout">Logout</a>
+    {{else}}
+    <p class="error">You must be logged in to see userhome!</p>
+    {{/if}}
+</section>
+{{/inline}}
+{{>layout}}

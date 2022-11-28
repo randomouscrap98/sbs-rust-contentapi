@@ -58,6 +58,12 @@ async fn login_get(config: &State<config::Config>, jar: &CookieJar<'_>) -> Resul
     Ok(basic_template!("login", context, {}))
 }
 
+#[get("/userhome")]
+async fn userhome_get(config: &State<config::Config>, jar: &CookieJar<'_>) -> Result<Template, RocketCustom<String>> {
+    let context = context::Context::new(config, jar);
+    Ok(basic_template!("userhome", context, { }))
+}
+
 #[post("/login", data = "<login>")]
 async fn login_post(login: Form<forms::Login<'_>>, config: &State<config::Config>, jar: &CookieJar<'_>) -> Result<MultiResponse, RocketCustom<String>> {
     let context = context::Context::new(config, jar);
@@ -84,7 +90,7 @@ fn logout_get(config: &State<config::Config>, jar: &CookieJar<'_>) -> Redirect {
 #[launch]
 fn rocket() -> _ {
     rocket::build()
-        .mount("/", routes![index_get, login_get, login_post, logout_get])
+        .mount("/", routes![index_get, login_get, login_post, logout_get, userhome_get])
         .mount("/static", FileServer::from("static/"))
         .attach(AdHoc::config::<config::Config>())
         .attach(Template::custom(|engines| {

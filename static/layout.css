@@ -27,6 +27,7 @@ header {
     background: var(--bg_header);
     color: var(--tc_header);
     flex-wrap: wrap;
+    padding-left: 0.15em !important;
 }
 
 footer {
@@ -62,7 +63,7 @@ section {
  * ----------------------------- */
 
 header img {
-    width: 1.75em;
+    width: 1.6em;
     display: block;
     border-radius: 0.4em;
 }
