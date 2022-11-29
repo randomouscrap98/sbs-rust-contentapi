@@ -36,6 +36,7 @@ macro_rules! basic_template{
             api_fileraw : $context.config.api_fileraw.clone(),
             user: api::get_user_safe(&$context).await,
             api_about: api::get_about_rocket(&$context).await?,
+            route_path: $context.route_path,
             $($field_name: $field_value,)*
         })
     }
@@ -53,17 +54,17 @@ pub enum MultiResponse {
 
 #[get("/")]
 async fn index_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
-    Ok(basic_template!("index", context, {}))
+    Ok(basic_template!("index", context, {header_page:"index"}))
 }
 
 #[get("/login")]
 async fn login_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
-    Ok(basic_template!("login", context, {}))
+    Ok(basic_template!("login", context, {header_page:"login"}))
 }
 
 #[get("/userhome")]
 async fn userhome_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
-    Ok(basic_template!("userhome", context, {}))
+    Ok(basic_template!("userhome", context, {header_page:"userhome"}))
 }
 
 #[post("/login", data = "<login>")]

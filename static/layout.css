@@ -5,6 +5,7 @@
     --bg_header: #444;
     --tc_header: #EEE;
     --bg_section: white;
+    --color_border: lightgray;
 }
 
 /* ----------------------------- *
@@ -27,7 +28,7 @@ header {
     background: var(--bg_header);
     color: var(--tc_header);
     flex-wrap: wrap;
-    padding-left: 0.15em !important;
+    /* padding-left: 0.15em !important; */
 }
 
 footer {
@@ -50,11 +51,17 @@ main {
 }
 
 section {
-    padding: 1em;
+    border: 0.2em solid var(--color_border);
+    padding: 1.5em;
     background: var(--bg_section);
     max-width: 80em;
     margin: 1em auto;
     border-radius: 1em;
+}
+
+h1 {
+    margin: 0;
+    margin-bottom: 0.5em;
 }
 
 
@@ -90,7 +97,7 @@ header img {
     color: darkred;
 }
 
-.plainlink {
+.plainlink, .plainlink_all a {
     text-decoration: none;
     cursor: pointer;
 }
