@@ -81,7 +81,7 @@ generate_helper!{headerlink_helper, h, out, ctx, {
                 out.write(&format!("href=\"{}{}\"", httproot, path))?;
                 out.write("class=\"plainlink headertab ")?;
                 //THIS is the point of this helper! Add a special class if this is the current page!
-                if route == path {
+                if route.starts_with(path) {
                     out.write("current")?;
                 }
                 out.write("\"")?;

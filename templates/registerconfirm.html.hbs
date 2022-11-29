@@ -6,7 +6,7 @@
     </p>
     <!-- Post to self -->
     <form {{selfpost}}>
-        {{> errorlist }}
+        {{> partials/errorlist }}
         <label for="complete_email">Email:</label>
         <input id="complete_email" type="text" name="complete_email">
         <label for="complete_key">Code from email:</label>
@@ -18,7 +18,7 @@
         to get through email filters. If you didn't receive it, you can send it again here:
     </p>
     <form {{selfpost}}> <!--method="POST" action="{{http_root}}/register/resend">-->
-        {{> errorlist }}
+        {{> partials/errorlist }}
         <label for="resend_email">Email:</label>
         <input id="resend_email" type="email" name="resend_email">
         <input type="submit" value="Resend confirmation email">

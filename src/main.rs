@@ -82,6 +82,11 @@ async fn search_get(context: context::Context) -> Result<Template, RocketCustom<
     Ok(basic_template!("search", context, {}))
 }
 
+#[get("/about")] 
+async fn about_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
+    Ok(basic_template!("about", context, {}))
+}
+
 #[get("/register")] 
 async fn register_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
     Ok(basic_template!("register", context, {}))
@@ -132,7 +137,8 @@ fn rocket() -> _ {
             activity_get,
             search_get,
             register_get,
-            registerconfirm_get
+            registerconfirm_get,
+            about_get
         ])
         .mount("/static", FileServer::from("static/"))
         .attach(AdHoc::config::<config::Config>())
