@@ -56,7 +56,7 @@ section {
     padding: 1.5em;
     background: var(--bg_section);
     max-width: 80em;
-    margin: 1em auto;
+    margin: 0.5em auto;
     border-radius: 1em;
 }
 
@@ -113,6 +113,10 @@ header img {
     color: var(--tc_activeselect);
 }
 
+nav .headertab.current {
+    margin: 0 0.2em;
+}
+
 #header-user {
     margin-left: auto;
 }
@@ -133,5 +137,17 @@ header img {
 }
 
 /* ----------------------------- *
- *     SPECIFIC HEADER STUFF     *
+ *     MEDIA SPECIALNESS         *
  * ----------------------------- */
+
+ @media screen and (max-width: 30em)
+ {
+    header {
+        /* This should shrink the header entirely */
+        font-size: 0.8em;
+    }
+
+    main {
+        padding: 0.8em;
+    }
+ }
