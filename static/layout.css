@@ -83,7 +83,7 @@ h1 {
     display: flex;
     align-items: center;
     box-sizing: border-box;
-    /*padding: 0.25em;*/
+    padding: 0.25em;
     width: 100%;
 }
 
@@ -124,6 +124,12 @@ header img {
 
 #header-user a > * {
     margin-left: 0.5em;
+}
+
+#homelink img {
+    width: 1.8em;
+    padding: 0.1em 0;
+    padding-right: 0.2em;
 }
 
 /* ----------------------------- *
