@@ -1,15 +1,15 @@
-<header class="controlbar plainlink_all">
-    <nav class="smallseparate">
-        <a href="{{http_root}}"><img src="{{http_resources}}/favicon.ico"></a>
-        <a href="{{http_root}}/activity">Activity</a>
-        <a href="{{http_root}}/search">Browse</a>
-        <a href="{{http_root}}/forum">Forums</a>
+<header class="controlbar">
+    <nav>
+        <a class="plainlink headertab" href="{{http_root}}/"><img src="{{http_resources}}/favicon.ico"></a>
+        <a {{headerlink "/activity"}}>Activity</a>
+        <a {{headerlink "/search"}}>Browse</a>
+        <a {{headerlink "/forum"}}>Forums</a>
     </nav>
     <div id="header-user">
         {{#if user}}
-        <a href="{{http_root}}/userhome"><span>{{user.username}}</span><img src="{{imagelink user.avatar 100 true}}"></a>
+        <a {{headerlink "/userhome"}}><span>{{user.username}}</span><img src="{{imagelink user.avatar 100 true}}"></a>
         {{else}}
-        <a href="{{http_root}}/login">Login</a>
+        <a {{headerlink "/login"}}>Login</a>
         {{/if}}
     </div>
 </header>

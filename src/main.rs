@@ -54,17 +54,32 @@ pub enum MultiResponse {
 
 #[get("/")]
 async fn index_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
-    Ok(basic_template!("index", context, {header_page:"index"}))
+    Ok(basic_template!("index", context, {}))
 }
 
 #[get("/login")]
 async fn login_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
-    Ok(basic_template!("login", context, {header_page:"login"}))
+    Ok(basic_template!("login", context, {}))
 }
 
 #[get("/userhome")]
 async fn userhome_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
-    Ok(basic_template!("userhome", context, {header_page:"userhome"}))
+    Ok(basic_template!("userhome", context, {}))
+}
+
+#[get("/forum")]
+async fn forum_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
+    Ok(basic_template!("forum", context, {}))
+}
+
+#[get("/activity")] //this ofc has param values
+async fn activity_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
+    Ok(basic_template!("activity", context, {}))
+}
+
+#[get("/search")] //this ofc has param values
+async fn search_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
+    Ok(basic_template!("search", context, {}))
 }
 
 #[post("/login", data = "<login>")]
@@ -97,7 +112,16 @@ fn logout_get(config: &State<config::Config>, jar: &CookieJar<'_>) -> Redirect {
 #[launch]
 fn rocket() -> _ {
     rocket::build()
-        .mount("/", routes![index_get, login_get, login_post, logout_get, userhome_get])
+        .mount("/", routes![
+            index_get, 
+            login_get, 
+            login_post, 
+            logout_get, 
+            userhome_get, 
+            forum_get,
+            activity_get,
+            search_get,
+        ])
         .mount("/static", FileServer::from("static/"))
         .attach(AdHoc::config::<config::Config>())
         .attach(Template::custom(|engines| {

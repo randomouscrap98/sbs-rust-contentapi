@@ -6,6 +6,8 @@
     --tc_header: #EEE;
     --bg_section: white;
     --color_border: lightgray;
+    --bg_activeselect: teal;
+    --tc_activeselect: white;
 }
 
 /* ----------------------------- *
@@ -28,17 +30,16 @@ header {
     background: var(--bg_header);
     color: var(--tc_header);
     flex-wrap: wrap;
-    /* padding-left: 0.15em !important; */
 }
+
+/* Links are ugh */
+header a, header a:visited { color: var(--tc_header); }
 
 footer {
     background: var(--bg_header);
     color: var(--tc_header);
     margin-top: auto;
 }
-
-/* Links are ugh */
-header a, header a:visited { color: var(--tc_header); }
 
 nav {
     display: flex;
@@ -64,15 +65,52 @@ h1 {
     margin-bottom: 0.5em;
 }
 
+/* ----------------------------- *
+ *     BASIC / GENERIC STUFF     *
+ * ----------------------------- */
+
+.error {
+    color: darkred;
+}
+
+.plainlink {
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.controlbar {
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    /*padding: 0.25em;*/
+    width: 100%;
+}
+
+.smallseparate > * {
+    margin-right: 0.5em;
+}
+
 
 /* ----------------------------- *
- *     SPECIFIC LAYOUT STUFF     *
+ *     SPECIFIC HEADER STUFF     *
  * ----------------------------- */
 
 header img {
     width: 1.6em;
     display: block;
     border-radius: 0.4em;
+}
+
+.headertab {
+    border-radius: 0.2em;
+    padding: 0.2em 0.4em;
+}
+
+.headertab.current{
+    font-weight: bold;
+    background-color: var(--bg_activeselect);
+    color: var(--tc_activeselect);
 }
 
 #header-user {
@@ -88,29 +126,6 @@ header img {
     margin-left: 0.5em;
 }
 
-
 /* ----------------------------- *
- *     BASIC / GENERIC STUFF     *
+ *     SPECIFIC HEADER STUFF     *
  * ----------------------------- */
-
-.error {
-    color: darkred;
-}
-
-.plainlink, .plainlink_all a {
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.controlbar {
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    box-sizing: border-box;
-    padding: 0.25em;
-    width: 100%;
-}
-
-.smallseparate > * {
-    margin-right: 0.5em;
-}
