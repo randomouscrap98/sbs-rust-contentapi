@@ -5,22 +5,22 @@
         confirmation code here to complete your registration.
     </p>
     <!-- Post to self -->
-    <form {{selfpost}}>
+    <form method="POST" action="{{http_root}}/register/confirm">
         {{> partials/errorlist }}
         <label for="complete_email">Email:</label>
-        <input id="complete_email" type="text" name="complete_email">
+        <input id="complete_email" type="text" name="email" value="{{email}}">
         <label for="complete_key">Code from email:</label>
-        <input id="complete_key" type="text" name="complete_key">
+        <input id="complete_key" type="text" name="key">
         <input type="submit" value="Complete registration">
     </form>
     <h3>Didn't get the email?</h3>
     <p>The email comes from smilebasicsource@gmail.com. It may be in your spam folder, and it may take up to a couple minutes
         to get through email filters. If you didn't receive it, you can send it again here:
     </p>
-    <form {{selfpost}}> <!--method="POST" action="{{http_root}}/register/resend">-->
+    <form method="POST" action="{{http_root}}/register/resend">
         {{> partials/errorlist }}
         <label for="resend_email">Email:</label>
-        <input id="resend_email" type="email" name="resend_email">
+        <input id="resend_email" type="email" name="email">
         <input type="submit" value="Resend confirmation email">
     </form>
 </section>

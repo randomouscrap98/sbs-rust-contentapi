@@ -7,7 +7,9 @@ pub struct Config
     pub api_endpoint: String,
     pub http_root: String,
     pub api_fileraw : String,
-    pub token_cookie_key: String
+    pub token_cookie_key: String,
+    //pub register_cookie_key: String,
+    pub default_token_expire: i32
 }
 
 impl Config 

@@ -1,6 +1,7 @@
 #[macro_use] extern crate rocket;
 
 use rocket::response::Redirect;
+use rocket::time::Duration;
 use rocket::{State, http::Cookie};
 use rocket::form::Form;
 use rocket::fairing::AdHoc;
@@ -93,8 +94,10 @@ async fn register_get(context: context::Context) -> Result<Template, RocketCusto
 }
 
 #[get("/register/confirm")] 
-async fn registerconfirm_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
-    Ok(basic_template!("registerconfirm", context, {}))
+async fn registerconfirm_get(context: context::Context, jar: &CookieJar<'_>) -> Result<Template, RocketCustom<String>> {
+    Ok(basic_template!("registerconfirm", context, { 
+        emailresult : jar.get(&context.config.register_cookie_key).and_then(|email| Some(String::from(email.value())))
+    }))
 }
 
 #[post("/login", data = "<login>")]
@@ -104,11 +107,57 @@ async fn login_post(context: context::Context, login: Form<forms::Login<'_>>, ja
         Ok(result) => {
             //Again with the wasting memory and cpu, it's whatever. If we needed THAT much optimization,
             //uhh... well we'd have a lot of other problems than just a single small key copy on the heap
-            jar.add(Cookie::new(context.config.token_cookie_key.clone(), result));
+            jar.add(
+                Cookie::build(context.config.token_cookie_key.clone(), result)
+                    .max_age(Duration::days(context.config.default_token_expire.into()))
+                    .finish()
+            );
             Ok(MultiResponse::Redirect(my_redirect!(context.config, "/")))
         },
         Err(error) => {
             Ok(MultiResponse::Template(basic_template!("login", context, {errors: vec![error.get_just_string()]})))
+        } 
+    }
+}
+
+#[post("/register", data = "<registration>")]
+async fn register_post(context: context::Context, registration: Form<forms::Register<'_>>, jar: &CookieJar<'_>) -> Result<MultiResponse, RocketCustom<String>> {
+    match api::post_register(&context, &registration).await
+    {
+        Ok(_) => {
+            //It's fine to render this page at the same url I think? I don't know
+            //This is a scary temporary cookie that exposes the user's email. It will be deleted upon registration
+            //but... mmm I don't know.
+            //jar.add(
+            //    Cookie::build(context.config.register_cookie_key.clone(), String::from(registration.email))
+            //        .max_age(Duration::minutes(30))
+            //        .finish()
+            //);
+            Ok(MultiResponse::Template(basic_template!("registerconfirm", context, { emailresult : String::from(registration.email)})))
+            //Ok(MultiResponse::Redirect(my_redirect!(context.config, format!("/register/confirm"))))
+        },
+        Err(error) => {
+            Ok(MultiResponse::Template(basic_template!("register", context, {errors: vec![error.get_just_string()]})))
+        } 
+    }
+}
+
+#[post("/register/confirm", data = "<confirm>")]
+async fn registerconfirm_post(context: context::Context, confirm: Form<forms::RegisterConfirm<'_>>, jar: &CookieJar<'_>) -> Result<MultiResponse, RocketCustom<String>> {
+    match api::post_register(&context, &registration).await
+    {
+        Ok(_) => {
+            //This is a scary temporary cookie that exposes the user's email. It will be deleted upon registration
+            //but... mmm I don't know.
+            jar.add(
+                Cookie::build(context.config.register_cookie_key.clone(), String::from(registration.email))
+                    .max_age(Duration::minutes(30))
+                    .finish()
+            );
+            Ok(MultiResponse::Redirect(my_redirect!(context.config, format!("/register/confirm"))))
+        },
+        Err(error) => {
+            Ok(MultiResponse::Template(basic_template!("register", context, {errors: vec![error.get_just_string()]})))
         } 
     }
 }
@@ -138,6 +187,8 @@ fn rocket() -> _ {
             search_get,
             register_get,
             registerconfirm_get,
+            register_post,
+            registerconfirm_post,
             about_get
         ])
         .mount("/static", FileServer::from("static/"))

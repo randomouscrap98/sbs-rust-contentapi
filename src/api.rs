@@ -169,5 +169,10 @@ pub async fn get_user_safe(context: &Context) -> Option<User> //Result<Option<Us
 //Not a rocket version because we want the errors from the API
 pub async fn post_login<'a>(context: &Context, login: &forms::Login<'a>) -> Result<String, ApiError>
 {
-    basic_post_request::<forms::Login<'a>, String>("/user/login", login, context).await
+    basic_post_request("/user/login", login, context).await
+}
+
+pub async fn post_register<'a>(context: &Context, register: &forms::Register<'a>) -> Result<User, ApiError>
+{
+    basic_post_request("/user/register", register, context).await
 }
