@@ -8,6 +8,7 @@
     --color_border: lightgray;
     --bg_activeselect: teal;
     --tc_activeselect: white;
+    --tc_aside: gray;
 }
 
 /* ----------------------------- *
@@ -91,6 +92,11 @@ h1 {
     margin-right: 0.5em;
 }
 
+.aside {
+    font-size: 0.8em;
+    color: var(--tc_aside);
+}
+
 
 /* ----------------------------- *
  *     SPECIFIC HEADER STUFF     *
@@ -135,6 +141,28 @@ nav .headertab.current {
     padding: 0.1em 0;
     padding-right: 0.2em;
 }
+
+/* ----------------------------- *
+ *     SPECIFIC FORM   STUFF     *
+ * ----------------------------- */
+
+label {
+    display: block;
+    margin-bottom: 0.2em;
+}
+
+form input, form textbox {
+    display: block;
+    margin-bottom: 0.5em;
+}
+
+.errorlist .error {
+    margin-bottom: 0.5em;
+    padding: 0.2em 0.4em;
+    border-radius: 0.2em;
+    background-color: rgba(255,0,0,0.05);
+}
+
 
 /* ----------------------------- *
  *     MEDIA SPECIALNESS         *

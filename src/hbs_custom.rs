@@ -90,8 +90,17 @@ generate_helper!{headerlink_helper, h, out, ctx, {
     }
 }}
 
+generate_helper!{selfpost_helper, _h, out, ctx, {
+    get_required_str! { (HTTPROOTKEY, httproot, ctx) {
+        get_required_str! { (ROUTEKEY, route, ctx) {
+            out.write(&format!("method=\"POST\" action=\"{httproot}{route}\""))?;
+        }}
+    }}
+}}
+
 // Where we register all the helpers
 pub fn customize(hbs: &mut Handlebars) {
     hbs.register_helper("imagelink", Box::new(imagelink_helper));
     hbs.register_helper("headerlink", Box::new(headerlink_helper));
+    hbs.register_helper("selfpost", Box::new(selfpost_helper));
 }

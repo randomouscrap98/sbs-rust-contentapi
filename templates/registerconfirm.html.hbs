@@ -1,0 +1,28 @@
+{{#*inline "page"}}
+<section>
+    <h1>Complete Registration</h1>
+    <p>If you've already registered, you'll receive a confirmation email shortly. Re-enter your email and the
+        confirmation code here to complete your registration.
+    </p>
+    <!-- Post to self -->
+    <form {{selfpost}}>
+        {{> errorlist }}
+        <label for="complete_email">Email:</label>
+        <input id="complete_email" type="text" name="complete_email">
+        <label for="complete_key">Code from email:</label>
+        <input id="complete_key" type="text" name="complete_key">
+        <input type="submit" value="Complete registration">
+    </form>
+    <h3>Didn't get the email?</h3>
+    <p>The email comes from smilebasicsource@gmail.com. It may be in your spam folder, and it may take up to a couple minutes
+        to get through email filters. If you didn't receive it, you can send it again here:
+    </p>
+    <form {{selfpost}}> <!--method="POST" action="{{http_root}}/register/resend">-->
+        {{> errorlist }}
+        <label for="resend_email">Email:</label>
+        <input id="resend_email" type="email" name="resend_email">
+        <input type="submit" value="Resend confirmation email">
+    </form>
+</section>
+{{/inline}}
+{{>layout}}

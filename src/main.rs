@@ -82,6 +82,16 @@ async fn search_get(context: context::Context) -> Result<Template, RocketCustom<
     Ok(basic_template!("search", context, {}))
 }
 
+#[get("/register")] 
+async fn register_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
+    Ok(basic_template!("register", context, {}))
+}
+
+#[get("/register/confirm")] 
+async fn registerconfirm_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
+    Ok(basic_template!("registerconfirm", context, {}))
+}
+
 #[post("/login", data = "<login>")]
 async fn login_post(context: context::Context, login: Form<forms::Login<'_>>, jar: &CookieJar<'_>) -> Result<MultiResponse, RocketCustom<String>> {
     match api::post_login(&context, &login).await
@@ -121,6 +131,8 @@ fn rocket() -> _ {
             forum_get,
             activity_get,
             search_get,
+            register_get,
+            registerconfirm_get
         ])
         .mount("/static", FileServer::from("static/"))
         .attach(AdHoc::config::<config::Config>())

@@ -1,0 +1,20 @@
+{{#*inline "page"}}
+<section>
+    <h1>Register</h1>
+    <!-- Post to self -->
+    <form {{selfpost}}>
+        {{> errorlist }}
+        <label for="register_username">Username:</label>
+        <input id="register_username" type="text" name="username">
+        <label for="register_password">Password:</label>
+        <input id="register_password" type="password" name="password">
+        <label for="register_email">Email:</label>
+        <input id="register_email" type="email" name="email">
+        <p class="aside">We only use your email for account recovery and verification. All code is open source, see: 
+            <a href="{{http_root}}/about">About</a>.</p>
+        <input type="submit" value="Register">
+    </form>
+    <p>Already registered? Go to <a href="{{http_root}}/register/confirm">confirmation page</a>.</p>
+</section>
+{{/inline}}
+{{>layout}}
