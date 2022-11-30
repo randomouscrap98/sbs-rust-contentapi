@@ -1,26 +1,48 @@
 {{#*inline "page"}}
 <section>
     <h1>Complete Registration</h1>
+    {{#if emailresult}}
+    <p>Hello, {{userresult.username}}!</p>
+    <p>You'll receive an email shortly from smilebasicsource@gmail.com with the to code to complete your 
+        registration, enter it below. If you <span class="error">reload or navigate away from the page</span>, 
+        you can still complete your registration, you'll just have to supply your email.</p>
+    {{else}}
     <p>If you've already registered, you'll receive a confirmation email shortly. Re-enter your email and the
         confirmation code here to complete your registration.
     </p>
-    <!-- Post to self -->
+    {{/if}}
+    <!-- CAN'T post to self: we could be rendering from another context -->
     <form method="POST" action="{{http_root}}/register/confirm">
         {{> partials/errorlist }}
+        {{#if emailresult}}
+        <label>Email: <b>{{emailresult}}</b></label>
+        <input id="complete_email" type="hidden" name="email" value="{{emailresult}}">
+        {{else}}
         <label for="complete_email">Email:</label>
-        <input id="complete_email" type="text" name="email" value="{{email}}">
+        <input id="complete_email" type="text" name="email" value="{{emailresult}}">
+        {{/if}}
         <label for="complete_key">Code from email:</label>
-        <input id="complete_key" type="text" name="key">
+        <input id="complete_key" class="largeinput" type="text" name="key">
         <input type="submit" value="Complete registration">
     </form>
     <h3>Didn't get the email?</h3>
     <p>The email comes from smilebasicsource@gmail.com. It may be in your spam folder, and it may take up to a couple minutes
         to get through email filters. If you didn't receive it, you can send it again here:
     </p>
+    <!-- CAN'T post to self: we could be rendering from another context (and the endpoint isn't self anyway) -->
     <form method="POST" action="{{http_root}}/register/resend">
-        {{> partials/errorlist }}
+        <div class="errorlist">
+        {{#each resenderrors}}
+            <div class="error">{{this}}</div>
+        {{/each}}
+        </div>
+        {{#if emailresult}}
+        <label>Email: <b>{{emailresult}}</b></label>
+        <input id="resend_email" type="hidden" name="email" value="{{emailresult}}">
+        {{else}}
         <label for="resend_email">Email:</label>
-        <input id="resend_email" type="email" name="email">
+        <input id="resend_email" type="text" name="email" value="{{emailresult}}">
+        {{/if}}
         <input type="submit" value="Resend confirmation email">
     </form>
 </section>

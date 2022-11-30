@@ -104,6 +104,11 @@ table td {
     color: var(--tc_aside);
 }
 
+.largeinput {
+    width: 30em;
+    max-width: 100%;
+    box-sizing: border-box;
+}
 
 /* ----------------------------- *
  *     SPECIFIC HEADER STUFF     *

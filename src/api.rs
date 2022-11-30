@@ -176,3 +176,13 @@ pub async fn post_register<'a>(context: &Context, register: &forms::Register<'a>
 {
     basic_post_request("/user/register", register, context).await
 }
+
+pub async fn post_sendemail<'a>(context: &Context, email: &str) -> Result<bool, ApiError>
+{
+    basic_post_request("/user/sendregistrationcode", &email, context).await
+}
+
+pub async fn post_registerconfirm<'a>(context: &Context, confirm: &forms::RegisterConfirm<'a>) -> Result<String, ApiError>
+{
+    basic_post_request("/user/confirmregistration", confirm, context).await
+}

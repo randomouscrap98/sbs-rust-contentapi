@@ -43,6 +43,18 @@ macro_rules! basic_template{
     }
 }
 
+macro_rules! login {
+    ($jar:ident, $context: ident, $token: expr) => {
+        //Again with the wasting memory and cpu, it's whatever. If we needed THAT much optimization,
+        //uhh... well we'd have a lot of other problems than just a single small key copy on the heap
+        $jar.add(
+            Cookie::build($context.config.token_cookie_key.clone(), $token)
+                .max_age(Duration::days($context.config.default_token_expire.into()))
+                .finish()
+        )
+    };
+}
+
 #[derive(Debug, Responder)]
 pub enum MultiResponse {
     Template(Template),
@@ -94,10 +106,9 @@ async fn register_get(context: context::Context) -> Result<Template, RocketCusto
 }
 
 #[get("/register/confirm")] 
-async fn registerconfirm_get(context: context::Context, jar: &CookieJar<'_>) -> Result<Template, RocketCustom<String>> {
-    Ok(basic_template!("registerconfirm", context, { 
-        emailresult : jar.get(&context.config.register_cookie_key).and_then(|email| Some(String::from(email.value())))
-    }))
+async fn registerconfirm_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
+    //This is a PLAIN confirmation page with no extra data
+    Ok(basic_template!("registerconfirm", context, { }))
 }
 
 #[post("/login", data = "<login>")]
@@ -105,13 +116,7 @@ async fn login_post(context: context::Context, login: Form<forms::Login<'_>>, ja
     match api::post_login(&context, &login).await
     {
         Ok(result) => {
-            //Again with the wasting memory and cpu, it's whatever. If we needed THAT much optimization,
-            //uhh... well we'd have a lot of other problems than just a single small key copy on the heap
-            jar.add(
-                Cookie::build(context.config.token_cookie_key.clone(), result)
-                    .max_age(Duration::days(context.config.default_token_expire.into()))
-                    .finish()
-            );
+            login!(jar, context, result);
             Ok(MultiResponse::Redirect(my_redirect!(context.config, "/")))
         },
         Err(error) => {
@@ -121,21 +126,35 @@ async fn login_post(context: context::Context, login: Form<forms::Login<'_>>, ja
 }
 
 #[post("/register", data = "<registration>")]
-async fn register_post(context: context::Context, registration: Form<forms::Register<'_>>, jar: &CookieJar<'_>) -> Result<MultiResponse, RocketCustom<String>> {
+async fn register_post(context: context::Context, registration: Form<forms::Register<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
     match api::post_register(&context, &registration).await
     {
-        Ok(_) => {
-            //It's fine to render this page at the same url I think? I don't know
-            //This is a scary temporary cookie that exposes the user's email. It will be deleted upon registration
-            //but... mmm I don't know.
-            //jar.add(
-            //    Cookie::build(context.config.register_cookie_key.clone(), String::from(registration.email))
-            //        .max_age(Duration::minutes(30))
-            //        .finish()
-            //);
-            Ok(MultiResponse::Template(basic_template!("registerconfirm", context, { emailresult : String::from(registration.email)})))
-            //Ok(MultiResponse::Redirect(my_redirect!(context.config, format!("/register/confirm"))))
+        //On success, we render the confirmation page with the email result baked in (it's more janky because it's
+        //the same page data but on the same route but whatever... it's safer).
+        Ok(userresult) => {
+            let mut errors = Vec::new();
+            //Oh but if the email fails, we need to tell them about it. 
+            match api::post_sendemail(&context, registration.email).await
+            {
+                Ok(success) => {
+                    if !success {
+                        errors.push(String::from("yeah"));
+                    }
+                }
+                Err(error) => {
+                    errors.push(error.get_just_string());
+                }
+            }
+            //This is the success result registerconfirm render, which should show the user and email. If they
+            //navigate away from the page, they'll lose that specialness, but the page will still work if they
+            //know their email (why wouldn't they?)
+            Ok(MultiResponse::Template(basic_template!("registerconfirm", context, { 
+                emailresult : String::from(registration.email),
+                userresult : userresult,
+                errors: errors
+            })))
         },
+        //On failure, we re-render the registration page, show errors
         Err(error) => {
             Ok(MultiResponse::Template(basic_template!("register", context, {errors: vec![error.get_just_string()]})))
         } 
@@ -144,20 +163,16 @@ async fn register_post(context: context::Context, registration: Form<forms::Regi
 
 #[post("/register/confirm", data = "<confirm>")]
 async fn registerconfirm_post(context: context::Context, confirm: Form<forms::RegisterConfirm<'_>>, jar: &CookieJar<'_>) -> Result<MultiResponse, RocketCustom<String>> {
-    match api::post_register(&context, &registration).await
+    match api::post_registerconfirm(&context, &confirm).await
     {
-        Ok(_) => {
-            //This is a scary temporary cookie that exposes the user's email. It will be deleted upon registration
-            //but... mmm I don't know.
-            jar.add(
-                Cookie::build(context.config.register_cookie_key.clone(), String::from(registration.email))
-                    .max_age(Duration::minutes(30))
-                    .finish()
-            );
-            Ok(MultiResponse::Redirect(my_redirect!(context.config, format!("/register/confirm"))))
+        //If confirmation is successful, we get a token back. We login and redirect to the userhome page
+        Ok(token) => {
+            login!(jar, context, token);
+            Ok(MultiResponse::Redirect(my_redirect!(context.config, format!("/userhome"))))
         },
+        //If there's an error, we re-render the confirmation page with the errors.
         Err(error) => {
-            Ok(MultiResponse::Template(basic_template!("register", context, {errors: vec![error.get_just_string()]})))
+            Ok(MultiResponse::Template(basic_template!("registerconfirm", context, {errors: vec![error.get_just_string()]})))
         } 
     }
 }
