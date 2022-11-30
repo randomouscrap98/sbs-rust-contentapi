@@ -31,3 +31,9 @@ pub struct RegisterResend<'a>
 {
     pub email: &'a str
 }
+
+#[derive(Serialize, FromForm)]
+pub struct LoginRecover<'a>
+{
+    pub email: &'a str
+}

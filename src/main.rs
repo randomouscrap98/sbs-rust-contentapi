@@ -61,6 +61,25 @@ macro_rules! login {
     };
 }
 
+//All our email endpoints in the API just return bools, handling them is a pain, lots of checking and building
+macro_rules! handle_email {
+    ($email_result:expr, $errors:ident) => {
+        match $email_result //post_sendemail(context, email).await
+        {
+            //If confirmation is successful, we get a token back. We login and redirect to the userhome page
+            Ok(success) => {
+                if !success {
+                    $errors.push(String::from("Something went wrong sending the email! Try again?"));
+                }
+            },
+            //If there's an error, we re-render the confirmation page with the errors.
+            Err(error) => {
+                $errors.push(error.get_just_string());
+            } 
+        }
+    };
+}
+
 #[derive(Debug, Responder)]
 pub enum MultiResponse {
     Template(Template),
@@ -132,6 +151,18 @@ async fn login_post(context: context::Context, login: Form<forms::Login<'_>>, ja
     }
 }
 
+#[post("/login/recover", data = "<recover>")]
+async fn loginrecover_post(context: context::Context, recover: Form<forms::LoginRecover<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
+    let mut errors = Vec::new();
+    handle_email!(api::post_email_recover(&context, recover.email).await, errors);
+    Ok(MultiResponse::Template(basic_template!("login", context, {
+        emailresult : String::from(recover.email),
+        recoversuccess : errors.len() == 0,
+        recovererrors: errors
+    })))
+}
+
+
 #[post("/register", data = "<registration>")]
 async fn register_post(context: context::Context, registration: Form<forms::Register<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
     match api::post_register(&context, &registration).await
@@ -141,7 +172,7 @@ async fn register_post(context: context::Context, registration: Form<forms::Regi
         Ok(userresult) => {
             let mut errors = Vec::new();
             //Oh but if the email fails, we need to tell them about it. 
-            api::post_sendemail_adderrors(&context, registration.email, &mut errors).await;
+            handle_email!(api::post_email_confirm(&context, registration.email).await, errors);
             //This is the success result registerconfirm render, which should show the user and email. If they
             //navigate away from the page, they'll lose that specialness, but the page will still work if they
             //know their email (why wouldn't they?)
@@ -178,10 +209,10 @@ async fn registerconfirm_post(context: context::Context, confirm: Form<forms::Re
 #[post("/register/resend", data = "<resend>")]
 async fn registerresend_post(context: context::Context, resend: Form<forms::RegisterResend<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
     let mut errors = Vec::new();
-    api::post_sendemail_adderrors(&context, resend.email, &mut errors).await;
+    handle_email!(api::post_email_confirm(&context, resend.email).await, errors);
     Ok(MultiResponse::Template(basic_template!("registerconfirm", context, {
-        resendsuccess : errors.len() == 0,
         emailresult : String::from(resend.email),
+        resendsuccess : errors.len() == 0,
         resenderrors: errors
     })))
 }
@@ -204,16 +235,17 @@ fn rocket() -> _ {
             index_get, 
             login_get, 
             login_post, 
+            loginrecover_post,
             logout_get, 
+            register_get,
+            register_post,
+            registerconfirm_get,
+            registerconfirm_post,
+            registerresend_post,
             userhome_get, 
             forum_get,
             activity_get,
             search_get,
-            register_get,
-            registerconfirm_get,
-            register_post,
-            registerconfirm_post,
-            registerresend_post,
             about_get
         ])
         .mount("/static", FileServer::from("static/"))

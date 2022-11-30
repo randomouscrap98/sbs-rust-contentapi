@@ -2,7 +2,7 @@
 <section>
     <h1>Login</h1>
     <!-- Post to self -->
-    <form {{selfpost}}>
+    <form method="POST" action="{{http_root}}/login">
         {{> partials/errorlist }}
         <label for="login_username">Username:</label>
         <input id="login_username" type="text" name="username">
@@ -11,7 +11,26 @@
         <label class="inline" for="login_extended"><span>Very long session:</span><input id="login_extended" type="checkbox" name="long_session"></label>
         <input type="submit" value="Login">
     </form>
-    <p>New to SmileBASIC Source? <a href="{{http_root}}/register">Register here</a></p>
+    <hr>
+    <h2>Password expired / forgotten?</h2>
+    <!-- CAN'T post to self: we could be rendering from another context (and the endpoint isn't self anyway) -->
+    <form method="POST" action="{{http_root}}/login/recover">
+        <div class="errorlist">
+        {{#each recovererrors}}
+            <div class="error">{{this}}</div>
+        {{/each}}
+        </div>
+        {{#if recoversuccess}}
+        <p class="success">Email sent!</p>
+        {{/if}}
+        <label for="recover_email">Email:</label>
+        <input id="recover_email" type="text" name="email" value="{{emailresult}}">
+        <p class="aside">Sends an email with a temporary password to login with, use above</p>
+        <input type="submit" value="Send recovery email">
+    </form>
+    <hr>
+    <h2>New to SmileBASIC Source?</h2>
+    <p><a href="{{http_root}}/register">Click here</a> to register</p>
 </section>
 {{/inline}}
 {{>layout}}

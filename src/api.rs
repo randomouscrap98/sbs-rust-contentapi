@@ -177,26 +177,14 @@ pub async fn post_register<'a>(context: &Context, register: &forms::Register<'a>
     basic_post_request("/user/register", register, context).await
 }
 
-pub async fn post_sendemail<'a>(context: &Context, email: &str) -> Result<bool, ApiError>
+pub async fn post_email_confirm<'a>(context: &Context, email: &str) -> Result<bool, ApiError>
 {
     basic_post_request("/user/sendregistrationcode", &email, context).await
 }
 
-pub async fn post_sendemail_adderrors<'a>(context: &Context, email: &str, errors: &mut Vec::<String>)
+pub async fn post_email_recover<'a>(context: &Context, email: &str) -> Result<bool, ApiError>
 {
-    match post_sendemail(context, email).await
-    {
-        //If confirmation is successful, we get a token back. We login and redirect to the userhome page
-        Ok(success) => {
-            if !success {
-                errors.push(String::from("Something went wrong sending the email! Try again?"));
-            }
-        },
-        //If there's an error, we re-render the confirmation page with the errors.
-        Err(error) => {
-            errors.push(error.get_just_string());
-        } 
-    }
+    basic_post_request("/user/sendpasswordrecovery", &email, context).await
 }
 
 pub async fn post_registerconfirm<'a>(context: &Context, confirm: &forms::RegisterConfirm<'a>) -> Result<String, ApiError>

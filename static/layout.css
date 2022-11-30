@@ -6,6 +6,7 @@
     --tc_header: #EEE;
     --bg_section: white;
     --color_border: lightgray;
+    --color_divider: gainsboro;
     --bg_activeselect: teal;
     --tc_activeselect: white;
     --tc_aside: gray;
@@ -73,7 +74,12 @@ h1 {
 
 table td {
     padding-right: 0.5em;
-    /*padding: 0.1em 0.2em;*/
+}
+
+hr {
+    border: none;
+    border-top: 1px solid var(--color_divider);
+    margin: 1.5em 0;
 }
 
 /* ----------------------------- *
@@ -173,6 +179,7 @@ label {
 label.inline {
     display: flex;
     align-items: center;
+    margin-bottom: 0.5em;
 }
 
 form input, form textbox {
