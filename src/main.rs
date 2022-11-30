@@ -28,7 +28,7 @@ macro_rules! my_redirect {
 //Just simplify that into a macro... (although we could probably do better)
 macro_rules! basic_template{
     ($template:expr, $context:ident, {
-        $($field_name:ident : $field_value:expr),*
+        $($field_name:ident : $field_value:expr),*$(,)*
     }) => {
         Template::render($template, context! {
             http_root : $context.config.http_root.clone(),
@@ -41,8 +41,30 @@ macro_rules! basic_template{
             route_path: $context.route_path.clone(),
             $($field_name: $field_value,)*
         })
-    }
+    };
 }
+
+macro_rules! userhome_base {
+    ($context:ident, { $($uf:ident : $uv:expr),*$(,)* }) => {
+        basic_template!("userhome", $context, {
+            userprivate : api::get_user_private_safe(&$context).await,
+            $($uf: $uv,)*
+        })
+    };
+}
+
+macro_rules! register_base {
+    ($context:ident, { $($uf:ident : $uv:expr),*$(,)* }) => {
+        basic_template!("register", $context, { $($uf: $uv,)* })
+    };
+}
+
+macro_rules! registerconfirm_base {
+    ($context:ident, { $($uf:ident : $uv:expr),*$(,)* }) => {
+        basic_template!("registerconfirm", $context, { $($uf: $uv,)* })
+    };
+}
+
 
 macro_rules! login {
     ($jar:ident, $context: ident, $token: expr) => {
@@ -109,16 +131,9 @@ async fn login_get(context: context::Context) -> Result<Template, RocketCustom<S
     Ok(basic_template!("login", context, {}))
 }
 
-async fn userhome_base(context: context::Context, errors: Option<Vec::<String>>) -> Result<Template, RocketCustom<String>> {
-    Ok(basic_template!("userhome", context, {
-        userprivate : api::get_user_private_safe(&context).await,
-        errors: errors
-    }))
-}
-
 #[get("/userhome")]
 async fn userhome_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
-    userhome_base(context, None).await
+    Ok(userhome_base!(context, {}))
 }
 
 #[get("/forum")]
@@ -143,13 +158,12 @@ async fn about_get(context: context::Context) -> Result<Template, RocketCustom<S
 
 #[get("/register")] 
 async fn register_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
-    Ok(basic_template!("register", context, {}))
+    Ok(register_base!(context, {}))
 }
 
-#[get("/register/confirm")] 
+#[get("/register/confirm")] //This is a PLAIN confirmation page with no extra data
 async fn registerconfirm_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
-    //This is a PLAIN confirmation page with no extra data
-    Ok(basic_template!("registerconfirm", context, { }))
+    Ok(registerconfirm_base!(context, { }))
 }
 
 #[post("/login", data = "<login>")]
@@ -183,7 +197,7 @@ async fn loginrecover_post(context: context::Context, recover: Form<forms::Login
 async fn usersensitive_post(context: context::Context, sensitive: Form<forms::UserSensitive<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
     let mut errors = Vec::new();
     handle_error!(api::post_usersensitive(&context, &sensitive).await, errors);
-    userhome_base(context, Some(errors)).await.and_then(|r| Ok(MultiResponse::Template(r)))
+    Ok(MultiResponse::Template(userhome_base!(context, {sensitiveerrors:errors})))
 }
 
 
@@ -200,7 +214,7 @@ async fn register_post(context: context::Context, registration: Form<forms::Regi
             //This is the success result registerconfirm render, which should show the user and email. If they
             //navigate away from the page, they'll lose that specialness, but the page will still work if they
             //know their email (why wouldn't they?)
-            Ok(MultiResponse::Template(basic_template!("registerconfirm", context, { 
+            Ok(MultiResponse::Template(registerconfirm_base!(context, { 
                 emailresult : String::from(registration.email),
                 userresult : userresult,
                 errors: errors
@@ -208,7 +222,7 @@ async fn register_post(context: context::Context, registration: Form<forms::Regi
         },
         //On failure, we re-render the registration page, show errors
         Err(error) => {
-            Ok(MultiResponse::Template(basic_template!("register", context, {errors: vec![error.get_just_string()]})))
+            Ok(MultiResponse::Template(register_base!(context, {errors: vec![error.get_just_string()]})))
         } 
     }
 }
@@ -225,7 +239,7 @@ async fn registerconfirm_post(context: context::Context, confirm: Form<forms::Re
         },
         //If there's an error, we re-render the confirmation page with the errors.
         Err(error) => {
-            Ok(MultiResponse::Template(basic_template!("registerconfirm", context, {errors: vec![error.get_just_string()]})))
+            Ok(MultiResponse::Template(registerconfirm_base!(context, {errors: vec![error.get_just_string()]})))
         } 
     }
 }
@@ -234,10 +248,9 @@ async fn registerconfirm_post(context: context::Context, confirm: Form<forms::Re
 async fn registerresend_post(context: context::Context, resend: Form<forms::RegisterResend<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
     let mut errors = Vec::new();
     handle_email!(api::post_email_confirm(&context, resend.email).await, errors);
-    //let resendsuccess = errors.len() == 0;
-    Ok(MultiResponse::Template(basic_template!("registerconfirm", context, {
-        emailresult : String::from(resend.email), //if resendsuccess { Some(String::from(resend.email)) } else { None },
-        resendsuccess: errors.len() == 0, //resendsuccess,
+    Ok(MultiResponse::Template(registerconfirm_base!(context, {
+        emailresult : String::from(resend.email), 
+        resendsuccess: errors.len() == 0, 
         resenderrors: errors
     })))
 }

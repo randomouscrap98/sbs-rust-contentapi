@@ -15,7 +15,7 @@
     <h2>Password expired / forgotten?</h2>
     <!-- CAN'T post to self: we could be rendering from another context (and the endpoint isn't self anyway) -->
     <form method="POST" action="{{http_root}}/login/recover">
-        {{> errorlist errors=recovererrors}}
+        {{> partials/errorlist errors=recovererrors}}
         {{#if recoversuccess}}
         <p class="success">Email sent!</p>
         {{/if}}
