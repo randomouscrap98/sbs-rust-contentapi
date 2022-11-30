@@ -117,7 +117,7 @@ async fn login_post(context: context::Context, login: Form<forms::Login<'_>>, ja
     {
         Ok(result) => {
             login!(jar, context, result);
-            Ok(MultiResponse::Redirect(my_redirect!(context.config, "/")))
+            Ok(MultiResponse::Redirect(my_redirect!(context.config, "/userhome")))
         },
         Err(error) => {
             Ok(MultiResponse::Template(basic_template!("login", context, {errors: vec![error.get_just_string()]})))
@@ -134,17 +134,7 @@ async fn register_post(context: context::Context, registration: Form<forms::Regi
         Ok(userresult) => {
             let mut errors = Vec::new();
             //Oh but if the email fails, we need to tell them about it. 
-            match api::post_sendemail(&context, registration.email).await
-            {
-                Ok(success) => {
-                    if !success {
-                        errors.push(String::from("yeah"));
-                    }
-                }
-                Err(error) => {
-                    errors.push(error.get_just_string());
-                }
-            }
+            api::post_sendemail_adderrors(&context, registration.email, &mut errors).await;
             //This is the success result registerconfirm render, which should show the user and email. If they
             //navigate away from the page, they'll lose that specialness, but the page will still work if they
             //know their email (why wouldn't they?)
@@ -177,6 +167,17 @@ async fn registerconfirm_post(context: context::Context, confirm: Form<forms::Re
     }
 }
 
+#[post("/register/resend", data = "<resend>")]
+async fn registerresend_post(context: context::Context, resend: Form<forms::RegisterResend<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
+    let mut errors = Vec::new();
+    api::post_sendemail_adderrors(&context, resend.email, &mut errors).await;
+    Ok(MultiResponse::Template(basic_template!("registerconfirm", context, {
+        resendsuccess : errors.len() == 0,
+        emailresult : String::from(resend.email),
+        resenderrors: errors
+    })))
+}
+
 //Don't need the heavy lifting of an entire context just for logout 
 #[get("/logout")]
 fn logout_get(config: &State<config::Config>, jar: &CookieJar<'_>) -> Redirect {
@@ -204,6 +205,7 @@ fn rocket() -> _ {
             registerconfirm_get,
             register_post,
             registerconfirm_post,
+            registerresend_post,
             about_get
         ])
         .mount("/static", FileServer::from("static/"))

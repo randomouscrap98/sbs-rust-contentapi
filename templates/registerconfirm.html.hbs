@@ -2,7 +2,9 @@
 <section>
     <h1>Complete Registration</h1>
     {{#if emailresult}}
+    {{#if userresult}}
     <p>Hello, {{userresult.username}}!</p>
+    {{/if}}
     <p>You'll receive an email shortly from smilebasicsource@gmail.com with the to code to complete your 
         registration, enter it below. If you <span class="error">reload or navigate away from the page</span>, 
         you can still complete your registration, you'll just have to supply your email.</p>
@@ -36,6 +38,9 @@
             <div class="error">{{this}}</div>
         {{/each}}
         </div>
+        {{#if resendsuccess}}
+        <p class="success">Email resent!</p>
+        {{/if}}
         {{#if emailresult}}
         <label>Email: <b>{{emailresult}}</b></label>
         <input id="resend_email" type="hidden" name="email" value="{{emailresult}}">

@@ -9,6 +9,9 @@
     --bg_activeselect: teal;
     --tc_activeselect: white;
     --tc_aside: gray;
+    --tc_error: darkred;
+    --bg_error: rgba(255,0,0,0.05);
+    --tc_success: green;
 }
 
 /* ----------------------------- *
@@ -78,7 +81,11 @@ table td {
  * ----------------------------- */
 
 .error {
-    color: darkred;
+    color: var(--tc_error);
+}
+
+.success {
+    color: var(--tc_success);
 }
 
 .plainlink {
@@ -172,7 +179,7 @@ form input, form textbox {
     margin-bottom: 0.5em;
     padding: 0.2em 0.4em;
     border-radius: 0.2em;
-    background-color: rgba(255,0,0,0.05);
+    background-color: var(--bg_error);
 }
 
 

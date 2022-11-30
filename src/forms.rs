@@ -22,3 +22,9 @@ pub struct RegisterConfirm<'a>
     pub email: &'a str,
     pub key: &'a str
 }
+
+#[derive(Serialize, FromForm)]
+pub struct RegisterResend<'a>
+{
+    pub email: &'a str
+}
