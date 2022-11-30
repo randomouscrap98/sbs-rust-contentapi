@@ -170,9 +170,21 @@ label {
     margin-bottom: 0.2em;
 }
 
+label.inline {
+    display: flex;
+    align-items: center;
+}
+
 form input, form textbox {
     display: block;
     margin-bottom: 0.5em;
+}
+
+input[type="checkbox"] {
+    margin: 0 0.75em;
+    width: 1.1em;
+    height: 1.1em;
+    box-sizing: border-box;
 }
 
 .errorlist .error {

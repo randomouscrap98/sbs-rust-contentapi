@@ -16,6 +16,7 @@ mod api_data;
 mod context;
 mod forms;
 mod hbs_custom;
+mod conversion;
 
 macro_rules! my_redirect {
     ($config:expr, $location:expr) => {
@@ -45,13 +46,18 @@ macro_rules! basic_template{
 
 macro_rules! login {
     ($jar:ident, $context: ident, $token: expr) => {
+        login!($jar, $context, $token, 0) 
+    };
+    ($jar:ident, $context: ident, $token: expr, $expire: expr) => {
         //Again with the wasting memory and cpu, it's whatever. If we needed THAT much optimization,
         //uhh... well we'd have a lot of other problems than just a single small key copy on the heap
-        $jar.add(
-            Cookie::build($context.config.token_cookie_key.clone(), $token)
-                .max_age(Duration::days($context.config.default_token_expire.into()))
-                .finish()
-        )
+        let mut cookie = Cookie::build($context.config.token_cookie_key.clone(), $token);
+        //Here, we say "if you send us an expiration, set the expiration. Otherwise, let it expire
+        //at the end of the session"
+        if $expire != 0 {
+            cookie = cookie.max_age(Duration::seconds($expire as i64));
+        }
+        $jar.add(cookie.finish());
     };
 }
 
@@ -113,10 +119,11 @@ async fn registerconfirm_get(context: context::Context) -> Result<Template, Rock
 
 #[post("/login", data = "<login>")]
 async fn login_post(context: context::Context, login: Form<forms::Login<'_>>, jar: &CookieJar<'_>) -> Result<MultiResponse, RocketCustom<String>> {
-    match api::post_login(&context, &login).await
+    let new_login = conversion::convert_login(&context, &login);
+    match api::post_login(&context, &new_login).await
     {
         Ok(result) => {
-            login!(jar, context, result);
+            login!(jar, context, result, new_login.expireSeconds);
             Ok(MultiResponse::Redirect(my_redirect!(context.config, "/userhome")))
         },
         Err(error) => {
@@ -157,6 +164,7 @@ async fn registerconfirm_post(context: context::Context, confirm: Form<forms::Re
     {
         //If confirmation is successful, we get a token back. We login and redirect to the userhome page
         Ok(token) => {
+            //Registration provides no expiration, so we let the cookie expire as soon as possible
             login!(jar, context, token);
             Ok(MultiResponse::Redirect(my_redirect!(context.config, format!("/userhome"))))
         },

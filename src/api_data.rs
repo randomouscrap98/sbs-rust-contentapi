@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use serde::{Deserialize, Serialize};
 
 
@@ -25,4 +27,15 @@ pub struct QueryImage
 {
     pub size: Option<i64>,
     pub crop: Option<bool>
+}
+
+
+// Data to submit to the api
+
+#[derive(Serialize)]
+pub struct Login
+{
+    pub username: String,
+    pub password: String,
+    pub expireSeconds: i64 
 }

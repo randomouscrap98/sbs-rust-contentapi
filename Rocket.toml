@@ -13,8 +13,8 @@ api_fileraw = "https://oboy.smilebasicsource.com/sbs/contentapi/images"
 
 # The rest is whatever
 token_cookie_key = "sbs_contentapi_token"
-# register_cookie_key = "sbs_contentapi_register"
-default_token_expire = 30 # days
+default_cookie_expire = 1209600 #14 days in seconds
+long_cookie_expire = 31536000 # 365 days in seconds
 port = 5010
 
 [oboy]
