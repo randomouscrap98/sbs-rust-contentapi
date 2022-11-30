@@ -123,6 +123,12 @@ hr {
     box-sizing: border-box;
 }
 
+.spoilertext {
+    background: var(--bg_header);
+    color: var(--bg_header);
+    border-radius: 0.2em;
+}
+
 /* ----------------------------- *
  *     SPECIFIC HEADER STUFF     *
  * ----------------------------- */

@@ -2,7 +2,29 @@
 <section>
     {{#if user}}
     <h1>{{user.username}}</h1>
-    <a href="{{http_root}}/logout">Logout</a>
+    <table>
+        <tr><td><b>Email:</b></td><td class="spoilertext">{{userprivate.email}}</td></tr>
+        <tr><td><b>User ID:</b></td><td>{{user.id}}</td></tr>
+        <tr><td><b>Joined:</b></td><td><time>{{user.createDate}}</time></td></tr>
+    </table>
+    <p><a href="{{http_root}}/logout">Logout</a></p>
+    <hr>
+    <h3>Update sensitive info</h3>
+    <p>Only set the fields you want to change, except 'current password', which is required</p>
+    <form method="POST" autocomplete="off" action="{{http_root}}/user/sensitive">
+        <label for="sensitive_username">New Username:</label>
+        <input id="sensitve_username" type="text" autocomplete="new-password" name="username" value="">
+        <label for="sensitive_password">New Password:</label>
+        <input id="sensitive_password" type="password" autocomplete="new-password" name="password" value="">
+        <label for="sensitive_email">New Email:</label>
+        <input id="sensitive_email" type="email" autocomplete="new-password" name="email" value="">
+        <label for="sensitive_currentpassword"><b>Current Password:</b> <span class="error">*</span></label>
+        <input id="sensitive_currentpassword" type="password" name="currentPassword">
+        <input type="submit" value="Update">
+    </form>
+    <p><b>Note:</b> if you logged in using a temporary recovery password or otherwise don't know your 
+        password, you will need to obtain another temporary recovery password through email to fill out the 
+        'current password' field above. You can do so <a href="{{http_root}}/login" target="_blank">here</a>.</p>
     {{else}}
     <p class="error">You must be logged in to see userhome!</p>
     {{/if}}

@@ -166,6 +166,25 @@ pub async fn get_user_safe(context: &Context) -> Option<User> //Result<Option<Us
     }
 }
 
+pub async fn get_user_private_safe(context: &Context) -> Option<UserPrivate> //Result<Option<User>, RocketCustom<String>>
+{
+    //Only run if there IS a token
+    if let Some(_) = context.user_token 
+    {
+        //Once we have the token, try it against the api. If there's an error, just print it and move on
+        //with apparently "no" user
+        match basic_get_request::<UserPrivate>("/user/privatedata", context).await 
+        {
+            Ok(result) => Some(result),
+            Err(_error) => None,
+        }
+    }
+    else
+    {
+        None
+    }
+}
+
 //Not a rocket version because we want the errors from the API
 pub async fn post_login<'a>(context: &Context, login: &Login) -> Result<String, ApiError>
 {

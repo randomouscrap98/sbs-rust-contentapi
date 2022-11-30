@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 
@@ -17,7 +18,14 @@ pub struct User
 {
     id: u64,
     username: String,
-    avatar: String
+    avatar: String,
+    createDate : DateTime<Utc>
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UserPrivate
+{
+    email: String
 }
 
 

@@ -38,7 +38,7 @@ macro_rules! basic_template{
             api_fileraw : $context.config.api_fileraw.clone(),
             user: api::get_user_safe(&$context).await,
             api_about: api::get_about_rocket(&$context).await?,
-            route_path: $context.route_path,
+            route_path: $context.route_path.clone(),
             $($field_name: $field_value,)*
         })
     }
@@ -102,7 +102,9 @@ async fn login_get(context: context::Context) -> Result<Template, RocketCustom<S
 
 #[get("/userhome")]
 async fn userhome_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
-    Ok(basic_template!("userhome", context, {}))
+    Ok(basic_template!("userhome", context, {
+        userprivate : api::get_user_private_safe(&context).await
+    }))
 }
 
 #[get("/forum")]
