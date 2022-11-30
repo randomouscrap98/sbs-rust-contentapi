@@ -37,3 +37,12 @@ pub struct LoginRecover<'a>
 {
     pub email: &'a str
 }
+
+#[derive(Serialize, FromForm)]
+pub struct UserSensitive<'a>
+{
+    pub username: Option<&'a str>,
+    pub password: Option<&'a str>,
+    pub email: Option<&'a str>,
+    pub currentPassword: &'a str 
+}

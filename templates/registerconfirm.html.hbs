@@ -16,13 +16,8 @@
     <!-- CAN'T post to self: we could be rendering from another context -->
     <form method="POST" action="{{http_root}}/register/confirm">
         {{> partials/errorlist }}
-        {{#if emailresult}}
-        <label>Email: <b>{{emailresult}}</b></label>
-        <input id="complete_email" type="hidden" name="email" value="{{emailresult}}">
-        {{else}}
         <label for="complete_email">Email:</label>
         <input id="complete_email" type="text" name="email" value="{{emailresult}}">
-        {{/if}}
         <label for="complete_key">Code from email:</label>
         <input id="complete_key" class="largeinput" type="text" name="key">
         <input type="submit" value="Complete registration">
@@ -34,21 +29,12 @@
     </p>
     <!-- CAN'T post to self: we could be rendering from another context (and the endpoint isn't self anyway) -->
     <form method="POST" action="{{http_root}}/register/resend">
-        <div class="errorlist">
-        {{#each resenderrors}}
-            <div class="error">{{this}}</div>
-        {{/each}}
-        </div>
+        {{> partials/errorlist errors=resenderrors }}
         {{#if resendsuccess}}
         <p class="success">Email resent!</p>
         {{/if}}
-        {{#if emailresult}}
-        <label>Email: <b>{{emailresult}}</b></label>
-        <input id="resend_email" type="hidden" name="email" value="{{emailresult}}">
-        {{else}}
         <label for="resend_email">Email:</label>
         <input id="resend_email" type="text" name="email" value="{{emailresult}}">
-        {{/if}}
         <input type="submit" value="Resend confirmation email">
     </form>
 </section>

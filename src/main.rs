@@ -64,12 +64,21 @@ macro_rules! login {
 //All our email endpoints in the API just return bools, handling them is a pain, lots of checking and building
 macro_rules! handle_email {
     ($email_result:expr, $errors:ident) => {
-        match $email_result //post_sendemail(context, email).await
+        handle_error!($email_result, $errors, "Something went wrong sending the email! Try again?");
+    };
+}
+
+macro_rules! handle_error {
+    ($result:expr, $errors:ident) => {
+        handle_error!($result, $errors, "Unkown error occurred");
+    };
+    ($result:expr, $errors:ident, $message:literal) => {
+        match $result //post_sendemail(context, email).await
         {
             //If confirmation is successful, we get a token back. We login and redirect to the userhome page
             Ok(success) => {
                 if !success {
-                    $errors.push(String::from("Something went wrong sending the email! Try again?"));
+                    $errors.push(String::from($message));
                 }
             },
             //If there's an error, we re-render the confirmation page with the errors.
@@ -100,11 +109,16 @@ async fn login_get(context: context::Context) -> Result<Template, RocketCustom<S
     Ok(basic_template!("login", context, {}))
 }
 
+async fn userhome_base(context: context::Context, errors: Option<Vec::<String>>) -> Result<Template, RocketCustom<String>> {
+    Ok(basic_template!("userhome", context, {
+        userprivate : api::get_user_private_safe(&context).await,
+        errors: errors
+    }))
+}
+
 #[get("/userhome")]
 async fn userhome_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
-    Ok(basic_template!("userhome", context, {
-        userprivate : api::get_user_private_safe(&context).await
-    }))
+    userhome_base(context, None).await
 }
 
 #[get("/forum")]
@@ -157,11 +171,19 @@ async fn login_post(context: context::Context, login: Form<forms::Login<'_>>, ja
 async fn loginrecover_post(context: context::Context, recover: Form<forms::LoginRecover<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
     let mut errors = Vec::new();
     handle_email!(api::post_email_recover(&context, recover.email).await, errors);
+    //let resendsuccess = errors.len() == 0;
     Ok(MultiResponse::Template(basic_template!("login", context, {
-        emailresult : String::from(recover.email),
-        recoversuccess : errors.len() == 0,
+        emailresult : String::from(recover.email), //if resendsuccess { Some(String::from(recover.email)) } else { None },
+        recoversuccess : errors.len() == 0, //resendsuccess,
         recovererrors: errors
     })))
+}
+
+#[post("/user/sensitive", data = "<sensitive>")]
+async fn usersensitive_post(context: context::Context, sensitive: Form<forms::UserSensitive<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
+    let mut errors = Vec::new();
+    handle_error!(api::post_usersensitive(&context, &sensitive).await, errors);
+    userhome_base(context, Some(errors)).await.and_then(|r| Ok(MultiResponse::Template(r)))
 }
 
 
@@ -212,9 +234,10 @@ async fn registerconfirm_post(context: context::Context, confirm: Form<forms::Re
 async fn registerresend_post(context: context::Context, resend: Form<forms::RegisterResend<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
     let mut errors = Vec::new();
     handle_email!(api::post_email_confirm(&context, resend.email).await, errors);
+    //let resendsuccess = errors.len() == 0;
     Ok(MultiResponse::Template(basic_template!("registerconfirm", context, {
-        emailresult : String::from(resend.email),
-        resendsuccess : errors.len() == 0,
+        emailresult : String::from(resend.email), //if resendsuccess { Some(String::from(resend.email)) } else { None },
+        resendsuccess: errors.len() == 0, //resendsuccess,
         resenderrors: errors
     })))
 }
@@ -238,6 +261,7 @@ fn rocket() -> _ {
             login_get, 
             login_post, 
             loginrecover_post,
+            usersensitive_post,
             logout_get, 
             register_get,
             register_post,

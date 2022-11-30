@@ -210,3 +210,8 @@ pub async fn post_registerconfirm<'a>(context: &Context, confirm: &forms::Regist
 {
     basic_post_request("/user/confirmregistration", confirm, context).await
 }
+
+pub async fn post_usersensitive<'a>(context: &Context, sensitive: &forms::UserSensitive<'_>) -> Result<bool, ApiError>
+{
+    basic_post_request("/user/privatedata", sensitive, context).await
+}
