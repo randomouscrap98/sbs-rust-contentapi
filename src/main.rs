@@ -18,6 +18,8 @@ mod forms;
 mod hbs_custom;
 mod conversion;
 
+use api_data::build_request;
+
 
 macro_rules! my_redirect {
     ($config:expr, $location:expr) => {
@@ -282,6 +284,20 @@ async fn widget_imagebrowser_get(context: context::Context, search: forms::Image
     }))
 }
 
+#[get("/test/request")]
+async fn test_request_get(context: context::Context) -> String {
+    let mut request = api_data::FullRequest::new();
+    request.requests.push(build_request!(api_data::RequestType::user));
+    match api::post_request(&context, &request).await {
+        Ok(result) => {
+            format!("Omg the result is:\n{:?}", result)
+        },
+        Err(error) => {
+            error.get_just_string()
+        }
+    }
+}
+
 // -------------------------
 // ------- LAUNCH ----------
 // -------------------------
@@ -306,6 +322,7 @@ fn rocket() -> _ {
             activity_get,
             search_get,
             about_get,
+            test_request_get,
             widget_imagebrowser_get
         ])
         .mount("/static", FileServer::from("static/"))
