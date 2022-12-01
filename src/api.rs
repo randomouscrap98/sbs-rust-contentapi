@@ -185,6 +185,11 @@ pub async fn get_user_private_safe(context: &Context) -> Option<UserPrivate> //R
     }
 }
 
+pub async fn post_request(context: &Context, request: &FullRequest) -> Result<RequestResult, ApiError>
+{
+    basic_post_request("/request", request, context).await
+}
+
 //Not a rocket version because we want the errors from the API
 pub async fn post_login<'a>(context: &Context, login: &Login) -> Result<String, ApiError>
 {

@@ -271,7 +271,7 @@ fn logout_get(config: &State<config::Config>, jar: &CookieJar<'_>) -> Redirect {
 
 #[get("/widget/imagebrowser?<search..>")]
 async fn widget_imagebrowser_get(context: context::Context, search: forms::ImageBrowseSearch<'_>) -> Result<Template, RocketCustom<String>> {
-    println!("Got: {:?}", &search);
+    //println!("Got: {:?}", &search);
     Ok(basic_template!("widgets/imagebrowser", context, {
         search : &search,
         sizevalues : vec![

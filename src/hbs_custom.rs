@@ -142,9 +142,13 @@ pub struct SelectValue<T>
     pub selected: bool
 }
 
-impl<T:PartialEq+Clone> SelectValue<T> {
+impl<T:PartialEq+Copy> SelectValue<T> {
     pub fn new(value: T, text: &str, selected_value: T) -> Self {
-        SelectValue { value: value.clone(), text: Some(String::from(text)), selected: selected_value == value }
+        SelectValue { 
+            value: value,
+            selected: selected_value == value, 
+            text: Some(String::from(text))
+        }
     }
 }
 

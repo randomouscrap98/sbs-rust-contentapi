@@ -104,6 +104,11 @@ input[type="checkbox"] {
     box-sizing: border-box;
 }
 
+/* Oh also, all readonly inputs should be the same! */
+input[readonly] {
+    filter: opacity(0.75);
+}
+
 /* Also, dividers are like decorators, want them generic too */
 hr {
     border: none;
