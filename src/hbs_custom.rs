@@ -120,6 +120,8 @@ generate_helper!{selfpost_helper, h, out, ctx, {
     get_required_str! { (HTTPROOTKEY, httproot, ctx) {
         get_required_str! { (ROUTEKEY, route, ctx) {
             out.write(&format!("method=\"POST\" action=\"{httproot}{route}"))?;
+            //This lets us select different routes without actually changing the path in the url,
+            //meaning users won't get confused (the url should now always be correct)
             if let Some(classify) = get_param!(h, 0, as_str) {
                 out.write("?")?;
                 out.write(classify)?;

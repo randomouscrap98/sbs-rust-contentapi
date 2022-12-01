@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{language_code}}">
 <head>
-    {{> basicmeta }}
+    {{> partials/basicmeta }}
     <title>SmileBASIC Source Image Browser</title>
     <meta name="description" content="Simple image browser widget">
     <!-- Keep in mind how many places may want the default colors, basic classes, etc. 
@@ -10,13 +10,71 @@
     {{stylesheet "/base.css"}}
     <style>
         /* Since style is JUST for this widget, just include it directly */
+        body {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+            /* Let the parent figure out the padding on their side */
+            padding: 0;
+            /*padding: 0.5em;*/ 
+            box-sizing: border-box;
+            overflow-x: hidden;
+            overflow-y: hidden;
+            background-color: var(--bg_section);
+            font-family: var(--font);
+        }
+        h3 {
+            margin: 0;
+            margin-bottom: 0.5em;
+        }
+        #browseform {
+            display: flex;
+            flex-wrap: wrap;
+            padding: 0.5em 0.75em;
+            background-color: var(--color_divider);
+            border-radius: 0.5em;
+        }
+        #browseform > * {
+            margin: 0.25em 0;
+        }
     </style>
 </head>
 <body>
-    {{>partials/header}}
-    <main>
-    {{>page}}
-    </main>
-    {{>partials/footer}}
+    <!-- This is meant to go in an iframe, so it will use the entire space -->
+    <h3>Upload file:</h3>
+    <!-- Still technically a self post but we need to preserve the entirety of 
+        the -->
+    <form method="POST" action="{{http_root}}{{route_uri}}">
+        {{> partials/errorlist }}
+        <input id="fileinput" type="file" name="file" accept="image/*">
+        <input type="submit" value="Upload">
+    </form>
+    <hr>
+    <h3>Browse files:</h3>
+    <div class="scrollable">
+        <!-- Don't include an action so it just posts to the same url but with the form as params -->
+        <form method="GET" id="browseform" class="mediumseparate">
+            <label for="search-oldest" class="inline"><span>Oldest first:</span><input id="search-oldest" type="checkbox" value="{{search.oldest}}"></label>
+            <label for="search-all" class="inline"><span>Global search:</span><input id="search-all" type="checkbox" value="{{search.global}}"></label>
+            <label for="search-size" class="inline">
+                <span>Size:</span>
+                <select id="search-size" value="{{search.size}}">
+                    <option value="1">1x</option>
+                    <option value="2">2x</option>
+                    <option value="3">3x</option>
+                </select>
+            </label>
+            <label for="search-preview" class="inline">
+                <span>Preview:</span>
+                <input id="search-preview" type="text" class="largeinput" value="{{search.global}}" placeholder="Comma separated hashes">
+            </label>
+            <input type="submit" value="Update search">
+        </form>
+        <div id="imagebrowse">
+            {{#each images}}
+            {{/each}}
+        </div>
+    </div>
 </body>
 </html>

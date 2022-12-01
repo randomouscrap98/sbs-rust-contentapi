@@ -6,7 +6,7 @@
 
 /* The body needs to get out of the way */
 body {
-    font-family: sans-serif;
+    font-family: var(--font);
     padding: 0;
     margin: 0;
     border: none;
@@ -61,11 +61,6 @@ table td {
     padding-right: 0.5em;
 }
 
-hr {
-    border: none;
-    border-top: 1px solid var(--color_divider);
-    margin: 1.5em 0;
-}
 
 /* ----------------------------- *
  *     SPECIFIC HEADER STUFF     *
@@ -121,21 +116,12 @@ label {
 }
 
 label.inline {
-    display: flex;
-    align-items: center;
     margin-bottom: 0.5em;
 }
 
 form input, form textbox {
     display: block;
     margin-bottom: 0.5em;
-}
-
-input[type="checkbox"] {
-    margin: 0 0.75em;
-    width: 1.1em;
-    height: 1.1em;
-    box-sizing: border-box;
 }
 
 

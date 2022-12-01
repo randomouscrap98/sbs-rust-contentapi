@@ -9,6 +9,9 @@
     </table>
     <p><a href="{{http_root}}/logout">Logout</a></p>
     <hr>
+    <!--<h3>Browse images:</h3>-->
+    <iframe src="{{http_root}}/widget/imagebrowser" class="imagebrowser"></iframe>
+    <hr>
     <h3>Update sensitive info</h3>
     <p>Only set the fields you want to change, except 'current password', which is required</p>
     <form {{selfpost "sensitive"}} autocomplete="off" >

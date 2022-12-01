@@ -12,6 +12,7 @@
     --tc_error: darkred;
     --bg_error: rgba(255,0,0,0.05);
     --tc_success: green;
+    --font: sans-serif;
 }
 
 /* ----------------------------- *
@@ -51,6 +52,10 @@
     margin-right: 0.5em;
 }
 
+.mediumseparate > * {
+    margin-right: 0.5em;
+}
+
 .aside {
     font-size: 0.8em;
     color: var(--tc_aside);
@@ -66,4 +71,42 @@
     background: var(--bg_header);
     color: var(--bg_header);
     border-radius: 0.2em;
+}
+
+.imagebrowser {
+    width: 100%;
+    height: 20em;
+    box-sizing: border-box;
+    border: none;
+    /*border: 1px solid var(--color_divider);*/
+}
+
+.scrollable {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+label.inline {
+    display: flex;
+    align-items: center;
+    max-width: 100%;
+}
+
+label.inline > input, label.inline > select {
+    /* Give space between input and label... assuming that's how it's set up */
+    margin: 0 0.75em;
+}
+
+/* Make checkboxes consistent on all pages */
+input[type="checkbox"] {
+    width: 1.1em;
+    height: 1.1em;
+    box-sizing: border-box;
+}
+
+/* Also, dividers are like decorators, want them generic too */
+hr {
+    border: none;
+    border-top: 1px solid var(--color_divider);
+    margin: 1.5em 0;
 }

@@ -32,16 +32,21 @@ macro_rules! basic_template{
         $($field_name:ident : $field_value:expr),*$(,)*
     }) => {
         Template::render($template, context! {
-            //How many of these clones are necessary? Many of them are already cloned values...
-            http_root : $context.config.http_root.clone(),
+            //Only need to borrow everything from context, since it's all 
+            //cloned values anyway. Also, this only works because context is passed
+            //into the function as a guard, so the lifetime extends beyond the function
+            //call and so can be part of the return value (being the template render)
+            http_root : &$context.config.http_root,
             http_static : format!("{}/static", &$context.config.http_root),
             http_resources : format!("{}/static/resources", &$context.config.http_root),
-            api_fileraw : $context.config.api_fileraw.clone(),
-            route_path: $context.route_path.clone(),
-            boot_time: $context.init.boot_time.clone(),
-            client_ip : $context.client_ip,
+            api_fileraw : &$context.config.api_fileraw,
+            route_path: &$context.route_path,
+            route_uri: &$context.route_path,
+            boot_time: &$context.init.boot_time,
+            client_ip : &$context.client_ip,
             user: api::get_user_safe(&$context).await,
             api_about: api::get_about_rocket(&$context).await?,
+            language_code: "en", //Eventually!!
             $($field_name: $field_value,)*
         })
     };
@@ -264,6 +269,11 @@ fn logout_get(config: &State<config::Config>, jar: &CookieJar<'_>) -> Redirect {
     my_redirect!(config, "/")
 }
 
+#[get("/widget/imagebrowser")] 
+async fn widget_imagebrowser_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
+    Ok(basic_template!("widgets/imagebrowser", context, {}))
+}
+
 // -------------------------
 // ------- LAUNCH ----------
 // -------------------------
@@ -287,7 +297,8 @@ fn rocket() -> _ {
             forum_get,
             activity_get,
             search_get,
-            about_get
+            about_get,
+            widget_imagebrowser_get
         ])
         .mount("/static", FileServer::from("static/"))
         .manage(context::InitData {
