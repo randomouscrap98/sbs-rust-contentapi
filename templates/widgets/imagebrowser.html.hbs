@@ -41,11 +41,18 @@
         }
         #browseform > * {
             margin: 0.25em 0;
+            margin-right: 0.3em;
+        }
+        #browsepagenav {
+            display: flex;
+            justify-content: center;
+            margin: 0.5em;
         }
         .imagelist {
             display: flex;
             flex-wrap: wrap;
             align-items: flex-end;
+            justify-content: space-evenly;
         }
         .imagelist > * {
             margin: 0.2em;
@@ -54,23 +61,27 @@
             display: flex;
             flex-direction: column;
         }
+        [data-size="1"] .imagepreview { width: 100px; }
+        [data-size="1"] .imagepreview input { font-size: 0.6em; }
+        [data-size="2"] .imagepreview { width: 200px; }
+        [data-size="3"] .imagepreview { width: 300px; }
     </style>
 </head>
-<body>
+<body data-size="{{search.size}}">
     <!-- This is meant to go in an iframe, so it will use the entire space -->
     <h3>Upload file:</h3>
     <!-- Still technically a self post but we need to preserve the entirety of 
         the -->
     <form method="POST" action="{{http_root}}{{route_uri}}">
         {{> partials/errorlist }}
-        <input id="fileinput" type="file" name="file" accept="image/*">
+        <input id="fileinput" type="file" name="file" class="largeinput" accept="image/*">
         <input type="submit" value="Upload">
     </form>
     <hr>
     <h3>Browse files:</h3>
     <div class="scrollable">
         <!-- Don't include an action so it just posts to the same url but with the form as params -->
-        <form method="GET" id="browseform" class="mediumseparate">
+        <form method="GET" id="browseform">
             <label for="search-oldest" class="inline">
                 <span>Oldest first:</span>
                 <input id="search-oldest" type="checkbox" name="oldest" value="true" {{#if search.oldest}}checked=""{{/if}}>
@@ -95,9 +106,19 @@
         {{#each images}}
         <div class="imagepreview">
             <img src="{{imagelink hash ../imagesize}}">
-            <input readonly="" value="{{hash}}">
+            <input readonly="" value="{{hash}}" title="{{hash}}">
         </div>
         {{/each}}
+        {{/inline}}
+        {{#*inline "img_nav"}}
+        <div id="browsepagenav" class="smallseparate">
+            {{#if previouspagelink}}
+            <a href="{{http_root}}{{previouspagelink}}" class="plainlink">Previous</a>
+            {{/if}}
+            {{#if hasimages}}
+            <a href="{{http_root}}{{nextpagelink}}" class="plainlink">Next</a>
+            {{/if}}
+        </div>
         {{/inline}}
         {{#if haspreview}}
         <b>Preview images: {{imagesize}}</b>
@@ -106,9 +127,13 @@
         </div>
         <hr>
         {{/if}}
+        {{> img_nav }}
         <div class="imagelist">
             {{> img_b }}
         </div>
+        {{#if hasimages}}
+        {{> img_nav }}
+        {{/if}}
     </div>
 </body>
 </html>

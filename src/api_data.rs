@@ -50,6 +50,8 @@ pub struct User
     pub username: String,
     pub avatar: String,
     pub deleted: bool,
+    #[serde(alias = "super")]
+    pub admin: bool,
     pub createDate : DateTime<Utc>
 }
 

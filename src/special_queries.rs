@@ -10,7 +10,7 @@ pub async fn imagebrowser_request(context: &Context, search: &ImageBrowseSearch<
     let mut request = FullRequest::new();
     add_value!(request, "type", ContentType::FILE);
 
-    let base_query = "contentType = @type";
+    let base_query = "contentType = @type and !valuekeynotlike({{system}})";
     let mut query = String::from(base_query);
 
     //Add user restriction to query
@@ -23,6 +23,7 @@ pub async fn imagebrowser_request(context: &Context, search: &ImageBrowseSearch<
 
     let mut main_request = minimal_content!(query);
     main_request.limit = context.config.default_imagebrowser_count.into();
+    main_request.skip = (search.page as i64) * main_request.limit;
 
     //Oldest means default ordering, so 'not' oldest is actually inverted order
     if !search.oldest {

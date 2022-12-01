@@ -282,18 +282,28 @@ fn logout_get(config: &State<config::Config>, jar: &CookieJar<'_>) -> Redirect {
 async fn widget_imagebrowser_get(context: context::Context, search: forms::ImageBrowseSearch<'_>) -> Result<Template, RocketCustom<String>> 
 {
     let result = special_queries::imagebrowser_request(&context, &search).await.map_err(rocket_error!())?;
+    let images = conversion::cast_result::<api_data::MinimalContent>(&result, "content").map_err(rocket_error!())?;
     let previews = conversion::cast_result::<api_data::MinimalContent>(&result, "preview").map_err(rocket_error!())?;
+    let mut searchprev = search.clone();
+    let mut searchnext = search.clone();
+    searchprev.page = searchprev.page - 1;
+    searchnext.page = searchnext.page + 1;
 
     Ok(basic_template!("widgets/imagebrowser", context, {
         search : &search,
         haspreview : previews.len() > 0,
+        hasimages : images.len() > 0,
         previewimages : previews,
-        imagesize: 100 + 100 * search.size,
-        images : conversion::cast_result::<api_data::MinimalContent>(&result, "content").map_err(rocket_error!())?,
+        imagesize: 0 + 100 * search.size,
+        nextpagelink : if let Ok(q) = serde_qs::to_string(&searchnext) { 
+            Some(format!("{}?{}", context.route_path, q)) } else { None },
+        previouspagelink : if searchprev.page >= 0 { if let Ok(q) = serde_qs::to_string(&searchprev) {
+            Some(format!("{}?{}", context.route_path, q)) } else { None } } else { None },
+        images : images,
         sizevalues : vec![
-            hbs_custom::SelectValue::new(1, "1x", search.size), 
-            hbs_custom::SelectValue::new(2, "2x", search.size),
-            hbs_custom::SelectValue::new(3, "3x", search.size)
+            hbs_custom::SelectValue::new(1, "1", search.size), 
+            hbs_custom::SelectValue::new(2, "2", search.size),
+            hbs_custom::SelectValue::new(3, "3", search.size)
         ]
     }))
 }

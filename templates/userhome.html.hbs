@@ -10,9 +10,14 @@
 #userhomeinfo > #infoblock {
     margin-right: 1em;
 }
+#logoutlink {
+    display: block;
+    margin-left: 0.2em;
+    margin-top: 0.4em;
+}
 #userhomeinfo > img {
     margin-left: auto;
-    width: 8em;
+    width: 8.5em;
     border-radius: 0.9em;
 }
 /* This isn't ULTRA MINIMAL size (that's 30em), but enough to not have everything on one line */
@@ -35,18 +40,19 @@
                 <tr><td><b>Email:</b></td><td class="spoilertext">{{userprivate.email}}</td></tr>
                 <tr><td><b>User ID:</b></td><td>{{user.id}}</td></tr>
                 <tr><td><b>Joined:</b></td><td><time>{{user.createDate}}</time></td></tr>
+                <tr><td><b>Avatar:</b></td><td>{{user.avatar}}</td></tr>
+                <tr><td><b>Admin:</b></td><td>{{#if user.admin}}true{{else}}false{{/if}}</td></tr>
             </table>
-            <p><a href="{{http_root}}/logout">Logout</a></p>
+            <a id="logoutlink" href="{{http_root}}/logout">Logout</a>
         </div>
         <img src="{{imagelink user.avatar 300 true}}">
     </div>
     <hr>
-    <!--<h3>Browse images:</h3>-->
     <iframe src="{{http_root}}/widget/imagebrowser" class="imagebrowser"></iframe>
     <hr>
-    <h3>Update sensitive info</h3>
+    <h3 id="update-sensitive">Update sensitive info</h3>
     <p>Only set the fields you want to change, except 'current password', which is required</p>
-    <form {{selfpost "sensitive"}} autocomplete="off" >
+    <form {{selfpost "sensitive#update-sensitive"}} autocomplete="off" >
         {{> partials/errorlist errors=sensitiveerrors}}
         <!--<label for="sensitive_username">New Username:</label>
         <input id="sensitve_username" type="text" autocomplete="new-password" name="username" value="">-->

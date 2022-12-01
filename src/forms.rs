@@ -47,12 +47,14 @@ pub struct UserSensitive<'a>
     pub currentPassword: &'a str 
 }
 
-#[derive(Serialize, FromForm, Debug)]
+#[derive(Serialize, FromForm, Debug, Clone)]
 pub struct ImageBrowseSearch<'a>
 {
     #[field(default = 1i32, validate=range(1..=3))]
     pub size: i32,
     pub global: bool,
     pub oldest: bool,
+    #[field(default = 0, validate=range(0..))]
+    pub page: i32,
     pub preview: Option<&'a str>,
 }
