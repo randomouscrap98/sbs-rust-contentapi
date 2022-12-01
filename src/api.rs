@@ -1,12 +1,10 @@
 use std::fmt;
 
-use rocket::{http::Status, serde::DeserializeOwned};
+use rocket::serde::DeserializeOwned;
 use serde::Serialize;
 use crate::context::Context;
 use crate::forms;
 use crate::api_data::*;
-
-use rocket::response::status::Custom as RocketCustom;
 
 //These are the specific types of errosr we'll care about from the api
 pub enum ApiError
@@ -61,13 +59,6 @@ macro_rules! parse_error {
     };
 }
 
-//Simple conversion from server error into rocket error. This should ONLY be used where we are certain
-//the error isn't due to the user!
-macro_rules! rocket_error {
-    () => {
-        |e| RocketCustom(Status::ServiceUnavailable, e.to_string())
-    };
-}
 
 //Once a response comes back from the API, figure out the appropriate errors or data to parse and return
 macro_rules! handle_response {
@@ -80,13 +71,10 @@ macro_rules! handle_response {
             {
                 //The result from the API was fine, try to parse it as json
                 Ok(_) => {
-                    //println!("Result from API was ok");
                     $response.json::<T>().await.map_err(parse_error!($endpoint, status))
                 },
                 //The result from the API was 400, 500, etc. Try to parse the body as the error
                 Err(response_error) => {
-                    //println!("Result from API was NOT OK: {:?}", response_error);
-                    //match $response.json::<String>().await.map_err(parse_error!($endpoint)) {
                     match $response.text().await.map_err(parse_error!($endpoint, status)) {
                         Ok(real_error) => Err(ApiError::User(response_error.status(), real_error)),
                         Err(p_error) => Err(p_error)
@@ -143,9 +131,9 @@ pub async fn basic_post_request<U, T>(endpoint: &str, data: &U, context: &Contex
     handle_response!(response, endpoint)
 }
 
-pub async fn get_about_rocket(context: &Context) -> Result<About, RocketCustom<String>> 
+pub async fn get_about(context: &Context) -> Result<About, ApiError>//RocketCustom<String>> 
 {
-    basic_get_request("/status", context).await.map_err(rocket_error!())
+    basic_get_request("/status", context).await//.map_err(rocket_error!())
 }
 
 //This consumes the error and returns "None", since it could just be that the token is stupid. In the future,

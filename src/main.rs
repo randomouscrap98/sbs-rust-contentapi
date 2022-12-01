@@ -17,8 +17,7 @@ mod context;
 mod forms;
 mod hbs_custom;
 mod conversion;
-
-use api_data::build_request;
+mod special_queries;
 
 
 macro_rules! my_redirect {
@@ -47,7 +46,7 @@ macro_rules! basic_template{
             boot_time: &$context.init.boot_time,
             client_ip : &$context.client_ip,
             user: api::get_user_safe(&$context).await,
-            api_about: api::get_about_rocket(&$context).await?,
+            api_about: api::get_about(&$context).await.map_err(rocket_error!())?,
             language_code: "en", //Eventually!!
             $($field_name: $field_value,)*
         })
@@ -118,6 +117,14 @@ macro_rules! handle_error {
                 $errors.push(error.get_just_string());
             } 
         }
+    };
+}
+
+//Simple conversion from server error into rocket error. This should ONLY be used where we are certain
+//the error isn't due to the user!
+macro_rules! rocket_error {
+    () => {
+        |e| RocketCustom(rocket::http::Status::ServiceUnavailable, e.to_string())
     };
 }
 
@@ -272,8 +279,10 @@ fn logout_get(config: &State<config::Config>, jar: &CookieJar<'_>) -> Redirect {
 }
 
 #[get("/widget/imagebrowser?<search..>")]
-async fn widget_imagebrowser_get(context: context::Context, search: forms::ImageBrowseSearch<'_>) -> Result<Template, RocketCustom<String>> {
-    //println!("Got: {:?}", &search);
+async fn widget_imagebrowser_get(context: context::Context, search: forms::ImageBrowseSearch<'_>) -> Result<Template, RocketCustom<String>> 
+{
+    let result = special_queries::imagebrowser_request(&context, &search).await.map_err(rocket_error!())?;
+
     Ok(basic_template!("widgets/imagebrowser", context, {
         search : &search,
         sizevalues : vec![
@@ -284,20 +293,20 @@ async fn widget_imagebrowser_get(context: context::Context, search: forms::Image
     }))
 }
 
-#[get("/test/request")]
-async fn test_request_get(context: context::Context) -> String {
-    let mut request = api_data::FullRequest::new();
-    request.requests.push(build_request!(api_data::RequestType::user));
-    println!("Sending: {:?}", &request);
-    match api::post_request(&context, &request).await {
-        Ok(result) => {
-            format!("Omg the result is:\n{:?}", result)
-        },
-        Err(error) => {
-            error.get_just_string()
-        }
-    }
-}
+//#[get("/test/request")]
+//async fn test_request_get(context: context::Context) -> String {
+//    let mut request = api_data::FullRequest::new();
+//    request.requests.push(build_request!(api_data::RequestType::user));
+//    println!("Sending: {:?}", &request);
+//    match api::post_request(&context, &request).await {
+//        Ok(result) => {
+//            format!("Omg the result is:\n{:?}", result)
+//        },
+//        Err(error) => {
+//            error.get_just_string()
+//        }
+//    }
+//}
 
 // -------------------------
 // ------- LAUNCH ----------
@@ -323,7 +332,7 @@ fn rocket() -> _ {
             activity_get,
             search_get,
             about_get,
-            test_request_get,
+            //test_request_get,
             widget_imagebrowser_get
         ])
         .mount("/static", FileServer::from("static/"))

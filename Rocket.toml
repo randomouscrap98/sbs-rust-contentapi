@@ -16,6 +16,7 @@ token_cookie_key = "sbs_contentapi_token"
 default_cookie_expire = 1209600 #14 days in seconds
 long_cookie_expire = 31536000 # 365 days in seconds
 port = 5010
+default_imagebrowser_count = 100
 
 [oboy]
 

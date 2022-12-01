@@ -9,7 +9,8 @@ pub struct Config
     pub api_fileraw : String,
     pub token_cookie_key: String,
     pub default_cookie_expire: i32,
-    pub long_cookie_expire: i32
+    pub long_cookie_expire: i32,
+    pub default_imagebrowser_count: i32
 }
 
 impl Config 
