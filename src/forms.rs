@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use rocket::form::FromForm;
+use rocket::{form::FromForm, fs::TempFile};
 use serde::Serialize;
 
 #[derive(Serialize, FromForm)]
@@ -57,4 +57,16 @@ pub struct ImageBrowseSearch<'a>
     #[field(default = 0, validate=range(0..))]
     pub page: i32,
     pub preview: Option<&'a str>,
+}
+
+impl<'a> ImageBrowseSearch<'a> {
+    pub fn new() -> Self {
+        ImageBrowseSearch { size: 1, global: false, oldest: false, page: 0, preview: None }
+    }
+}
+
+#[derive(FromForm)] //We're not sending this directly to the API so it's fine?
+pub struct FileUpload<'a>
+{
+    pub file: TempFile<'a>
 }

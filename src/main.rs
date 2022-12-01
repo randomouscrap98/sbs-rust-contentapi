@@ -1,5 +1,6 @@
 #[macro_use] extern crate rocket;
 
+use forms::FileUpload;
 use rocket::response::Redirect;
 use rocket::time::Duration;
 use rocket::{State, http::Cookie};
@@ -19,6 +20,13 @@ mod hbs_custom;
 mod conversion;
 mod special_queries;
 
+/* 
+    OK so this file should be entirely just routing and the top level stuff required to route. 
+    Think of it as all your 'controllers' from ASP.NET put into one. Anything more complicated 
+    than rendering a template or basic data parsing should be put in some OTHER function. We 
+    have a module 'special_queries' which houses a lot of the complex functionality, and 'api' 
+    for general calls to API endpoints.
+*/
 
 macro_rules! my_redirect {
     ($config:expr, $location:expr) => {
@@ -53,6 +61,8 @@ macro_rules! basic_template{
     };
 }
 
+// These are specific page rendering macros for pages which get rendered in multiple
+// places (such as on POST/GET combined pages, which is quite a few!)
 macro_rules! userhome_base {
     ($context:ident, { $($uf:ident : $uv:expr),*$(,)* }) => {
         basic_template!("userhome", $context, {
@@ -114,7 +124,7 @@ macro_rules! handle_error {
             },
             //If there's an error, we re-render the confirmation page with the errors.
             Err(error) => {
-                $errors.push(error.get_just_string());
+                $errors.push(error.to_string());
             } 
         }
     };
@@ -193,7 +203,7 @@ async fn login_post(context: context::Context, login: Form<forms::Login<'_>>, ja
             Ok(MultiResponse::Redirect(my_redirect!(context.config, "/userhome")))
         },
         Err(error) => {
-            Ok(MultiResponse::Template(basic_template!("login", context, {errors: vec![error.get_just_string()]})))
+            Ok(MultiResponse::Template(basic_template!("login", context, {errors: vec![error.to_string()]})))
         } 
     }
 }
@@ -238,7 +248,7 @@ async fn register_post(context: context::Context, registration: Form<forms::Regi
         },
         //On failure, we re-render the registration page, show errors
         Err(error) => {
-            Ok(MultiResponse::Template(register_base!(context, {errors: vec![error.get_just_string()]})))
+            Ok(MultiResponse::Template(register_base!(context, {errors: vec![error.to_string()]})))
         } 
     }
 }
@@ -255,7 +265,7 @@ async fn registerconfirm_post(context: context::Context, confirm: Form<forms::Re
         },
         //If there's an error, we re-render the confirmation page with the errors.
         Err(error) => {
-            Ok(MultiResponse::Template(registerconfirm_base!(context, {errors: vec![error.get_just_string()]})))
+            Ok(MultiResponse::Template(registerconfirm_base!(context, {errors: vec![error.to_string()]})))
         } 
     }
 }
@@ -308,20 +318,16 @@ async fn widget_imagebrowser_get(context: context::Context, search: forms::Image
     }))
 }
 
-//#[get("/test/request")]
-//async fn test_request_get(context: context::Context) -> String {
-//    let mut request = api_data::FullRequest::new();
-//    request.requests.push(build_request!(api_data::RequestType::user));
-//    println!("Sending: {:?}", &request);
-//    match api::post_request(&context, &request).await {
-//        Ok(result) => {
-//            format!("Omg the result is:\n{:?}", result)
-//        },
-//        Err(error) => {
-//            error.get_just_string()
-//        }
-//    }
-//}
+#[post("/widget/imagebrowser", data = "<upload>")]
+async fn widget_imagebrowser_post(context: context::Context, upload: Form<forms::FileUpload<'_>>) -> Result<Template, RocketCustom<String>> 
+{
+    let result = api::upload_file(&context, &upload).await.map_err(rocket_error!())?;
+    let mut search = forms::ImageBrowseSearch::new();
+    search.preview = Some(&result.hash); //.clone();
+    Ok(basic_template!("widgets/imagebrowser", context, {
+        search: search
+    }))
+}
 
 // -------------------------
 // ------- LAUNCH ----------
@@ -347,8 +353,8 @@ fn rocket() -> _ {
             activity_get,
             search_get,
             about_get,
-            //test_request_get,
-            widget_imagebrowser_get
+            widget_imagebrowser_get,
+            widget_imagebrowser_post
         ])
         .mount("/static", FileServer::from("static/"))
         .manage(context::InitData {

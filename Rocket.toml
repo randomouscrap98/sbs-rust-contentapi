@@ -18,6 +18,9 @@ long_cookie_expire = 31536000 # 365 days in seconds
 port = 5010
 default_imagebrowser_count = 100
 
+# file limit is 10 MB, but server will resize as necessary
+limits = { file = 10000000 }
+
 [oboy]
 
 api_endpoint = "http://localhost:5000/api"

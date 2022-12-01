@@ -8,6 +8,7 @@
         We may need a css for the colors and classes, and another for layout structure
         with forms and stuff. Oh wait, there it is: base.css -->
     {{stylesheet "/base.css"}}
+    {{script "/base.js"}}
     <style>
         html {
             height: 100%;
@@ -38,6 +39,7 @@
             padding: 0.5em 0.75em;
             background-color: var(--color_divider);
             border-radius: 0.5em;
+            margin-bottom: 0.5em;
         }
         #browseform > * {
             margin: 0.25em 0;
@@ -48,31 +50,77 @@
             justify-content: center;
             margin: 0.5em;
         }
+        #browsepagenav a {
+            padding: 0.2em;
+            background: var(--bg_activeselect);
+            color: var(--tc_header);
+            border-radius: 0.3em;
+        }
         .imagelist {
             display: flex;
             flex-wrap: wrap;
             align-items: flex-end;
-            justify-content: space-evenly;
-        }
-        .imagelist > * {
-            margin: 0.2em;
+            justify-content: center;
+            /*justify-content: space-evenly;*/
         }
         .imagepreview {
             display: flex;
             flex-direction: column;
+            margin: 0.3em;
+        }
+        .imagepreview input {
+            filter: opacity(0.75);
+        }
+        .imagepreview.copyable img {
+            border-radius: 0.3em;
+        }
+        .imagepreview.copyable input{
+            cursor: pointer;
+            border: none;
+            background-color: var(--bg_header);
+            color: var(--tc_header);
+            filter: none;
+            border-radius: 0.3em;
+            margin: 0.2em 0;
+            padding: 0.2em 0.4em;
+        }
+        .imagepreview.copyable input.success {
+            background-color: var(--tc_success);
+        }
+        .imagepreview.copyable input:hover {
+            filter: brightness(1.2);
         }
         [data-size="1"] .imagepreview { width: 100px; }
         [data-size="1"] .imagepreview input { font-size: 0.6em; }
         [data-size="2"] .imagepreview { width: 200px; }
         [data-size="3"] .imagepreview { width: 300px; }
     </style>
+    <script>
+        window.onload = function() {
+            set_copy_on_click();
+        };
+        //Modify all the image list inputs so users just have to click to get the hash
+        function set_copy_on_click() {
+            if (navigator && navigator.clipboard) {
+                var inputs = [...document.querySelectorAll(".imagelist input")];
+                inputs.forEach((x) =>
+                {
+                    setup_input_copy(x);
+                    x.parentNode.className += " copyable";
+                });
+            }
+            else {
+                console.warn("Could not setup copy on click for image hashes; no window.navigator");
+            }
+        }
+    </script>
 </head>
 <body data-size="{{search.size}}">
     <!-- This is meant to go in an iframe, so it will use the entire space -->
     <h3>Upload file:</h3>
     <!-- Still technically a self post but we need to preserve the entirety of 
-        the -->
-    <form method="POST" action="{{http_root}}{{route_uri}}">
+        the... no wait, no we don't. we can reset the url! -->
+    <form {{selfpost}}> <!--method="POST" action="{{http_root}}{{route_uri}}">-->
         {{> partials/errorlist }}
         <input id="fileinput" type="file" name="file" class="largeinput" accept="image/*">
         <input type="submit" value="Upload">
@@ -82,13 +130,17 @@
     <div class="scrollable">
         <!-- Don't include an action so it just posts to the same url but with the form as params -->
         <form method="GET" id="browseform">
-            <label for="search-oldest" class="inline">
-                <span>Oldest first:</span>
-                <input id="search-oldest" type="checkbox" name="oldest" value="true" {{#if search.oldest}}checked=""{{/if}}>
+            <label for="search-preview" class="inline">
+                <span>Preview:</span>
+                <input id="search-preview" type="text" class="largeinput" name="preview" value="{{search.preview}}" placeholder="Comma separated hashes">
             </label>
             <label for="search-all" class="inline">
                 <span>Global search:</span>
                 <input id="search-all" type="checkbox" name="global" value="true" {{#if search.global}} checked=""{{/if}}>
+            </label>
+            <label for="search-oldest" class="inline">
+                <span>Oldest first:</span>
+                <input id="search-oldest" type="checkbox" name="oldest" value="true" {{#if search.oldest}}checked=""{{/if}}>
             </label>
             <label for="search-size" class="inline">
                 <span>Size:</span>
@@ -96,44 +148,52 @@
                     {{> partials/optionlist options=sizevalues}}
                 </select>
             </label>
-            <label for="search-preview" class="inline">
-                <span>Preview:</span>
-                <input id="search-preview" type="text" class="largeinput" name="preview" value="{{search.preview}}" placeholder="Comma separated hashes">
+            <label for="search-page" class="inline">
+                <span>Page:</span>
+                <input id="search-page" type="text" name="page" value="{{search.page}}" class="smallinput">
             </label>
             <input type="submit" value="Update search">
         </form>
-        {{#*inline "img_b"}}
-        {{#each images}}
-        <div class="imagepreview">
-            <img src="{{imagelink hash ../imagesize}}">
-            <input readonly="" value="{{hash}}" title="{{hash}}">
-        </div>
-        {{/each}}
-        {{/inline}}
-        {{#*inline "img_nav"}}
-        <div id="browsepagenav" class="smallseparate">
-            {{#if previouspagelink}}
-            <a href="{{http_root}}{{previouspagelink}}" class="plainlink">Previous</a>
-            {{/if}}
-            {{#if hasimages}}
-            <a href="{{http_root}}{{nextpagelink}}" class="plainlink">Next</a>
-            {{/if}}
-        </div>
-        {{/inline}}
-        {{#if haspreview}}
-        <b>Preview images: {{imagesize}}</b>
+{{! These are inline partials used in the next section for the repeated image stuff; no use 
+    muddying up the filesystem with partials when this is the only one that will use it}}
+{{#*inline "img_b"}}
+{{#each images}}
+<div class="imagepreview">
+    <img src="{{imagelink hash ../imagesize}}">
+    <input readonly="" value="{{hash}}" title="{{hash}}">
+</div>
+{{/each}}
+{{/inline}}
+{{#*inline "img_nav"}}
+<div id="browsepagenav" class="smallseparate">
+    {{#if previouspagelink}}
+    <a href="{{http_root}}{{previouspagelink}}" class="plainlink">Previous</a>
+    {{/if}}
+    {{#if hasimages}}
+    <a href="{{http_root}}{{nextpagelink}}" class="plainlink">Next</a>
+    {{/if}}
+</div>
+{{/inline}}
+        {{#if search.preview}}
+        <!--<h4>Preview images:</h4>-->
         <div class="imagelist">
+            {{#if haspreview}}
             {{> img_b images=previewimages}}
+            {{else}}
+            <p class="aside">No images returned for preview!</p>
+            {{/if}}
         </div>
         <hr>
         {{/if}}
-        {{> img_nav }}
+        <!--{{> img_nav }}-->
         <div class="imagelist">
+            {{#if hasimages}}
             {{> img_b }}
+            {{else}}
+            <p class="aside">No images!</p>
+            {{/if}}
         </div>
-        {{#if hasimages}}
         {{> img_nav }}
-        {{/if}}
     </div>
 </body>
 </html>

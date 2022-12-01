@@ -49,7 +49,7 @@ pub struct User
     pub id: u64,
     pub username: String,
     pub avatar: String,
-    pub deleted: bool,
+    //pub deleted: bool,
     #[serde(alias = "super")]
     pub admin: bool,
     pub createDate : DateTime<Utc>
@@ -60,7 +60,7 @@ pub struct Content //Remember, these are files, pages, threads etc. Lovely!
 {
     pub id: u64,
     pub name: String,
-    pub deleted: i8, //bool, but api returns 0
+    //pub deleted: i8, //bool, but api returns 0
     pub createUserId: u64,
     pub createDate : DateTime<Utc>,
     pub contentType : i8, // This is an enum, consider making values for this!
@@ -88,7 +88,7 @@ pub struct MinimalContent
 {
     pub id: u64,
     pub name: String,
-    pub deleted: i8, //bool, but the api returns 0
+    //pub deleted: i8, //bool, but the api returns 0
     pub createUserId: u64,
     pub createDate : DateTime<Utc>,
     pub contentType : i8, // This is an enum, consider making values for this!

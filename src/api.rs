@@ -2,51 +2,61 @@ use std::fmt;
 
 use rocket::serde::DeserializeOwned;
 use serde::Serialize;
+use tokio_util::codec::BytesCodec;
+use tokio_util::codec::FramedRead;
 use crate::context::Context;
 use crate::forms;
 use crate::api_data::*;
 
-//These are the specific types of errosr we'll care about from the api
+//These are the specific types of errors we'll care about from the api
 pub enum ApiError
 {
+    Precondition(String),   //Something BEFORE the api failed (some kind of setup?)
     Network(String),    //Is the API reachable?
     Usage(String),      //Did I (the programmer) use it correctly?
     User(Option<reqwest::StatusCode>, String) //Did the user submit proper data?
 }
 
-impl ApiError
-{
-    //This is the implementation of "display". Since I have multiple display formats,
-    //I wanted there to be consistent functions.
-    pub fn get_to_string(&self) -> String {
-        match self {
-            ApiError::Network(s) => format!("Network Error: {}", s),
-            ApiError::Usage(s) => format!("API Usage Error: {}", s),
-            ApiError::User(_, s) => format!("Request Error: {}", s),
-        }
-    }
-
-    //No default params makes me sad
-    pub fn get_just_string(&self) -> String {
-        match self {
-            ApiError::Network(s) => format!("{}", s),
-            ApiError::Usage(s) => format!("{}", s),
-            ApiError::User(_, s) => format!("{}", s),
-        }
-    }
-}
+//impl ApiError
+//{
+//    //This is the implementation of "display". Since I have multiple display formats,
+//    //I wanted there to be consistent functions.
+//    pub fn get_to_string(&self) -> String {
+//    }
+//
+//    ////No default params makes me sad
+//    //pub fn get_just_string(&self) -> String {
+//    //    match self {
+//    //        ApiError::Network(s) => format!("{}", s),
+//    //        ApiError::Usage(s) => format!("{}", s),
+//    //        ApiError::User(_, s) => format!("{}", s),
+//    //    }
+//    //}
+//}
 
 impl fmt::Display for ApiError 
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.get_to_string())
+        write!(f, "{}", match self {
+            ApiError::Precondition(s) => format!("Pre-API Preparation Error: {}", s),
+            ApiError::Network(s) => format!("Network Error: {}", s),
+            ApiError::Usage(s) => format!("API Usage Error: {}", s),
+            ApiError::User(_, s) => format!("Request Error: {}", s),
+        })
+        //write!(f, "{}", self.get_to_string())
     }
+}
+
+macro_rules! precondition_error {
+    () => {
+       |err| ApiError::Precondition(err.to_string()) //String::from(format!("Pre-API preparation failed: {}", err)))
+    };
 }
 
 //Generate the simple closure for map_error for when the API is unreachable
 macro_rules! network_error {
     () => {
-       |err| ApiError::Network(String::from(format!("Server unavailable: {}", err)))
+       |err| ApiError::Network(err.to_string()) //String::from(format!("Server unavailable: {}", err)))
     };
 }
 
@@ -109,20 +119,27 @@ pub async fn basic_get_request<T>(endpoint: &str, context: &Context) -> Result<T
     handle_response!(response, endpoint)
 }
 
-//Construct a basic POST request to the given endpoint (including ?params) using the given
-//request context. Automatically add bearer headers and all that
-pub async fn basic_post_request<U, T>(endpoint: &str, data: &U, context: &Context) -> Result<T, ApiError>
-    where U : Serialize, T: DeserializeOwned
-{
-    let mut request = context.client.post(context.config.get_endpoint(endpoint));
+// The basis for creating POST requests (since we have a couple types)
+fn create_post_request(endpoint: &str, context: &Context) -> reqwest::RequestBuilder {
+    let mut request = context.client.post(context.config.get_endpoint(endpoint))
+        .header("Accept", "application/json");
     
     if let Some(token) = &context.user_token {
         request = request.bearer_auth(token);
     }
 
+    request
+}
+
+//Construct a basic POST request to the given endpoint (including ?params) using the given
+//request context. Automatically add bearer headers and all that
+pub async fn basic_post_request<U, T>(endpoint: &str, data: &U, context: &Context) -> Result<T, ApiError>
+    where U : Serialize, T: DeserializeOwned
+{
+    let request = create_post_request(endpoint, context);
+
     //See above for info on why mapping request errors to string is fine
     let response = request
-        .header("Accept", "application/json")
         .header("Content-Type","application/json")
         .json(data)
         .send().await
@@ -130,6 +147,18 @@ pub async fn basic_post_request<U, T>(endpoint: &str, data: &U, context: &Contex
     
     handle_response!(response, endpoint)
 }
+
+pub async fn basic_upload_request<T: DeserializeOwned>(endpoint: &str, data: reqwest::multipart::Form, context: &Context) -> Result<T, ApiError>
+{
+    let request = create_post_request(endpoint, context);
+    let response = request
+        .multipart(data)
+        .send().await
+        .map_err(network_error!())?;
+
+    handle_response!(response, endpoint)
+}
+    //where T: DeserializeOwned
 
 pub async fn get_about(context: &Context) -> Result<About, ApiError>//RocketCustom<String>> 
 {
@@ -214,4 +243,28 @@ pub async fn post_registerconfirm<'a>(context: &Context, confirm: &forms::Regist
 pub async fn post_usersensitive<'a>(context: &Context, sensitive: &forms::UserSensitive<'_>) -> Result<bool, ApiError>
 {
     basic_post_request("/user/privatedata", sensitive, context).await
+}
+
+pub async fn create_basic_multipart_part(path: &std::path::Path) -> Result<reqwest::multipart::Part, ApiError>
+{
+    let file = tokio::fs::File::open(path).await.map_err(precondition_error!())?;
+    let stream = FramedRead::new(file, BytesCodec::new());
+    let file_body = reqwest::Body::wrap_stream(stream);
+
+    //I don't think the API uses ANY of the "filename" "mimetype" stuff
+    Ok(reqwest::multipart::Part::stream(file_body)) 
+}
+
+pub async fn upload_file<'a>(context: &Context, form: &forms::FileUpload<'_>) -> Result<Content, ApiError>
+{
+    let path = form.file.path().ok_or(ApiError::Precondition(String::from("Path could not be retrieved from TempFile")))?;
+    let form = reqwest::multipart::Form::new()
+        //.text("", "")
+        .part("file", create_basic_multipart_part(&path).await?);
+
+    //let some_file = reqwest::multipart::Part::stream(file_body)
+    //    .file_name("gitignore.txt")
+    //    .mime_str("text/plain")?;
+    
+    basic_upload_request("/file", form, context).await
 }
