@@ -56,8 +56,8 @@ macro_rules! network_error {
 //actually happen and indicate an error with the API, so I'm fine just outputting a general
 //error with additional info.
 macro_rules! parse_error {
-    ($endpoint:expr) => {
-       |err| ApiError::Usage(String::from(format!("Could not parse result/body from {}: response error: {}!", $endpoint, err)))
+    ($endpoint:expr, $status:expr) => {
+       |err| ApiError::Usage(String::from(format!("Could not parse result/body from {}({}): response error: {}!", $endpoint, $status, err)))
     };
 }
 
@@ -73,17 +73,24 @@ macro_rules! rocket_error {
 macro_rules! handle_response {
     ($response:ident, $endpoint:expr) => 
     {
-        match $response.error_for_status_ref()
+        //Another block so we can copy some values out of the response
         {
-            //The result from the API was fine, try to parse it as json
-            Ok(_) => {
-                $response.json::<T>().await.map_err(parse_error!($endpoint))
-            },
-            //The result from the API was 400, 500, etc. Try to parse the body as the error
-            Err(response_error) => {
-                match $response.json::<String>().await.map_err(parse_error!($endpoint)) {
-                    Ok(real_error) => Err(ApiError::User(response_error.status(), real_error)),
-                    Err(p_error) => Err(p_error)
+            let status = $response.status();
+            match $response.error_for_status_ref()
+            {
+                //The result from the API was fine, try to parse it as json
+                Ok(_) => {
+                    //println!("Result from API was ok");
+                    $response.json::<T>().await.map_err(parse_error!($endpoint, status))
+                },
+                //The result from the API was 400, 500, etc. Try to parse the body as the error
+                Err(response_error) => {
+                    //println!("Result from API was NOT OK: {:?}", response_error);
+                    //match $response.json::<String>().await.map_err(parse_error!($endpoint)) {
+                    match $response.text().await.map_err(parse_error!($endpoint, status)) {
+                        Ok(real_error) => Err(ApiError::User(response_error.status(), real_error)),
+                        Err(p_error) => Err(p_error)
+                    }
                 }
             }
         }

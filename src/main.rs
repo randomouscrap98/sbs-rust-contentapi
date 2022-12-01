@@ -288,6 +288,7 @@ async fn widget_imagebrowser_get(context: context::Context, search: forms::Image
 async fn test_request_get(context: context::Context) -> String {
     let mut request = api_data::FullRequest::new();
     request.requests.push(build_request!(api_data::RequestType::user));
+    println!("Sending: {:?}", &request);
     match api::post_request(&context, &request).await {
         Ok(result) => {
             format!("Omg the result is:\n{:?}", result)

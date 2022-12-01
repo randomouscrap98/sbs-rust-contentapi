@@ -44,10 +44,10 @@ pub struct QueryImage
 pub struct RequestResult
 {
     pub search: FullRequest,
-    pub databaseTimes: HashMap<String, i64>,
+    pub databaseTimes: HashMap<String, f64>,
     pub objects: HashMap<String, serde_json::Value>,
-    pub totalTime: i64,
-    pub nonDbTime: i64,
+    pub totalTime: f64,
+    pub nonDbTime: f64,
     pub requestUser: i64
 }
 
@@ -81,6 +81,7 @@ pub enum RequestType
     message_engagement
 }
 
+#[serde_with::skip_serializing_none] //MUST COME BEFORE
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Request
 {
