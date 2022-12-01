@@ -58,7 +58,7 @@ pub struct Content //Remember, these are files, pages, threads etc. Lovely!
 {
     pub id: u64,
     pub name: String,
-    pub deleted: bool,
+    pub deleted: i8, //bool, but api returns 0
     pub createUserId: u64,
     pub createDate : DateTime<Utc>,
     pub contentType : i8, // This is an enum, consider making values for this!
@@ -86,7 +86,7 @@ pub struct MinimalContent
 {
     pub id: u64,
     pub name: String,
-    pub deleted: bool,
+    pub deleted: i8, //bool, but the api returns 0
     pub createUserId: u64,
     pub createDate : DateTime<Utc>,
     pub contentType : i8, // This is an enum, consider making values for this!
@@ -129,7 +129,7 @@ pub struct RequestResult
 {
     pub search: FullRequest,
     pub databaseTimes: HashMap<String, f64>,
-    pub objects: HashMap<String, serde_json::Value>,
+    pub objects: HashMap<String, Vec<serde_json::Value>>,
     pub totalTime: f64,
     pub nonDbTime: f64,
     pub requestUser: i64

@@ -17,7 +17,7 @@ pub async fn imagebrowser_request(context: &Context, search: &ImageBrowseSearch<
     if let Some(user) = get_user_safe(context).await {
         add_value!(request, "userId", user.id);
         if !search.global {
-            query.push_str(" and createUserId = @userid");
+            query.push_str(" and createUserId = @userId");
         }
     }
 
@@ -34,11 +34,13 @@ pub async fn imagebrowser_request(context: &Context, search: &ImageBrowseSearch<
     //But what if we were passed preview?
     if let Some(preview) = search.preview {
         let hashes: Vec<String> = preview.split(",").map(|h| String::from(h.trim())).collect();
-        request.values.insert(String::from("preview"), hashes.into());
-        let mut preview_request = minimal_content!(format!("{} and hash in @preview", base_query));
+        add_value!(request, "preview_hashes", hashes);
+        let mut preview_request = minimal_content!(format!("{} and hash in @preview_hashes", base_query));
         preview_request.name = Some(String::from("preview"));
         request.requests.push(preview_request);
     }
+
+    println!("Sending: {:?}", &request);
 
     post_request(context, &request).await
 }

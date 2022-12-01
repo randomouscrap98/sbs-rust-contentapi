@@ -59,8 +59,8 @@ generate_helper!{imagelink_helper, h, out, ctx, {
                 size: get_param!(h, 1, as_i64),
                 crop: get_param!(h, 2, as_bool)
             };
-            println!("Query struct: {:?}", query);
-            println!("H params: {:?}", h.params());
+            //println!("Query struct: {:?}", query);
+            //println!("H params: {:?}", h.params());
             match serde_qs::to_string(&query) {
                 Ok(querystring) => {
                     let link = format!("{}/{}?{}", fileroot, hash, querystring);

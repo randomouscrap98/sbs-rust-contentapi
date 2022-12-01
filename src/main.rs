@@ -285,6 +285,7 @@ async fn widget_imagebrowser_get(context: context::Context, search: forms::Image
 
     Ok(basic_template!("widgets/imagebrowser", context, {
         search : &search,
+        images : conversion::cast_result::<api_data::MinimalContent>(&result, "content").map_err(rocket_error!())?,
         sizevalues : vec![
             hbs_custom::SelectValue::new(1, "1x", search.size), 
             hbs_custom::SelectValue::new(2, "2x", search.size),

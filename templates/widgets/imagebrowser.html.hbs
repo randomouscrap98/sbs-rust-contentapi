@@ -9,9 +9,13 @@
         with forms and stuff. Oh wait, there it is: base.css -->
     {{stylesheet "/base.css"}}
     <style>
+        html {
+            height: 100%;
+        }
         /* Since style is JUST for this widget, just include it directly */
         body {
             width: 100%;
+            height: 100%;
             display: flex;
             flex-direction: column;
             margin: 0;
@@ -37,6 +41,12 @@
         }
         #browseform > * {
             margin: 0.25em 0;
+        }
+        #imagebrowse {
+            margin-top: 0.5em;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
         }
     </style>
 </head>
@@ -77,6 +87,7 @@
         </form>
         <div id="imagebrowse">
             {{#each images}}
+            <img src="{{imagelink hash 100}}">
             {{/each}}
         </div>
     </div>
