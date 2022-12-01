@@ -24,8 +24,8 @@ pub async fn imagebrowser_request(context: &Context, search: &ImageBrowseSearch<
     let mut main_request = minimal_content!(query);
     main_request.limit = context.config.default_imagebrowser_count.into();
 
-    //Invert order if we want oldest first
-    if search.oldest {
+    //Oldest means default ordering, so 'not' oldest is actually inverted order
+    if !search.oldest {
         main_request.order = Some(String::from("id_desc"));
     }
 

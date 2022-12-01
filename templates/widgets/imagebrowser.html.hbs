@@ -42,11 +42,17 @@
         #browseform > * {
             margin: 0.25em 0;
         }
-        #imagebrowse {
-            margin-top: 0.5em;
+        .imagelist {
             display: flex;
             flex-wrap: wrap;
-            align-items: center;
+            align-items: flex-end;
+        }
+        .imagelist > * {
+            margin: 0.2em;
+        }
+        .imagepreview {
+            display: flex;
+            flex-direction: column;
         }
     </style>
 </head>
@@ -85,10 +91,23 @@
             </label>
             <input type="submit" value="Update search">
         </form>
-        <div id="imagebrowse">
-            {{#each images}}
-            <img src="{{imagelink hash 100}}">
-            {{/each}}
+        {{#*inline "img_b"}}
+        {{#each images}}
+        <div class="imagepreview">
+            <img src="{{imagelink hash ../imagesize}}">
+            <input readonly="" value="{{hash}}">
+        </div>
+        {{/each}}
+        {{/inline}}
+        {{#if haspreview}}
+        <b>Preview images: {{imagesize}}</b>
+        <div class="imagelist">
+            {{> img_b images=previewimages}}
+        </div>
+        <hr>
+        {{/if}}
+        <div class="imagelist">
+            {{> img_b }}
         </div>
     </div>
 </body>
