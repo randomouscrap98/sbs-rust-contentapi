@@ -55,19 +55,23 @@
     <div class="scrollable">
         <!-- Don't include an action so it just posts to the same url but with the form as params -->
         <form method="GET" id="browseform" class="mediumseparate">
-            <label for="search-oldest" class="inline"><span>Oldest first:</span><input id="search-oldest" type="checkbox" value="{{search.oldest}}"></label>
-            <label for="search-all" class="inline"><span>Global search:</span><input id="search-all" type="checkbox" value="{{search.global}}"></label>
+            <label for="search-oldest" class="inline">
+                <span>Oldest first:</span>
+                <input id="search-oldest" type="checkbox" name="oldest" value="true" {{#if search.oldest}}checked=""{{/if}}>
+            </label>
+            <label for="search-all" class="inline">
+                <span>Global search:</span>
+                <input id="search-all" type="checkbox" name="global" value="true" {{#if search.global}} checked=""{{/if}}>
+            </label>
             <label for="search-size" class="inline">
                 <span>Size:</span>
-                <select id="search-size" value="{{search.size}}">
-                    <option value="1">1x</option>
-                    <option value="2">2x</option>
-                    <option value="3">3x</option>
+                <select id="search-size" value="{{search.size}}" name="size">
+                    {{> partials/optionlist options=sizevalues}}
                 </select>
             </label>
             <label for="search-preview" class="inline">
                 <span>Preview:</span>
-                <input id="search-preview" type="text" class="largeinput" value="{{search.global}}" placeholder="Comma separated hashes">
+                <input id="search-preview" type="text" class="largeinput" name="preview" value="{{search.preview}}" placeholder="Comma separated hashes">
             </label>
             <input type="submit" value="Update search">
         </form>

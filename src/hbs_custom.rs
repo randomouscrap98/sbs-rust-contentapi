@@ -1,4 +1,5 @@
 use rocket_dyn_templates::handlebars::{self, Handlebars};
+use serde::Serialize;
 use crate::api_data;
 use serde_qs;
 
@@ -130,6 +131,23 @@ generate_helper!{selfpost_helper, h, out, ctx, {
         }}
     }}
 }}
+
+//A stupid extension to help display of form select, it's like impossible to 
+//set the selected option, so this will go along with the partial
+#[derive(Serialize, FromForm, Debug)]
+pub struct SelectValue<T>
+{
+    pub value: T,
+    pub text: Option<String>,
+    pub selected: bool
+}
+
+impl<T:PartialEq+Clone> SelectValue<T> {
+    pub fn new(value: T, text: &str, selected_value: T) -> Self {
+        SelectValue { value: value.clone(), text: Some(String::from(text)), selected: selected_value == value }
+    }
+}
+
 
 // Where we register all the helpers
 pub fn customize(hbs: &mut Handlebars) {

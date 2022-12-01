@@ -1,13 +1,45 @@
 {{#*inline "page"}}
+<!-- Is anyone going to mind styles in the body? I sure hope not... -->
+<style>
+#userhomeinfo {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 0.5em 0.2em;
+}
+#userhomeinfo > #infoblock {
+    margin-right: 1em;
+}
+#userhomeinfo > img {
+    margin-left: auto;
+    width: 8em;
+    border-radius: 0.9em;
+}
+/* This isn't ULTRA MINIMAL size (that's 30em), but enough to not have everything on one line */
+@media screen and (max-width: 40em)
+{
+    #userhomeinfo > img {
+        margin-right: auto;
+    }
+    #userhomeinfo {
+        padding: 0;
+    }
+}
+</style>
 <section>
     {{#if user}}
     <h1>{{user.username}}</h1>
-    <table>
-        <tr><td><b>Email:</b></td><td class="spoilertext">{{userprivate.email}}</td></tr>
-        <tr><td><b>User ID:</b></td><td>{{user.id}}</td></tr>
-        <tr><td><b>Joined:</b></td><td><time>{{user.createDate}}</time></td></tr>
-    </table>
-    <p><a href="{{http_root}}/logout">Logout</a></p>
+    <div id="userhomeinfo">
+        <div id="infoblock">
+            <table>
+                <tr><td><b>Email:</b></td><td class="spoilertext">{{userprivate.email}}</td></tr>
+                <tr><td><b>User ID:</b></td><td>{{user.id}}</td></tr>
+                <tr><td><b>Joined:</b></td><td><time>{{user.createDate}}</time></td></tr>
+            </table>
+            <p><a href="{{http_root}}/logout">Logout</a></p>
+        </div>
+        <img src="{{imagelink user.avatar 300 true}}">
+    </div>
     <hr>
     <!--<h3>Browse images:</h3>-->
     <iframe src="{{http_root}}/widget/imagebrowser" class="imagebrowser"></iframe>

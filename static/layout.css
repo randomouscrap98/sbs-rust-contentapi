@@ -136,7 +136,17 @@ form input, form textbox {
         font-size: 0.8em;
     }
 
-    main {
-        padding: 0.8em;
+    main { 
+        padding: 0;
+    }
+
+    /* Remove decorations, turn into simple page */
+    section {
+        padding: 1em;
+        margin: 0;
+        border-right: none;
+        border-left: none;
+        border-top: none;
+        border-radius: 0;
     }
  }
