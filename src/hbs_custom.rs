@@ -5,6 +5,8 @@ use serde_qs;
 //I think I'm doing something wrong? I don't like that I need all these
 static FILERAWKEY: &'static str = "api_fileraw";
 static HTTPROOTKEY: &'static str = "http_root";
+static HTTPSTATICKEY: &'static str = "http_static";
+static BOOTTIMEKEY: &'static str = "boot_time";
 static ROUTEKEY: &'static str = "route_path";
 
 //The helper signature is just TOO DAMN COMPLICATED (I know you need those
@@ -90,10 +92,39 @@ generate_helper!{headerlink_helper, h, out, ctx, {
     }
 }}
 
-generate_helper!{selfpost_helper, _h, out, ctx, {
+//Generate the entire style element for the given path (single parameter, auto cache busting)
+generate_helper!{stylesheet_helper, h, out, ctx, {
+    //Absolutely must have the path to the css file (relative to static!)
+    if let Some(path) = get_param!(h, 0, as_str) {
+        get_required_str! { (HTTPSTATICKEY, httpstatic, ctx) {
+            get_required_str! { (BOOTTIMEKEY, boot_time, ctx) {
+                out.write(&format!("<link rel=\"stylesheet\" href=\"{}{}?{}\">", httpstatic, path, boot_time))?;
+            }}
+        }}
+    }
+}}
+
+//Same as stylesheet helper except output different format
+generate_helper!{script_helper, h, out, ctx, {
+    //Absolutely must have the path to the css file (relative to static!)
+    if let Some(path) = get_param!(h, 0, as_str) {
+        get_required_str! { (HTTPSTATICKEY, httpstatic, ctx) {
+            get_required_str! { (BOOTTIMEKEY, boot_time, ctx) {
+                out.write(&format!("<script src=\"{}{}?{}\"></script>", httpstatic, path, boot_time))?;
+            }}
+        }}
+    }
+}}
+
+generate_helper!{selfpost_helper, h, out, ctx, {
     get_required_str! { (HTTPROOTKEY, httproot, ctx) {
         get_required_str! { (ROUTEKEY, route, ctx) {
-            out.write(&format!("method=\"POST\" action=\"{httproot}{route}\""))?;
+            out.write(&format!("method=\"POST\" action=\"{httproot}{route}"))?;
+            if let Some(classify) = get_param!(h, 0, as_str) {
+                out.write("?")?;
+                out.write(classify)?;
+            }
+            out.write("\"")?;
         }}
     }}
 }}
@@ -103,4 +134,6 @@ pub fn customize(hbs: &mut Handlebars) {
     hbs.register_helper("imagelink", Box::new(imagelink_helper));
     hbs.register_helper("headerlink", Box::new(headerlink_helper));
     hbs.register_helper("selfpost", Box::new(selfpost_helper));
+    hbs.register_helper("stylesheet", Box::new(stylesheet_helper));
+    hbs.register_helper("script", Box::new(script_helper));
 }

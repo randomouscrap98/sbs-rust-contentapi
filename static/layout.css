@@ -1,19 +1,4 @@
-/* The main layout file */
-
-/* all the css variables to control common document constants */
-:root {
-    --bg_header: #444;
-    --tc_header: #EEE;
-    --bg_section: white;
-    --color_border: lightgray;
-    --color_divider: gainsboro;
-    --bg_activeselect: teal;
-    --tc_activeselect: white;
-    --tc_aside: gray;
-    --tc_error: darkred;
-    --bg_error: rgba(255,0,0,0.05);
-    --tc_success: green;
-}
+/* The main layout file. This EXPECTS base.css! */
 
 /* ----------------------------- *
  *     BODY / LAYOUT STUFF       *
@@ -80,53 +65,6 @@ hr {
     border: none;
     border-top: 1px solid var(--color_divider);
     margin: 1.5em 0;
-}
-
-/* ----------------------------- *
- *     BASIC / GENERIC STUFF     *
- * ----------------------------- */
-
-.error {
-    color: var(--tc_error);
-}
-
-.success {
-    color: var(--tc_success);
-}
-
-.plainlink {
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.controlbar {
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    box-sizing: border-box;
-    padding: 0.25em;
-    width: 100%;
-}
-
-.smallseparate > * {
-    margin-right: 0.5em;
-}
-
-.aside {
-    font-size: 0.8em;
-    color: var(--tc_aside);
-}
-
-.largeinput {
-    width: 30em;
-    max-width: 100%;
-    box-sizing: border-box;
-}
-
-.spoilertext {
-    background: var(--bg_header);
-    color: var(--bg_header);
-    border-radius: 0.2em;
 }
 
 /* ----------------------------- *
@@ -198,13 +136,6 @@ input[type="checkbox"] {
     width: 1.1em;
     height: 1.1em;
     box-sizing: border-box;
-}
-
-.errorlist .error {
-    margin-bottom: 0.5em;
-    padding: 0.2em 0.4em;
-    border-radius: 0.2em;
-    background-color: var(--bg_error);
 }
 
 

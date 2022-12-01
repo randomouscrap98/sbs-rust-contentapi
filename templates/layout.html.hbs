@@ -1,15 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="rating" content="general">
-    <meta name="viewport" content="width=device-width">
+    {{> basicmeta }}
     <!-- Is this modifiable? -->
     <title>SmileBASIC Source</title>
     <meta name="description" content="A community for sharing programs and getting advice on SmileBASIC applications on the Nintendo DSi, 3DS, and Switch">
-    <link rel="icon" type="image/svg+xml" sizes="any" href="{{http_resources}}/favicon.svg">
-    <link rel="stylesheet" href="{{http_static}}/layout.css">
-    <script src="{{http_static}}/layout.js"></script>
+    {{stylesheet "/base.css"}}
+    {{stylesheet "/layout.css"}}
+    {{script "/layout.js"}}
     <style>
         body {
             background-repeat: repeat;

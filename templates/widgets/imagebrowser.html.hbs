@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {{> basicmeta }}
+    <title>SmileBASIC Source Image Browser</title>
+    <meta name="description" content="Simple image browser widget">
+    <!-- Keep in mind how many places may want the default colors, basic classes, etc. 
+        We may need a css for the colors and classes, and another for layout structure
+        with forms and stuff. Oh wait, there it is: base.css -->
+    {{stylesheet "/base.css"}}
+    <style>
+        /* Since style is JUST for this widget, just include it directly */
+    </style>
+</head>
+<body>
+    {{>partials/header}}
+    <main>
+    {{>page}}
+    </main>
+    {{>partials/footer}}
+</body>
+</html>

@@ -18,6 +18,7 @@ mod forms;
 mod hbs_custom;
 mod conversion;
 
+
 macro_rules! my_redirect {
     ($config:expr, $location:expr) => {
         Redirect::to(format!("{}{}", $config.http_root, $location))
@@ -31,14 +32,16 @@ macro_rules! basic_template{
         $($field_name:ident : $field_value:expr),*$(,)*
     }) => {
         Template::render($template, context! {
+            //How many of these clones are necessary? Many of them are already cloned values...
             http_root : $context.config.http_root.clone(),
             http_static : format!("{}/static", &$context.config.http_root),
             http_resources : format!("{}/static/resources", &$context.config.http_root),
-            client_ip : $context.client_ip,
             api_fileraw : $context.config.api_fileraw.clone(),
+            route_path: $context.route_path.clone(),
+            boot_time: $context.init.boot_time.clone(),
+            client_ip : $context.client_ip,
             user: api::get_user_safe(&$context).await,
             api_about: api::get_about_rocket(&$context).await?,
-            route_path: $context.route_path.clone(),
             $($field_name: $field_value,)*
         })
     };
@@ -181,19 +184,18 @@ async fn login_post(context: context::Context, login: Form<forms::Login<'_>>, ja
     }
 }
 
-#[post("/login/recover", data = "<recover>")]
+#[post("/login?recover", data = "<recover>")]
 async fn loginrecover_post(context: context::Context, recover: Form<forms::LoginRecover<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
     let mut errors = Vec::new();
     handle_email!(api::post_email_recover(&context, recover.email).await, errors);
-    //let resendsuccess = errors.len() == 0;
     Ok(MultiResponse::Template(basic_template!("login", context, {
-        emailresult : String::from(recover.email), //if resendsuccess { Some(String::from(recover.email)) } else { None },
-        recoversuccess : errors.len() == 0, //resendsuccess,
+        emailresult : String::from(recover.email), 
+        recoversuccess : errors.len() == 0, 
         recovererrors: errors
     })))
 }
 
-#[post("/user/sensitive", data = "<sensitive>")]
+#[post("/userhome?sensitive", data = "<sensitive>")]
 async fn usersensitive_post(context: context::Context, sensitive: Form<forms::UserSensitive<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
     let mut errors = Vec::new();
     handle_error!(api::post_usersensitive(&context, &sensitive).await, errors);
@@ -244,12 +246,12 @@ async fn registerconfirm_post(context: context::Context, confirm: Form<forms::Re
     }
 }
 
-#[post("/register/resend", data = "<resend>")]
-async fn registerresend_post(context: context::Context, resend: Form<forms::RegisterResend<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
+#[post("/register/confirm?resend", data = "<resendform>")]
+async fn registerresend_post(context: context::Context, resendform: Form<forms::RegisterResend<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
     let mut errors = Vec::new();
-    handle_email!(api::post_email_confirm(&context, resend.email).await, errors);
+    handle_email!(api::post_email_confirm(&context, resendform.email).await, errors);
     Ok(MultiResponse::Template(registerconfirm_base!(context, {
-        emailresult : String::from(resend.email), 
+        emailresult : String::from(resendform.email), 
         resendsuccess: errors.len() == 0, 
         resenderrors: errors
     })))
@@ -288,6 +290,9 @@ fn rocket() -> _ {
             about_get
         ])
         .mount("/static", FileServer::from("static/"))
+        .manage(context::InitData {
+            boot_time : chrono::offset::Utc::now()
+        })
         .attach(AdHoc::config::<config::Config>())
         .attach(Template::custom(|engines| {
             hbs_custom::customize(&mut engines.handlebars);

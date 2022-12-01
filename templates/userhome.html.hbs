@@ -11,7 +11,7 @@
     <hr>
     <h3>Update sensitive info</h3>
     <p>Only set the fields you want to change, except 'current password', which is required</p>
-    <form method="POST" autocomplete="off" action="{{http_root}}/user/sensitive">
+    <form {{selfpost "sensitive"}} autocomplete="off" >
         {{> partials/errorlist errors=sensitiveerrors}}
         <!--<label for="sensitive_username">New Username:</label>
         <input id="sensitve_username" type="text" autocomplete="new-password" name="username" value="">-->

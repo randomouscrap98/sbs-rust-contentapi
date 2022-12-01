@@ -1,26 +1,24 @@
 {{#*inline "page"}}
 <section>
     <h1>Login</h1>
-    <!-- Post to self -->
-    <form method="POST" action="{{http_root}}/login">
+    <form {{selfpost}}> 
         {{> partials/errorlist }}
         <label for="login_username">Username:</label>
-        <input id="login_username" type="text" name="username">
+        <input id="login_username" type="text" required="" name="username">
         <label for="login_password">Password:</label>
-        <input id="login_password" type="password" name="password">
+        <input id="login_password" type="password" required="" name="password">
         <label class="inline" for="login_extended"><span>Very long session:</span><input id="login_extended" type="checkbox" name="long_session"></label>
         <input type="submit" value="Login">
     </form>
     <hr>
     <h2>Password expired / forgotten?</h2>
-    <!-- CAN'T post to self: we could be rendering from another context (and the endpoint isn't self anyway) -->
-    <form method="POST" action="{{http_root}}/login/recover">
+    <form {{selfpost "recover"}}> 
         {{> partials/errorlist errors=recovererrors}}
         {{#if recoversuccess}}
         <p class="success">Email sent!</p>
         {{/if}}
         <label for="recover_email">Email:</label>
-        <input id="recover_email" type="text" name="email" value="{{emailresult}}">
+        <input id="recover_email" type="text" name="email" required="" value="{{emailresult}}">
         <p class="aside">Sends an email with a temporary password to login with, use above</p>
         <input type="submit" value="Send recovery email">
     </form>

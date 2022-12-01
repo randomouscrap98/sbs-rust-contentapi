@@ -13,8 +13,15 @@ pub struct Context
     pub client: Client,
     pub user_token: Option<String>,
     pub client_ip: Option<IpAddr>,
-    pub route_path: String
+    pub route_path: String,
+    pub init: InitData
 }
+
+#[derive(Clone)]
+pub struct InitData {
+    pub boot_time: chrono::DateTime<chrono::Utc>
+}
+
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Context {
@@ -28,17 +35,19 @@ impl<'r> FromRequest<'r> for Context {
 
         //I honestly don't know how to do this, I'm going crazy
         if let Some(config) = request.rocket().state::<Config>() {
-            Outcome::Success(Context {
-                config: config.clone(),
-                client: reqwest::Client::new(),
-                user_token: jar.get(&config.token_cookie_key).and_then(|cookie| Some(String::from(cookie.value()))),
-                route_path: String::from(path.as_str()),
-                client_ip,
-            })
+            if let Some(init_data) = request.rocket().state::<InitData>() {
+                return Outcome::Success(Context {
+                    config: config.clone(), //These clones aren't necessary
+                    init: init_data.clone(),
+                    client: reqwest::Client::new(),
+                    user_token: jar.get(&config.token_cookie_key).and_then(|cookie| Some(String::from(cookie.value()))),
+                    route_path: String::from(path.as_str()),
+                    client_ip,
+                });
+            }
         }
-        else {
-            //IDK, the example had it
-            Outcome::Forward(())
-        }
+
+        //IDK, the example had it
+        Outcome::Forward(())
     }
 }
