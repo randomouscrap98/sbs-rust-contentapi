@@ -231,6 +231,24 @@ async fn usersensitive_post(context: context::Context, sensitive: Form<forms::Us
     Ok(MultiResponse::Template(userhome_base!(context, {sensitiveerrors:errors})))
 }
 
+#[post("/userhome", data= "<update>")]
+async fn userhome_update_post(context: context::Context, update: Form<forms::UserUpdate<'_>>) -> Result<Template, RocketCustom<String>>
+{
+    let mut errors = Vec::new();
+    //This is ANOTHER request to user but it's ok, it's only on post...
+    if let Some(mut current_user) = api::get_user_safe(&context).await {
+        current_user.username = String::from(update.username);
+        current_user.avatar = String::from(update.avatar);
+        if let Err(error) = api::post_userupdate(&context, &current_user).await { //We only care about the error
+            errors.push(error.to_string());
+        }
+    }
+    else {
+        errors.push(String::from("Couldn't pull user data, are you still logged in?"));
+    }
+    Ok(userhome_base!(context, {updateerrors:errors}))
+}
+
 
 #[post("/register", data = "<registration>")]
 async fn register_post(context: context::Context, registration: Form<forms::Register<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
@@ -292,6 +310,7 @@ fn logout_get(config: &State<config::Config>, jar: &CookieJar<'_>) -> Redirect {
     jar.remove(Cookie::named(config.token_cookie_key.clone()));
     my_redirect!(config, "/")
 }
+
 
 async fn widget_imagebrowser_base(context: &context::Context, search: &ImageBrowseSearch<'_>, errors: Option<Vec::<String>>) -> Result<Template, RocketCustom<String>>
 {
@@ -358,13 +377,14 @@ fn rocket() -> _ {
             login_post, 
             loginrecover_post,
             usersensitive_post,
+            userhome_get, 
+            userhome_update_post,
             logout_get, 
             register_get,
             register_post,
             registerconfirm_get,
             registerconfirm_post,
             registerresend_post,
-            userhome_get, 
             forum_get,
             activity_get,
             search_get,

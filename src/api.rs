@@ -214,6 +214,11 @@ pub async fn post_usersensitive<'a>(context: &Context, sensitive: &forms::UserSe
     basic_post_request("/user/privatedata", sensitive, context).await
 }
 
+pub async fn post_userupdate<'a>(context: &Context, user: &User) -> Result<User, ApiError>
+{
+    basic_post_request("/write/user", user, context).await
+}
+
 pub async fn upload_file<'a>(context: &Context, form: &mut forms::FileUpload<'_>) -> Result<Content, ApiError>
 {
     println!("Received form: {:?}, length: {}", form, form.file.len());

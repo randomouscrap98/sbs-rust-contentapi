@@ -24,6 +24,12 @@ impl ContentType {
     pub const SYSTEM: i8 = 5i8;
 }
 
+pub enum UserType { }
+
+#[allow(dead_code)]
+impl UserType {
+    pub const USER: i8 = 1i8;
+}
 
 // -----------------------------
 // *     RESULTS FROM API      *
@@ -47,8 +53,10 @@ pub struct About
 pub struct User
 {
     pub id: u64,
+    pub r#type: i8,
     pub username: String,
     pub avatar: String,
+    pub special: Option<String>,
     //pub deleted: bool,
     #[serde(alias = "super")]
     pub admin: bool,

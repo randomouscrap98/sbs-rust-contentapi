@@ -70,3 +70,13 @@ pub struct FileUpload<'a>
 {
     pub file: TempFile<'a>
 }
+
+#[derive(FromForm, Debug)]
+pub struct UserUpdate<'a>
+{
+    pub username: &'a str,
+    pub avatar: &'a str,
+    //pub special: &'a str,
+    //#[field(default = false)]
+    //pub admin: bool
+}
