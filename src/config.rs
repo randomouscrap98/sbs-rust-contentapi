@@ -7,6 +7,7 @@ pub struct Config
     pub api_endpoint: String,
     pub http_root: String,
     pub api_fileraw : String,
+    //pub api_fileupload : String,
     pub token_cookie_key: String,
     pub default_cookie_expire: i32,
     pub long_cookie_expire: i32,

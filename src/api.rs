@@ -1,5 +1,6 @@
 use std::fmt;
 
+use rocket::futures::TryFutureExt;
 use rocket::serde::DeserializeOwned;
 use serde::Serialize;
 use tokio_util::codec::BytesCodec;
@@ -17,23 +18,6 @@ pub enum ApiError
     User(Option<reqwest::StatusCode>, String) //Did the user submit proper data?
 }
 
-//impl ApiError
-//{
-//    //This is the implementation of "display". Since I have multiple display formats,
-//    //I wanted there to be consistent functions.
-//    pub fn get_to_string(&self) -> String {
-//    }
-//
-//    ////No default params makes me sad
-//    //pub fn get_just_string(&self) -> String {
-//    //    match self {
-//    //        ApiError::Network(s) => format!("{}", s),
-//    //        ApiError::Usage(s) => format!("{}", s),
-//    //        ApiError::User(_, s) => format!("{}", s),
-//    //    }
-//    //}
-//}
-
 impl fmt::Display for ApiError 
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -43,7 +27,6 @@ impl fmt::Display for ApiError
             ApiError::Usage(s) => format!("API Usage Error: {}", s),
             ApiError::User(_, s) => format!("Request Error: {}", s),
         })
-        //write!(f, "{}", self.get_to_string())
     }
 }
 
@@ -148,16 +131,17 @@ pub async fn basic_post_request<U, T>(endpoint: &str, data: &U, context: &Contex
     handle_response!(response, endpoint)
 }
 
-pub async fn basic_upload_request<T: DeserializeOwned>(endpoint: &str, data: reqwest::multipart::Form, context: &Context) -> Result<T, ApiError>
-{
-    let request = create_post_request(endpoint, context);
-    let response = request
-        .multipart(data)
-        .send().await
-        .map_err(network_error!())?;
-
-    handle_response!(response, endpoint)
-}
+//pub async fn basic_upload_request<T: DeserializeOwned>(endpoint: &str, data: reqwest::multipart::Form, context: &Context) -> Result<T, ApiError>
+//{
+//    println!("Going to upload multipart form: {:?}", &data);
+//    let request = create_post_request(endpoint, context);
+//    let response = request
+//        .multipart(data)
+//        .send().await
+//        .map_err(network_error!())?;
+//
+//    handle_response!(response, endpoint)
+//}
     //where T: DeserializeOwned
 
 pub async fn get_about(context: &Context) -> Result<About, ApiError>//RocketCustom<String>> 
@@ -245,26 +229,45 @@ pub async fn post_usersensitive<'a>(context: &Context, sensitive: &forms::UserSe
     basic_post_request("/user/privatedata", sensitive, context).await
 }
 
-pub async fn create_basic_multipart_part(path: &std::path::Path) -> Result<reqwest::multipart::Part, ApiError>
-{
-    let file = tokio::fs::File::open(path).await.map_err(precondition_error!())?;
-    let stream = FramedRead::new(file, BytesCodec::new());
-    let file_body = reqwest::Body::wrap_stream(stream);
-
-    //I don't think the API uses ANY of the "filename" "mimetype" stuff
-    Ok(reqwest::multipart::Part::stream(file_body)) 
-}
-
-pub async fn upload_file<'a>(context: &Context, form: &forms::FileUpload<'_>) -> Result<Content, ApiError>
-{
-    let path = form.file.path().ok_or(ApiError::Precondition(String::from("Path could not be retrieved from TempFile")))?;
-    let form = reqwest::multipart::Form::new()
-        //.text("", "")
-        .part("file", create_basic_multipart_part(&path).await?);
-
-    //let some_file = reqwest::multipart::Part::stream(file_body)
-    //    .file_name("gitignore.txt")
-    //    .mime_str("text/plain")?;
-    
-    basic_upload_request("/file", form, context).await
-}
+//pub async fn create_basic_multipart_part(path: &std::path::Path) -> Result<reqwest::multipart::Part, ApiError>
+//{
+//    let file = tokio::fs::File::open(path).await.map_err(precondition_error!())?;
+//    let stream = FramedRead::new(file, BytesCodec::new());
+//    let file_body = reqwest::Body::wrap_stream(stream);
+//
+//    //I don't think the API uses ANY of the "filename" "mimetype" stuff
+//    Ok(reqwest::multipart::Part::stream(file_body)) 
+//}
+//
+//pub async fn upload_file<'a>(context: &Context, form: &mut forms::FileUpload<'_>) -> Result<Content, ApiError>
+//{
+//    println!("Received form: {:?}", form);
+//    let named_file = tempfile::NamedTempFile::new().map_err(precondition_error!())?;
+//    let temp_path = named_file.into_temp_path(); //When this goes out of scope, the file is supposedly deleted. So DON'T SHADOW IT
+//    println!("the persist path is {:?}", &temp_path);
+//    //Remember, temp_path needs to be persisted, so don't transfer ownership!
+//    form.file.persist_to(&temp_path).map_err(precondition_error!()).await?;
+//    //let part = reqwest::multipart::Part::fil
+//    //let path = form.file.path().ok_or(ApiError::Precondition(String::from("Path could not be retrieved from TempFile")))?;
+//    let part_filename = String::from(form.file.name().unwrap_or("filename"));
+//    let part = create_basic_multipart_part(&temp_path).await?
+//        .file_name(part_filename);
+//        //.mime_str(&form.file.content_type().and_then(|ct| Some(ct.to_string())).unwrap_or(String::from("image/jpg")))
+//        //.map_err(precondition_error!())?;
+//    let form = reqwest::multipart::Form::new().part("file", part); //create_basic_multipart_part(&path).await?);
+//
+//        //.text("", "")
+//
+//    //let some_file = reqwest::multipart::Part::stream(file_body)
+//    //    .file_name("gitignore.txt")
+//    //    .mime_str("text/plain")?;
+//
+//    let result = basic_upload_request("/file", form, context).await;
+//
+//    //This ensures the compiler will complain if temp_path goes out of scope
+//    if let Err(error) = temp_path.close() {
+//        println!("Couldn't delete temporary file (this is ok): {}", error);
+//    }
+//    
+//    result
+//}

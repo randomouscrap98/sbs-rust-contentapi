@@ -1,6 +1,5 @@
 #[macro_use] extern crate rocket;
 
-use forms::FileUpload;
 use rocket::response::Redirect;
 use rocket::time::Duration;
 use rocket::{State, http::Cookie};
@@ -28,6 +27,13 @@ mod special_queries;
     for general calls to API endpoints.
 */
 
+#[derive(Debug, Responder)]
+pub enum MultiResponse {
+    Template(Template),
+    Redirect(Redirect),
+}
+
+
 macro_rules! my_redirect {
     ($config:expr, $location:expr) => {
         Redirect::to(format!("{}{}", $config.http_root, $location))
@@ -48,7 +54,8 @@ macro_rules! basic_template{
             http_root : &$context.config.http_root,
             http_static : format!("{}/static", &$context.config.http_root),
             http_resources : format!("{}/static/resources", &$context.config.http_root),
-            api_fileraw : &$context.config.api_fileraw,
+            api_fileraw : &$context.config.api_fileraw, //These "api" endpoints from the configs are fullpaths? 
+            //api_fileupload : &$context.config.api_fileupload, //so they can be moved
             route_path: &$context.route_path,
             route_uri: &$context.route_path,
             boot_time: &$context.init.boot_time,
@@ -58,29 +65,6 @@ macro_rules! basic_template{
             language_code: "en", //Eventually!!
             $($field_name: $field_value,)*
         })
-    };
-}
-
-// These are specific page rendering macros for pages which get rendered in multiple
-// places (such as on POST/GET combined pages, which is quite a few!)
-macro_rules! userhome_base {
-    ($context:ident, { $($uf:ident : $uv:expr),*$(,)* }) => {
-        basic_template!("userhome", $context, {
-            userprivate : api::get_user_private_safe(&$context).await,
-            $($uf: $uv,)*
-        })
-    };
-}
-
-macro_rules! register_base {
-    ($context:ident, { $($uf:ident : $uv:expr),*$(,)* }) => {
-        basic_template!("register", $context, { $($uf: $uv,)* })
-    };
-}
-
-macro_rules! registerconfirm_base {
-    ($context:ident, { $($uf:ident : $uv:expr),*$(,)* }) => {
-        basic_template!("registerconfirm", $context, { $($uf: $uv,)* })
     };
 }
 
@@ -138,11 +122,31 @@ macro_rules! rocket_error {
     };
 }
 
-#[derive(Debug, Responder)]
-pub enum MultiResponse {
-    Template(Template),
-    Redirect(Redirect),
+
+// These are specific page rendering macros for pages which get rendered in multiple
+// places (such as on POST/GET combined pages, which is quite a few!)
+
+macro_rules! userhome_base {
+    ($context:ident, { $($uf:ident : $uv:expr),*$(,)* }) => {
+        basic_template!("userhome", $context, {
+            userprivate : api::get_user_private_safe(&$context).await,
+            $($uf: $uv,)*
+        })
+    };
 }
+
+macro_rules! register_base {
+    ($context:ident, { $($uf:ident : $uv:expr),*$(,)* }) => {
+        basic_template!("register", $context, { $($uf: $uv,)* })
+    };
+}
+
+macro_rules! registerconfirm_base {
+    ($context:ident, { $($uf:ident : $uv:expr),*$(,)* }) => {
+        basic_template!("registerconfirm", $context, { $($uf: $uv,)* })
+    };
+}
+
 
 // ------------------------
 // ------- ROUTES ---------
@@ -319,14 +323,19 @@ async fn widget_imagebrowser_get(context: context::Context, search: forms::Image
 }
 
 #[post("/widget/imagebrowser", data = "<upload>")]
-async fn widget_imagebrowser_post(context: context::Context, upload: Form<forms::FileUpload<'_>>) -> Result<Template, RocketCustom<String>> 
+async fn widget_imagebrowser_post(context: context::Context, mut upload: Form<forms::FileUpload<'_>>) -> Result<Template, RocketCustom<String>> 
 {
-    let result = api::upload_file(&context, &upload).await.map_err(rocket_error!())?;
     let mut search = forms::ImageBrowseSearch::new();
-    search.preview = Some(&result.hash); //.clone();
-    Ok(basic_template!("widgets/imagebrowser", context, {
-        search: search
-    }))
+    match api::upload_file(&context, &mut upload).await
+    {
+        Ok(result) => {
+            search.preview = Some(&result.hash); 
+            Ok(basic_template!("widgets/imagebrowser", context, { search: search, }))
+        }
+        Err(error) => { 
+            Ok(basic_template!("widgets/imagebrowser", context, { search: search, errors: vec![error.to_string()] }))
+        }
+    }
 }
 
 // -------------------------

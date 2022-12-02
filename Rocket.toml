@@ -10,6 +10,7 @@ http_root = "https://oboy.smilebasicsource.com/sbs"
 # The special locations in the api that are exposed that you can access directly,
 # such as the raw image provider
 api_fileraw = "https://oboy.smilebasicsource.com/sbs/contentapi/images"
+# api_fileupload = "https://oboy.smilebasicsource.com/sbs/contentapi/images"
 
 # The rest is whatever
 token_cookie_key = "sbs_contentapi_token"

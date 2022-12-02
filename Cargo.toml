@@ -12,6 +12,7 @@ reqwest = { version = "~0.11", default-features=false, features = ["json","multi
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "~0.7.4", features = ["codec"]}
 serde = { version = "~1.0", features = ["derive"] }
+tempfile = { version = "~3.3.0" }
 serde_qs = "~0.10"
 serde_json = "~1.0"
 serde_with = "~2.1"

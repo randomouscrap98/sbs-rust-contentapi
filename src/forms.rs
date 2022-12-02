@@ -65,7 +65,7 @@ impl<'a> ImageBrowseSearch<'a> {
     }
 }
 
-#[derive(FromForm)] //We're not sending this directly to the API so it's fine?
+#[derive(FromForm, Debug)] //We're not sending this directly to the API so it's fine?
 pub struct FileUpload<'a>
 {
     pub file: TempFile<'a>
