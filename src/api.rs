@@ -1,12 +1,8 @@
 use std::fmt;
 use std::io::Read;
 
-use base64_stream::ToBase64Reader;
-use rocket::futures::TryFutureExt;
 use rocket::serde::DeserializeOwned;
 use serde::Serialize;
-//use tokio_util::codec::BytesCodec;
-//use tokio_util::codec::FramedRead;
 use crate::context::Context;
 use crate::forms;
 use crate::api_data::*;
@@ -133,28 +129,15 @@ pub async fn basic_post_request<U, T>(endpoint: &str, data: &U, context: &Contex
     handle_response!(response, endpoint)
 }
 
-//pub async fn basic_upload_request<T: DeserializeOwned>(endpoint: &str, data: reqwest::multipart::Form, context: &Context) -> Result<T, ApiError>
-//{
-//    println!("Going to upload multipart form: {:?}", &data);
-//    let request = create_post_request(endpoint, context);
-//    let response = request
-//        .multipart(data)
-//        .send().await
-//        .map_err(network_error!())?;
-//
-//    handle_response!(response, endpoint)
-//}
-    //where T: DeserializeOwned
-
-pub async fn get_about(context: &Context) -> Result<About, ApiError>//RocketCustom<String>> 
+pub async fn get_about(context: &Context) -> Result<About, ApiError>
 {
-    basic_get_request("/status", context).await//.map_err(rocket_error!())
+    basic_get_request("/status", context).await
 }
 
 //This consumes the error and returns "None", since it could just be that the token is stupid. In the future,
 //we may want to alert the user that their token is invalid somewhere, which would require propogating the
 //error result AND checking the status to determine if we need JSON or not...
-pub async fn get_user_safe(context: &Context) -> Option<User> //Result<Option<User>, RocketCustom<String>>
+pub async fn get_user_safe(context: &Context) -> Option<User>
 {
     //Only run if there IS a token
     if let Some(_) = context.user_token 
@@ -176,7 +159,7 @@ pub async fn get_user_safe(context: &Context) -> Option<User> //Result<Option<Us
     }
 }
 
-pub async fn get_user_private_safe(context: &Context) -> Option<UserPrivate> //Result<Option<User>, RocketCustom<String>>
+pub async fn get_user_private_safe(context: &Context) -> Option<UserPrivate>
 {
     //Only run if there IS a token
     if let Some(_) = context.user_token 
@@ -231,57 +214,27 @@ pub async fn post_usersensitive<'a>(context: &Context, sensitive: &forms::UserSe
     basic_post_request("/user/privatedata", sensitive, context).await
 }
 
-//pub async fn create_basic_multipart_part(path: &std::path::Path) -> Result<reqwest::multipart::Part, ApiError>
-//{
-//    let file = tokio::fs::File::open(path).await.map_err(precondition_error!())?;
-//    let stream = FramedRead::new(file, BytesCodec::new());
-//    let file_body = reqwest::Body::wrap_stream(stream);
-//
-//    //I don't think the API uses ANY of the "filename" "mimetype" stuff
-//    Ok(reqwest::multipart::Part::stream(file_body)) 
-//}
-//
 pub async fn upload_file<'a>(context: &Context, form: &mut forms::FileUpload<'_>) -> Result<Content, ApiError>
 {
     println!("Received form: {:?}, length: {}", form, form.file.len());
+
+    //First step is to get a temporary path. 
     let named_file = tempfile::NamedTempFile::new().map_err(precondition_error!())?;
     let temp_path = named_file.into_temp_path(); //When this goes out of scope, the file is supposedly deleted. So DON'T SHADOW IT
-    println!("the persist path is {:?}", &temp_path);
-    //Remember, temp_path needs to be persisted, so don't transfer ownership!
+
+    //Now, persist the uploaded file to the path. Remember, temp_path needs to be persisted, so don't transfer ownership!
     form.file.persist_to(&temp_path).await.map_err(precondition_error!())?;
-    //std::mem::drop(form.file);
-    
-    let content = Content::new(ContentType::FILE);
-    let file = std::fs::File::open(&temp_path).map_err(precondition_error!())?;//tokio::io::File
-    let mut b64reader = base64_stream::ToBase64Reader::new(&file);
 
-    let file_size = file.metadata().map_err(precondition_error!())?.len();
-    println!("Written file length: {}", file_size);
-
-    let mut base64 = String::new();
-    b64reader.read_to_string(&mut base64).map_err(precondition_error!())?;
-
-    println!("OMG THE BASE64: {}", base64);
-    let data = FileUploadAsObject {
-        base64blob : base64, //Take ownership
-        object : content //Also take ownership
+    //This is the data we're uploading. We'll be filling in the base64 next
+    let mut data = FileUploadAsObject {
+        base64blob : String::new(), 
+        object : Content::new(ContentType::FILE) 
     };
-    //let part = reqwest::multipart::Part::fil
-    //let path = form.file.path().ok_or(ApiError::Precondition(String::from("Path could not be retrieved from TempFile")))?;
-    //let part_filename = String::from(form.file.name().unwrap_or("filename"));
-    //let part = create_basic_multipart_part(&temp_path).await?
-    //    .file_name(part_filename);
-    //    //.mime_str(&form.file.content_type().and_then(|ct| Some(ct.to_string())).unwrap_or(String::from("image/jpg")))
-    //    //.map_err(precondition_error!())?;
-    //let form = reqwest::multipart::Form::new().part("file", part); //create_basic_multipart_part(&path).await?);
-
-    //    //.text("", "")
-
-    ////let some_file = reqwest::multipart::Part::stream(file_body)
-    ////    .file_name("gitignore.txt")
-    ////    .mime_str("text/plain")?;
-
-    //let result = basic_upload_request("/file", form, context).await;
+    
+    //OK now that it's on the filesystem, gotta read it as base64
+    let file = std::fs::File::open(&temp_path).map_err(precondition_error!())?;
+    let mut b64reader = base64_stream::ToBase64Reader::new(&file);
+    b64reader.read_to_string(&mut data.base64blob).map_err(precondition_error!())?;
 
     let result = basic_post_request("/file/asobject", &data, context).await;
 
@@ -291,4 +244,5 @@ pub async fn upload_file<'a>(context: &Context, form: &mut forms::FileUpload<'_>
     }
     
     result
+
 }
