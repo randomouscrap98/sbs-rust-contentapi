@@ -31,6 +31,34 @@ impl UserType {
     pub const USER: i8 = 1i8;
 }
 
+#[derive(strum_macros::Display)]
+#[allow(dead_code)] //man, idk if i'll use ALL of them but I WANT them
+pub enum RequestType
+{
+    user,
+    content,
+    message,
+    activity,
+    watch,
+    adminlog,
+    uservariable,
+    message_aggregate,
+    activity_aggregate,
+    content_engagement,
+    ban,
+    keyword_aggregate,
+    message_engagement
+}
+
+#[derive(strum_macros::Display)]
+#[allow(dead_code)]
+pub enum SBSContentType
+{
+    forumcategory,
+    forumthread
+}
+
+
 // -----------------------------
 // *     RESULTS FROM API      *
 // -----------------------------
@@ -134,15 +162,6 @@ pub struct MinimalContent
     pub hash: String,
 }
 
-//impl MinimalContent {
-//    pub fn fields() -> &'static str {
-//        "id,name,deleted,createUserId,createDate,contentType,parentId,literalType,meta,description,hash"
-//    }
-//    pub fn fields_str() -> String {
-//        String::from(Self::fields())
-//    }
-//}
-
 macro_rules! minimal_content {
     ($query:expr) => { 
         build_request!(
@@ -151,7 +170,6 @@ macro_rules! minimal_content {
             $query
         )
     };
-    //MinimalContent::fields_str() 
 }
 
 
@@ -201,25 +219,6 @@ pub struct Login
 // ---------------------
 // *     POST DATA     *
 // ---------------------
-
-#[derive(strum_macros::Display)]
-#[allow(dead_code)] //man, idk if i'll use ALL of them but I WANT them
-pub enum RequestType
-{
-    user,
-    content,
-    message,
-    activity,
-    watch,
-    adminlog,
-    uservariable,
-    message_aggregate,
-    activity_aggregate,
-    content_engagement,
-    ban,
-    keyword_aggregate,
-    message_engagement
-}
 
 #[serde_with::skip_serializing_none] //MUST COME BEFORE
 #[derive(Serialize, Deserialize, Debug)]

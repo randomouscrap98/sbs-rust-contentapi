@@ -18,6 +18,11 @@ default_cookie_expire = 1209600 #14 days in seconds
 long_cookie_expire = 31536000 # 365 days in seconds
 port = 5010
 default_imagebrowser_count = 100
+default_recent_threads = 5
+
+# Special SBS stuff (may store in database instead?)
+# Category order is a "starts with" matching for order
+forum_category_order = ["Programming", "FAQ", "General", "Talk", "SmileBASIC Bug", "Site"]
 
 # file limit is 10 MB, but server will resize as necessary
 limits = { file = 10000000 }
