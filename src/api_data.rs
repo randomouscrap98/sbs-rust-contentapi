@@ -55,7 +55,7 @@ pub struct User
     pub createDate : DateTime<Utc>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Content //Remember, these are files, pages, threads etc. Lovely!
 {
     pub id: u64,
@@ -81,9 +81,36 @@ pub struct Content //Remember, these are files, pages, threads etc. Lovely!
     pub lastRevisionId: i64
 }
 
+impl Content {
+    pub fn new(contentType: i8) -> Self {
+        Content {
+            id: 0,
+            name: String::from(""),
+            createUserId: 0,
+            createDate : Utc::now(),
+            contentType, //from params
+            parentId: 0,
+            text: String::from(""),
+            literalType: None,
+            meta: None,
+            description: None,
+            hash: String::from(""),
+            permissions: HashMap::new(),
+            values: HashMap::new(),
+            keywords: Vec::new(),
+            engagement: HashMap::new(),
+            lastCommentId: None,
+            commentCount: 0,
+            watchCount: 0,
+            keywordCount: 0,
+            lastRevisionId: 0
+        }
+    }
+}
+
 //The content format will never change, so this "duplicate" is fine. This is
 //used for the many queries that do NOT need everything
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct MinimalContent
 {
     pub id: u64,
@@ -251,6 +278,12 @@ impl FullRequest {
     }
 }
 
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct FileUploadAsObject {
+    pub object: Content,
+    pub base64blob: String, //This could be a VERY LARGE string!!!
+}
 
 pub(crate) use build_request; // Now classic paths Just Work™
 pub(crate) use add_value;

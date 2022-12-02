@@ -1,5 +1,6 @@
 #[macro_use] extern crate rocket;
 
+use forms::ImageBrowseSearch;
 use rocket::response::Redirect;
 use rocket::time::Duration;
 use rocket::{State, http::Cookie};
@@ -292,10 +293,9 @@ fn logout_get(config: &State<config::Config>, jar: &CookieJar<'_>) -> Redirect {
     my_redirect!(config, "/")
 }
 
-#[get("/widget/imagebrowser?<search..>")]
-async fn widget_imagebrowser_get(context: context::Context, search: forms::ImageBrowseSearch<'_>) -> Result<Template, RocketCustom<String>> 
+async fn widget_imagebrowser_base(context: &context::Context, search: &ImageBrowseSearch<'_>, errors: Option<Vec::<String>>) -> Result<Template, RocketCustom<String>>
 {
-    let result = special_queries::imagebrowser_request(&context, &search).await.map_err(rocket_error!())?;
+    let result = special_queries::imagebrowser_request(context, search).await.map_err(rocket_error!())?;
     let images = conversion::cast_result::<api_data::MinimalContent>(&result, "content").map_err(rocket_error!())?;
     let previews = conversion::cast_result::<api_data::MinimalContent>(&result, "preview").map_err(rocket_error!())?;
     let mut searchprev = search.clone();
@@ -314,12 +314,19 @@ async fn widget_imagebrowser_get(context: context::Context, search: forms::Image
         previouspagelink : if searchprev.page >= 0 { if let Ok(q) = serde_qs::to_string(&searchprev) {
             Some(format!("{}?{}", context.route_path, q)) } else { None } } else { None },
         images : images,
+        errors : errors,
         sizevalues : vec![
             hbs_custom::SelectValue::new(1, "1", search.size), 
             hbs_custom::SelectValue::new(2, "2", search.size),
             hbs_custom::SelectValue::new(3, "3", search.size)
         ]
     }))
+}
+
+#[get("/widget/imagebrowser?<search..>")]
+async fn widget_imagebrowser_get(context: context::Context, search: forms::ImageBrowseSearch<'_>) -> Result<Template, RocketCustom<String>> 
+{
+    widget_imagebrowser_base(&context, &search, None).await
 }
 
 #[post("/widget/imagebrowser", data = "<upload>")]
@@ -330,10 +337,10 @@ async fn widget_imagebrowser_post(context: context::Context, mut upload: Form<fo
     {
         Ok(result) => {
             search.preview = Some(&result.hash); 
-            Ok(basic_template!("widgets/imagebrowser", context, { search: search, }))
+            widget_imagebrowser_base(&context, &search, None).await
         }
         Err(error) => { 
-            Ok(basic_template!("widgets/imagebrowser", context, { search: search, errors: vec![error.to_string()] }))
+            widget_imagebrowser_base(&context, &search, Some(vec![error.to_string()])).await
         }
     }
 }

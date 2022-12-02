@@ -1,10 +1,12 @@
 use std::fmt;
+use std::io::Read;
 
+use base64_stream::ToBase64Reader;
 use rocket::futures::TryFutureExt;
 use rocket::serde::DeserializeOwned;
 use serde::Serialize;
-use tokio_util::codec::BytesCodec;
-use tokio_util::codec::FramedRead;
+//use tokio_util::codec::BytesCodec;
+//use tokio_util::codec::FramedRead;
 use crate::context::Context;
 use crate::forms;
 use crate::api_data::*;
@@ -239,35 +241,54 @@ pub async fn post_usersensitive<'a>(context: &Context, sensitive: &forms::UserSe
 //    Ok(reqwest::multipart::Part::stream(file_body)) 
 //}
 //
-//pub async fn upload_file<'a>(context: &Context, form: &mut forms::FileUpload<'_>) -> Result<Content, ApiError>
-//{
-//    println!("Received form: {:?}", form);
-//    let named_file = tempfile::NamedTempFile::new().map_err(precondition_error!())?;
-//    let temp_path = named_file.into_temp_path(); //When this goes out of scope, the file is supposedly deleted. So DON'T SHADOW IT
-//    println!("the persist path is {:?}", &temp_path);
-//    //Remember, temp_path needs to be persisted, so don't transfer ownership!
-//    form.file.persist_to(&temp_path).map_err(precondition_error!()).await?;
-//    //let part = reqwest::multipart::Part::fil
-//    //let path = form.file.path().ok_or(ApiError::Precondition(String::from("Path could not be retrieved from TempFile")))?;
-//    let part_filename = String::from(form.file.name().unwrap_or("filename"));
-//    let part = create_basic_multipart_part(&temp_path).await?
-//        .file_name(part_filename);
-//        //.mime_str(&form.file.content_type().and_then(|ct| Some(ct.to_string())).unwrap_or(String::from("image/jpg")))
-//        //.map_err(precondition_error!())?;
-//    let form = reqwest::multipart::Form::new().part("file", part); //create_basic_multipart_part(&path).await?);
-//
-//        //.text("", "")
-//
-//    //let some_file = reqwest::multipart::Part::stream(file_body)
-//    //    .file_name("gitignore.txt")
-//    //    .mime_str("text/plain")?;
-//
-//    let result = basic_upload_request("/file", form, context).await;
-//
-//    //This ensures the compiler will complain if temp_path goes out of scope
-//    if let Err(error) = temp_path.close() {
-//        println!("Couldn't delete temporary file (this is ok): {}", error);
-//    }
-//    
-//    result
-//}
+pub async fn upload_file<'a>(context: &Context, form: &mut forms::FileUpload<'_>) -> Result<Content, ApiError>
+{
+    println!("Received form: {:?}, length: {}", form, form.file.len());
+    let named_file = tempfile::NamedTempFile::new().map_err(precondition_error!())?;
+    let temp_path = named_file.into_temp_path(); //When this goes out of scope, the file is supposedly deleted. So DON'T SHADOW IT
+    println!("the persist path is {:?}", &temp_path);
+    //Remember, temp_path needs to be persisted, so don't transfer ownership!
+    form.file.persist_to(&temp_path).await.map_err(precondition_error!())?;
+    //std::mem::drop(form.file);
+    
+    let content = Content::new(ContentType::FILE);
+    let file = std::fs::File::open(&temp_path).map_err(precondition_error!())?;//tokio::io::File
+    let mut b64reader = base64_stream::ToBase64Reader::new(&file);
+
+    let file_size = file.metadata().map_err(precondition_error!())?.len();
+    println!("Written file length: {}", file_size);
+
+    let mut base64 = String::new();
+    b64reader.read_to_string(&mut base64).map_err(precondition_error!())?;
+
+    println!("OMG THE BASE64: {}", base64);
+    let data = FileUploadAsObject {
+        base64blob : base64, //Take ownership
+        object : content //Also take ownership
+    };
+    //let part = reqwest::multipart::Part::fil
+    //let path = form.file.path().ok_or(ApiError::Precondition(String::from("Path could not be retrieved from TempFile")))?;
+    //let part_filename = String::from(form.file.name().unwrap_or("filename"));
+    //let part = create_basic_multipart_part(&temp_path).await?
+    //    .file_name(part_filename);
+    //    //.mime_str(&form.file.content_type().and_then(|ct| Some(ct.to_string())).unwrap_or(String::from("image/jpg")))
+    //    //.map_err(precondition_error!())?;
+    //let form = reqwest::multipart::Form::new().part("file", part); //create_basic_multipart_part(&path).await?);
+
+    //    //.text("", "")
+
+    ////let some_file = reqwest::multipart::Part::stream(file_body)
+    ////    .file_name("gitignore.txt")
+    ////    .mime_str("text/plain")?;
+
+    //let result = basic_upload_request("/file", form, context).await;
+
+    let result = basic_post_request("/file/asobject", &data, context).await;
+
+    //This ensures the compiler will complain if temp_path goes out of scope
+    if let Err(error) = temp_path.close() {
+        println!("Couldn't delete temporary file (this is ok): {}", error);
+    }
+    
+    result
+}

@@ -120,7 +120,7 @@
     <h3>Upload file:</h3>
     <!-- Still technically a self post but we need to preserve the entirety of 
         the... no wait, no we don't. we can reset the url! -->
-    <form method="POST" {{sefpost}}>
+    <form method="POST" {{selfpost}} enctype="multipart/form-data">
     <!--action="{{api_fileupload}}" enctype="multipart/form-data"><!--{{selfpost}}> <!--method="POST" action="{{http_root}}{{route_uri}}">-->
         {{> partials/errorlist }}
         <input id="fileinput" type="file" name="file" class="largeinput" accept="image/*">
