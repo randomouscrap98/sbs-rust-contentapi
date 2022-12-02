@@ -49,7 +49,7 @@ pub struct About
 // *     VIEWS (READ AND WRITE)     *
 // ----------------------------------
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct User
 {
     pub id: u64,

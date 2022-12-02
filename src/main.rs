@@ -61,7 +61,7 @@ macro_rules! basic_template{
             route_uri: &$context.route_path,
             boot_time: &$context.init.boot_time,
             client_ip : &$context.client_ip,
-            user: api::get_user_safe(&$context).await,
+            user: &$context.current_user,
             api_about: api::get_about(&$context).await.map_err(rocket_error!())?,
             language_code: "en", //Eventually!!
             $($field_name: $field_value,)*
@@ -232,15 +232,18 @@ async fn usersensitive_post(context: context::Context, sensitive: Form<forms::Us
 }
 
 #[post("/userhome", data= "<update>")]
-async fn userhome_update_post(context: context::Context, update: Form<forms::UserUpdate<'_>>) -> Result<Template, RocketCustom<String>>
+async fn userhome_update_post(mut context: context::Context, update: Form<forms::UserUpdate<'_>>) -> Result<Template, RocketCustom<String>>
 {
     let mut errors = Vec::new();
-    //This is ANOTHER request to user but it's ok, it's only on post...
-    if let Some(mut current_user) = api::get_user_safe(&context).await {
+    //If the user is there, get a copy of it so we can modify and post it
+    if let Some(mut current_user) = context.current_user.clone() {
+        //Modify
         current_user.username = String::from(update.username);
         current_user.avatar = String::from(update.avatar);
-        if let Err(error) = api::post_userupdate(&context, &current_user).await { //We only care about the error
-            errors.push(error.to_string());
+        //Either update the context user or set an error
+        match api::post_userupdate(&context, &current_user).await { 
+            Ok(new_user) => context.current_user = Some(new_user),
+            Err(error) => errors.push(error.to_string())
         }
     }
     else {

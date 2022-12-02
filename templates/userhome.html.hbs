@@ -16,7 +16,9 @@
     margin-top: 0.4em;
 }
 #userhomeinfo > img {
-    margin-left: auto;
+    /*margin-left: auto;*/
+    margin-right: 1em;
+    margin-bottom: 0.5em;
     width: 8.5em;
     border-radius: 0.9em;
 }
@@ -24,9 +26,10 @@
 @media screen and (max-width: 40em)
 {
     #userhomeinfo > img {
-        margin-right: auto;
+        /*margin-right: auto;*/
     }
     #userhomeinfo {
+        justify-content: center;
         padding: 0;
     }
 }
@@ -35,6 +38,7 @@
     {{#if user}}
     <h1>{{user.username}}</h1>
     <div id="userhomeinfo">
+        <img src="{{imagelink user.avatar 300 true}}">
         <div id="infoblock">
             <table data-special="{{user.special}}" data-type="{{user.type}}">
                 <tr><td><b>Email:</b></td><td class="spoilertext">{{userprivate.email}}</td></tr>
@@ -45,9 +49,10 @@
             </table>
             <a id="logoutlink" href="{{http_root}}/logout">Logout</a>
         </div>
-        <img src="{{imagelink user.avatar 300 true}}">
     </div>
-    <hr>
+</section>
+<section>
+    <!--<hr>-->
     <iframe src="{{http_root}}/widget/imagebrowser" class="imagebrowser"></iframe>
     <hr>
     <h3 id="update-user">Update info:</h3>
@@ -57,7 +62,7 @@
         <input id="update_username" type="text" name="username" value="{{user.username}}">
         <label for="update_avatar">Avatar:</label>
         <input id="update_avatar" type="text" name="avatar" value="{{user.avatar}}">
-        <p class="aside">Copy key from image browser above</p>
+        <p class="aside">Copy key/hash from image browser above</p>
         <input type="submit" value="Update">
     </form>
     <hr>

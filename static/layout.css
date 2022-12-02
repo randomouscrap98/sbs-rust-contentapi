@@ -47,7 +47,7 @@ section {
     border: 0.2em solid var(--color_border);
     padding: 1.5em;
     background: var(--bg_section);
-    max-width: 80em;
+    max-width: 70em;
     margin: 0.5em auto;
     border-radius: 1em;
 }

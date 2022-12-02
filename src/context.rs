@@ -3,7 +3,7 @@ use std::net::IpAddr;
 use rocket::outcome::Outcome;
 use reqwest::Client;
 use rocket::request::FromRequest;
-use crate::config::Config;
+use crate::{config::Config, api_data::User, api};
 
 //This is the request context, which rocket may have systems for but I don't want to deal with that.
 //Also, notice that all the data here is specifically owned by Context and isn't borrowed (no references);
@@ -19,6 +19,7 @@ pub struct Context
     pub client_ip: Option<IpAddr>,
     pub route_path: String,
     pub route_uri: String,
+    pub current_user: Option<User>,
     pub init: InitData
 }
 
@@ -43,15 +44,18 @@ impl<'r> FromRequest<'r> for Context {
         //I honestly don't know how to do this, I'm going crazy
         if let Some(config) = request.rocket().state::<Config>() {
             if let Some(init_data) = request.rocket().state::<InitData>() {
-                return Outcome::Success(Context {
+                let mut context = Context {
                     config: config.clone(), //These clones aren't necessary
                     init: init_data.clone(),
                     client: reqwest::Client::new(),
                     user_token: jar.get(&config.token_cookie_key).and_then(|cookie| Some(String::from(cookie.value()))),
                     route_path: path.to_string(),
                     route_uri: uri.to_string(),
+                    current_user: None,
                     client_ip,
-                });
+                };
+                context.current_user = api::get_user_safe(&context).await;
+                return Outcome::Success(context);
             }
         }
 
