@@ -150,9 +150,53 @@ impl Content {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Message
+{
+    pub id: i64,
+    pub contentId: i64,
+    pub createUserId: i64,
+    pub createDate : DateTime<Utc>,
+    pub text: String,
+    pub values: HashMap<String, serde_json::Value>,
+    pub engagement: HashMap<String, HashMap<String, i64>>,
+    pub editDate: Option<DateTime<Utc>>,
+    pub editUserid: Option<i64>,
+    pub edited: bool, // PLEASE PLEASE be a real bool! 
+    pub module: Option<String>
+    //pub deleted: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct MinimalMessage
+{
+    pub id: i64,
+    pub contentId: i64,
+    pub createUserId: i64,
+    pub createDate : DateTime<Utc>,
+    //pub text: String,
+    //pub editDate: Option<DateTime<Utc>>,
+    //pub editUserid: Option<i64>,
+    //pub edited: bool, // PLEASE PLEASE be a real bool! 
+    pub module: Option<String>
+    //pub deleted: bool,
+}
+
+macro_rules! minimal_message {
+    ($query:expr) => { 
+        build_request!(
+            RequestType::content, 
+            //Have to select delete even if we're not putting it in the struct, for the contentapi macros
+            String::from("id,deleted,contentId,createUserid,createDate,module"),
+            $query
+        )
+    };
+}
+pub(crate) use minimal_message;
+
 //The content format will never change, so this "duplicate" is fine. This is
 //used for the many queries that do NOT need everything
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MinimalContent
 {
     pub id: i64,
@@ -176,11 +220,13 @@ macro_rules! minimal_content {
     ($query:expr) => { 
         build_request!(
             RequestType::content, 
-            String::from("id,name,deleted,createUserId,createDate,contentType,parentId,literalType,meta,description,hash,lastCommentId,commentCount"),
+            //Have to select delete even if we're not putting it in the struct, for the contentapi macros
+            String::from("id,deleted,name,createUserId,createDate,contentType,parentId,literalType,meta,description,hash,lastCommentId,commentCount"),
             $query
         )
     };
 }
+pub(crate) use minimal_content;
 
 
 #[derive(Serialize, Deserialize)]
@@ -225,6 +271,10 @@ pub struct Login
     pub expireSeconds: i64 
 }
 
+//Note: you WANT all these strings to be owned, even if it wastes memory or whatever,
+//because you want to be able to construct and pass around whatever requests you want 
+//from anywhere to anywhere and have the lifetimes of the internals strongly tied to the
+//struct. It's about HOW you're using the struct, not simply "saving memory". 
 #[serde_with::skip_serializing_none] //MUST COME BEFORE
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Request
@@ -241,7 +291,7 @@ pub struct Request
 macro_rules! build_request {
     //All these expect the RequestType enum
     ($type:expr) => { 
-        build_request!($type, "*", None, None, 0, 0, None) 
+        build_request!($type, String::from("*"), None, None, 0, 0, None) 
     };
     ($type:expr, $fields:expr) => { 
         build_request!($type, $fields, None, None, 0, 0, None) 
@@ -270,12 +320,14 @@ macro_rules! build_request {
         }
     };
 }
+pub(crate) use build_request; // Now classic paths Just Work™
 
 macro_rules! add_value {
     ($request:expr, $key:literal, $value:expr) => {
         $request.values.insert(String::from($key), $value.into());
     }
 }
+pub(crate) use add_value;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FullRequest
@@ -296,7 +348,3 @@ pub struct FileUploadAsObject {
     pub object: Content,
     pub base64blob: String, //This could be a VERY LARGE string!!!
 }
-
-pub(crate) use build_request; // Now classic paths Just Work™
-pub(crate) use add_value;
-pub(crate) use minimal_content;

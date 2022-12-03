@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use rocket_dyn_templates::Template;
 use serde::Serialize;
 
@@ -11,31 +9,49 @@ use super::*;
 use rocket::response::status::Custom as RocketCustom;
 
 
+// Build a request for JUST forum categories
 fn get_category_request() -> FullRequest
 {
     //The request which we will spend the entire function building
     let mut request = FullRequest::new();
     add_value!(request, "category_literal", SBSContentType::forumcategory.to_string());
 
-    let mut category_request = minimal_content!(String::from("literalType = @category_literal"));
+    let mut category_request = minimal_content!(String::from("literalType = @category_literal and !notdeleted()"));
     category_request.name = Some(String::from("category"));
     request.requests.push(category_request);
 
     request
 }
 
+// Build a request for thread data for the given forum category ids. This will produce
+// individual queries for each category. This is one of the ONLY places where we need to
+// perform such a decomposed and repetitious query: counting children of the thread parents
+// ends up requiring permissions and it's not trivial to ask the API to do it. Comment counts
+// are different because there can't be individual comments you can't see
 fn get_thread_request(category_ids: &Vec<i64>, limit: i32) -> FullRequest
 {
     let mut request = FullRequest::new();
     add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
 
-    for category_id in category_ids {
-        let base_query = format!("parentId = {{{{{category_id}}}}} and literalType = @thread_literal");
+    let mut comment_query = String::from("!basiccomments()");
+
+    for category_id in category_ids 
+    {
+        //Standard threads get (for latest N threads)
+        let base_query = format!("parentId = {{{{{category_id}}}}} and literalType = @thread_literal and !notedeleted()");
         let mut threads_request = minimal_content!(base_query.clone());
-        threads_request.name = Some(format!("threads_{}", category_id));
-        threads_request.order = Some(String::from("lastCommentId"));
-        threads_request.limit = limit.into(); //config.default_recent_threads.into();
+        let key = format!("threads_{}", category_id);
+
+        threads_request.name = Some(key.clone());
+        threads_request.order = Some(String::from("lastCommentId_desc"));
+        threads_request.limit = limit.into(); 
         request.requests.push(threads_request);
+
+        comment_query.push_str(" and id in @");
+        comment_query.push_str(&key);
+        comment_query.push_str(".lastCommentId");
+
+        //Thread count get (if the previous is too expensive, consider just doing this)
         let mut count_request = build_request!(
             RequestType::content, 
             String::from("specialCount,parentId,literalType,id"), 
@@ -45,71 +61,22 @@ fn get_thread_request(category_ids: &Vec<i64>, limit: i32) -> FullRequest
         request.requests.push(count_request);
     }
 
+    let comment_request = minimal_message!(comment_query);
+    request.requests.push(comment_request);
+
+    println!("Threads request: {:?}", &request);
+
     request
 }
 
-//Perform the raw query for minimal data 
-//async fn forumcategory_request(context: &Context) -> Result<RequestResult, ApiError>
-//{
-//    post_request(context, &request).await
-//}
-
-//async fn finalize_category_request(categories: &Vec<MinimalContent>, context: &Context) -> Result<Vec<ForumCategory>, impl Display>
-//{
-//    let mut request = FullRequest::new();
-//    add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
-//
-//    for category in categories {
-//        let mut threads_request = minimal_content!(String::from("parentId in @category.id and literalType = @thread_literal"));
-//        threads_request.name = Some(format!("threads_{}", category_id));
-//        threads_request.order = Some(String::from("lastCommentId"));
-//        threads_request.limit = context.config.default_recent_threads.into();
-//        request.requests.push(threads_request);
-//    }
-//
-//    post_request(context, &request).await
-//}
-
-//async fn forumroot_request (context: &Context) -> Result<RequestResult, ApiError>
-//{
-//    //The request which we will spend the entire function building
-//    let mut request = FullRequest::new();
-//    add_value!(request, "category_literal", SBSContentType::forumcategory.to_string());
-//    add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
-//
-//    let mut category_request = minimal_content!(String::from("literalType = @category_literal"));
-//    category_request.name = Some(String::from("category"));
-//    request.requests.push(category_request);
-//
-//    //Some awful hack to make a request per content type?
-//    let mut threads_request = minimal_content!(String::from("parentId in @category.id and literalType = @thread_literal"));
-//    threads_request.name = Some(String::from("threads"));
-//    threads_request.order = Some(String::from("lastCommentId"));
-//    threads_request.limit = context.config.default_recent_threads.into();
-//    request.requests.push(threads_request);
-//
-//    ////But what if we were passed preview?
-//    //if let Some(preview) = search.preview {
-//    //    let hashes: Vec<String> = preview.split(",").map(|h| String::from(h.trim())).collect();
-//    //    add_value!(request, "preview_hashes", hashes);
-//    //    let mut preview_request = minimal_content!(format!("{} and hash in @preview_hashes", base_query));
-//    //    preview_request.name = Some(String::from("preview"));
-//    //    request.requests.push(preview_request);
-//    //}
-//
-//    //println!("Sending: {:?}", &request);
-//
-//    post_request(context, &request).await
-//}
-
-#[derive(Serialize)]
+#[derive(Serialize, Clone, Debug)]
 struct ForumThread {
     thread: MinimalContent,
-
+    posts_count: i32
 }
 
 //Structs JUST for building data for the forum templates (so no need to be public)
-#[derive(Serialize)]
+#[derive(Serialize, Clone, Debug)]
 struct ForumCategory {
     category: MinimalContent,
     threads: Vec<ForumThread>,
@@ -122,16 +89,12 @@ pub async fn forum_get(context: Context) -> Result<Template, RocketCustom<String
     //First request: just get categories
     let request = get_category_request();
     let category_result = post_request(&context, &request).await.map_err(rocket_error!())?;
-    let mut categories_raw = conversion::cast_result::<MinimalContent>(&category_result, "category").map_err(rocket_error!())?;
+    let mut categories_raw = conversion::cast_result_required::<MinimalContent>(&category_result, "category").map_err(rocket_error!())?;
 
     //Next request: get the complicated dataset for each category
     let category_ids : Vec<i64> = categories_raw.iter().map(|catraw| catraw.id).collect();
     let thread_request = get_thread_request(&category_ids, context.config.default_recent_threads);
     let thread_result = post_request(&context, &thread_request).await.map_err(rocket_error!())?;
-
-    //let category_result = forumcategory_request(&context).await.map_err(rocket_error!())?;
-    //let mut categories_raw = conversion::cast_result::<MinimalContent>(&category_result, "category").map_err(rocket_error!())?;
-    //let mut categories = Vec::new();
 
     //Sort the categories by their name AGAINST the default list in the config. So, it should sort the categories
     //by the order defined in the config, with stuff not present going at the end. Tiebreakers are resolved alphabetically
@@ -145,26 +108,25 @@ pub async fn forum_get(context: Context) -> Result<Template, RocketCustom<String
     for catraw in categories_raw {
         let id = catraw.id;
         let threadcount_name = format!("threadcount_{}", id);
-        let threads_name = format!("threads{}", id);
-        let special_counts = conversion::cast_result::<SpecialCount>(&thread_result, &threadcount_name).map_err(rocket_error!())?;
-        let threads = conversion::cast_result::<MinimalContent>(&thread_result, &threads_name).map_err(rocket_error!())?;
+        let threads_name = format!("threads_{}", id);
+        let special_counts = conversion::cast_result_required::<SpecialCount>(&thread_result, &threadcount_name).map_err(rocket_error!())?;
+        let threads_raw = conversion::cast_result_required::<MinimalContent>(&thread_result, &threads_name).map_err(rocket_error!())?;
 
-        categories.push(ForumCategory {
+        let category = ForumCategory {
             category: catraw,
-            threads: threads.into_iter().map(|thread| ForumThread { thread }).collect(),
+            threads: threads_raw.into_iter().map(|thread| ForumThread { 
+                        thread,
+                        posts_count: 0
+                     }).collect(),
             threads_count: special_counts.get(0)
                 .and_then(|sp| Some(sp.specialCount))
                 .ok_or(ApiError::Precondition(format!("Didn't get specialCount for category {}", id)))
                 .map_err(rocket_error!())?
-        });
+        };
+        categories.push(category);
     }
 
-    //let categories : Vec<ForumCategory> = categories_raw.into_iter().map(|catraw| {
-    //}).collect();
-    //ForumCategory {
-    //    category: catraw,
-    //    threads: Vec::new()
-    //}).collect(); //.collect();
+    println!("Template categories: {:?}", &categories);
 
     Ok(basic_template!("forum", context, {
         categories: categories

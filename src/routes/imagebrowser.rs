@@ -16,7 +16,7 @@ async fn imagebrowser_request(context: &Context, search: &forms::ImageBrowseSear
     let mut request = FullRequest::new();
     add_value!(request, "type", ContentType::FILE);
 
-    let base_query = "contentType = @type and !valuekeynotlike({{system}})";
+    let base_query = "contentType = @type and !valuekeynotlike({{system}}) and !notdeleted()";
     let mut query = String::from(base_query);
 
     //Add user restriction to query
@@ -55,8 +55,8 @@ async fn imagebrowser_request(context: &Context, search: &forms::ImageBrowseSear
 async fn widget_imagebrowser_base(context: &Context, search: &forms::ImageBrowseSearch<'_>, errors: Option<Vec::<String>>) -> Result<Template, RocketCustom<String>>
 {
     let result = imagebrowser_request(context, search).await.map_err(rocket_error!())?;
-    let images = conversion::cast_result::<MinimalContent>(&result, "content").map_err(rocket_error!())?;
-    let previews = conversion::cast_result::<MinimalContent>(&result, "preview").map_err(rocket_error!())?;
+    let images = conversion::cast_result_safe::<MinimalContent>(&result, "content").map_err(rocket_error!())?;
+    let previews = conversion::cast_result_safe::<MinimalContent>(&result, "preview").map_err(rocket_error!())?;
     let mut searchprev = search.clone();
     let mut searchnext = search.clone();
     searchprev.page = searchprev.page - 1;

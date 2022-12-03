@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use rocket_dyn_templates::handlebars::{self, Handlebars};
 use serde::Serialize;
 use crate::api_data;
@@ -132,6 +133,28 @@ generate_helper!{selfpost_helper, h, out, ctx, {
     }}
 }}
 
+generate_helper!{timeago_helper, h, out, _ctx, {
+    if let Some(time) = get_param!(h, 0, as_str) {
+        match DateTime::parse_from_rfc3339(time) {
+            Ok(ptime) => {
+                let duration = Utc::now().signed_duration_since(ptime); //timeago::format()
+                match duration.to_std() {
+                    Ok(stdur) => {
+                        let agotime = timeago::format(stdur, timeago::Style::HUMAN);
+                        out.write(&agotime)?;
+                    },
+                    Err(error) => {
+                        println!("Couldn't convert chrono duration {} to std: {}", duration, error);
+                    }
+                }
+            }
+            Err(error) => {
+                println!("Couldn't parse date {}: {}", time, error);
+            }
+        }
+    }
+}}
+
 //A stupid extension to help display of form select, it's like impossible to 
 //set the selected option, so this will go along with the partial
 #[derive(Serialize, FromForm, Debug)]
@@ -160,4 +183,5 @@ pub fn customize(hbs: &mut Handlebars) {
     hbs.register_helper("selfpost", Box::new(selfpost_helper));
     hbs.register_helper("stylesheet", Box::new(stylesheet_helper));
     hbs.register_helper("script", Box::new(script_helper));
+    hbs.register_helper("timeago", Box::new(timeago_helper));
 }

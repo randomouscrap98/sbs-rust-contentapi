@@ -1595,6 +1595,7 @@ dependencies = [
  "strum",
  "strum_macros",
  "tempfile",
+ "timeago",
  "tokio",
  "tokio-util",
 ]
@@ -1925,6 +1926,12 @@ checksum = "d967f99f534ca7e495c575c62638eebc2898a8c84c119b89e250477bc4ba16b2"
 dependencies = [
  "time-core",
 ]
+
+[[package]]
+name = "timeago"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cbaac8bad0b5ce0c4b100fad45474ee142a70bd562cdf5fe0d671c79b54fe72f"
 
 [[package]]
 name = "tinyvec"

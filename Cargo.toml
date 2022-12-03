@@ -13,6 +13,7 @@ tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "~0.7.4", features = ["codec"]}
 serde = { version = "~1.0", features = ["derive"] }
 tempfile = { version = "~3.3.0" }
+timeago = "=0.0.2" # Says to use this one if you want simple; may upgrade later
 serde_qs = "~0.10"
 serde_json = "~1.0"
 serde_with = "~2.1"

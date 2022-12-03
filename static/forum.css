@@ -1,0 +1,24 @@
+/*.forumdescription {
+    font-size: 0.9em;
+}*/
+
+/*.category {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}*/
+
+.category h1 {
+    margin-top: 0; 
+}
+
+.categoryinfo {
+    flex: auto;
+}
+
+.foruminfo {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    margin-left: auto;
+}
