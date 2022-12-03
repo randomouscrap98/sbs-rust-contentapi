@@ -33,12 +33,13 @@ fn get_thread_request(category_ids: &Vec<i64>, limit: i32) -> FullRequest
     let mut request = FullRequest::new();
     add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
 
-    let mut comment_query = String::from("!basiccomments()");
+    let mut comment_query = String::from("!basiccomments() and (");
+    let id_count = category_ids.len();
 
-    for category_id in category_ids 
+    for (index, category_id) in category_ids.iter().enumerate()
     {
         //Standard threads get (for latest N threads)
-        let base_query = format!("parentId = {{{{{category_id}}}}} and literalType = @thread_literal and !notedeleted()");
+        let base_query = format!("parentId = {{{{{category_id}}}}} and literalType = @thread_literal and !notdeleted()");
         let mut threads_request = minimal_content!(base_query.clone());
         let key = format!("threads_{}", category_id);
 
@@ -47,9 +48,14 @@ fn get_thread_request(category_ids: &Vec<i64>, limit: i32) -> FullRequest
         threads_request.limit = limit.into(); 
         request.requests.push(threads_request);
 
-        comment_query.push_str(" and id in @");
+        comment_query.push_str("id in @");
         comment_query.push_str(&key);
         comment_query.push_str(".lastCommentId");
+
+        //Only output 'or' if we're not at the end
+        if index < id_count - 1 { 
+            comment_query.push_str(" or "); 
+        }
 
         //Thread count get (if the previous is too expensive, consider just doing this)
         let mut count_request = build_request!(
@@ -60,6 +66,8 @@ fn get_thread_request(category_ids: &Vec<i64>, limit: i32) -> FullRequest
         count_request.name = Some(format!("threadcount_{}", category_id));
         request.requests.push(count_request);
     }
+
+    comment_query.push_str(")");
 
     let comment_request = minimal_message!(comment_query);
     request.requests.push(comment_request);
@@ -72,7 +80,8 @@ fn get_thread_request(category_ids: &Vec<i64>, limit: i32) -> FullRequest
 #[derive(Serialize, Clone, Debug)]
 struct ForumThread {
     thread: MinimalContent,
-    posts_count: i32
+    posts: Vec<MinimalMessage>,
+    posts_count: i32,
 }
 
 //Structs JUST for building data for the forum templates (so no need to be public)
@@ -91,10 +100,12 @@ pub async fn forum_get(context: Context) -> Result<Template, RocketCustom<String
     let category_result = post_request(&context, &request).await.map_err(rocket_error!())?;
     let mut categories_raw = conversion::cast_result_required::<MinimalContent>(&category_result, "category").map_err(rocket_error!())?;
 
-    //Next request: get the complicated dataset for each category
+    //Next request: get the complicated dataset for each category (this somehow includes comments???)
     let category_ids : Vec<i64> = categories_raw.iter().map(|catraw| catraw.id).collect();
     let thread_request = get_thread_request(&category_ids, context.config.default_recent_threads);
     let thread_result = post_request(&context, &thread_request).await.map_err(rocket_error!())?;
+
+    let messages_raw = conversion::cast_result_required::<MinimalMessage>(&thread_result, "message").map_err(rocket_error!())?;
 
     //Sort the categories by their name AGAINST the default list in the config. So, it should sort the categories
     //by the order defined in the config, with stuff not present going at the end. Tiebreakers are resolved alphabetically
@@ -114,10 +125,14 @@ pub async fn forum_get(context: Context) -> Result<Template, RocketCustom<String
 
         let category = ForumCategory {
             category: catraw,
-            threads: threads_raw.into_iter().map(|thread| ForumThread { 
+            threads: threads_raw.into_iter().map(|thread| {
+                    let thread_id = thread.id;
+                    ForumThread { 
                         thread,
+                        posts: messages_raw.iter().filter(|m| m.contentId == thread_id).map(|m| m.clone()).collect(),
                         posts_count: 0
-                     }).collect(),
+                    }
+                }).collect(),
             threads_count: special_counts.get(0)
                 .and_then(|sp| Some(sp.specialCount))
                 .ok_or(ApiError::Precondition(format!("Didn't get specialCount for category {}", id)))

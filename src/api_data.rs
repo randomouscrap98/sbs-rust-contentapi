@@ -167,7 +167,7 @@ pub struct Message
     //pub deleted: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MinimalMessage
 {
     pub id: i64,
@@ -185,9 +185,9 @@ pub struct MinimalMessage
 macro_rules! minimal_message {
     ($query:expr) => { 
         build_request!(
-            RequestType::content, 
+            RequestType::message, 
             //Have to select delete even if we're not putting it in the struct, for the contentapi macros
-            String::from("id,deleted,contentId,createUserid,createDate,module"),
+            String::from("id,deleted,contentId,createUserId,createDate,module"),
             $query
         )
     };
