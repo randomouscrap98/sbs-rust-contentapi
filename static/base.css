@@ -91,6 +91,11 @@
     overflow-x: hidden;
 }
 
+a.titlelink:link, a.titlelink:visited {
+    text-decoration: none;
+    color: var(--bg_activeselect);
+}
+
 label.inline {
     display: flex;
     align-items: center;

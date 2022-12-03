@@ -221,7 +221,7 @@ pub async fn post_userupdate<'a>(context: &Context, user: &User) -> Result<User,
 
 pub async fn upload_file<'a>(context: &Context, form: &mut forms::FileUpload<'_>) -> Result<Content, ApiError>
 {
-    println!("Received form: {:?}, length: {}", form, form.file.len());
+    //println!("Received form: {:?}, length: {}", form, form.file.len());
 
     //First step is to get a temporary path. 
     let named_file = tempfile::NamedTempFile::new().map_err(precondition_error!())?;

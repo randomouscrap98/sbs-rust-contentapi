@@ -1,6 +1,17 @@
 {{#*inline "page"}}
 <section>
-    <h1>Forums, at some point</h1>
+    <h1>Forum Topics</h1>
+</section>
+<section>
+    {{#each categories}}
+    <h1><a href="{{http_root}}/forum?fcid={{category.id}}" class="titlelink">{{category.name}}</a></h1>
+    <p class="aside">{{category.description}}</p>
+    {{#if @last}}
+    {{!Rocket's handlebars implementation is very limited, don't have unless or whatever}}
+    {{else}}
+    <hr>
+    {{/if}}
+    {{/each}}
 </section>
 {{/inline}}
 {{>layout}}

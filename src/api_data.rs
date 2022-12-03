@@ -72,6 +72,12 @@ pub struct About
     pub contact: String
 }
 
+#[derive(Deserialize)]
+pub struct SpecialCount
+{
+    pub specialCount: i32
+}
+
 
 // ----------------------------------
 // *     VIEWS (READ AND WRITE)     *
@@ -80,7 +86,7 @@ pub struct About
 #[derive(Serialize, Deserialize, Clone)]
 pub struct User
 {
-    pub id: u64,
+    pub id: i64,
     pub r#type: i8,
     pub username: String,
     pub avatar: String,
@@ -94,10 +100,10 @@ pub struct User
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Content //Remember, these are files, pages, threads etc. Lovely!
 {
-    pub id: u64,
+    pub id: i64,
     pub name: String,
     //pub deleted: i8, //bool, but api returns 0
-    pub createUserId: u64,
+    pub createUserId: i64,
     pub createDate : DateTime<Utc>,
     pub contentType : i8, // This is an enum, consider making values for this!
     pub parentId : i64,
@@ -149,24 +155,28 @@ impl Content {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MinimalContent
 {
-    pub id: u64,
+    pub id: i64,
     pub name: String,
     //pub deleted: i8, //bool, but the api returns 0
-    pub createUserId: u64,
+    pub createUserId: i64,
     pub createDate : DateTime<Utc>,
     pub contentType : i8, // This is an enum, consider making values for this!
     pub parentId : i64,
     pub literalType: Option<String>,
     pub meta: Option<String>,
-    pub description: Option<String>,
+    pub description: Option<String>, // Is USUALLY small, and instantly retrievable
     pub hash: String,
+    //These are expensive on QCS ONLY because off-topic takes a not-insignificant time to compute. but
+    //they should be fast on SBS and they're just kinda necessary for too many 'minimal' things.
+    pub lastCommentId: Option<i64>,
+    pub commentCount: i64,
 }
 
 macro_rules! minimal_content {
     ($query:expr) => { 
         build_request!(
             RequestType::content, 
-            String::from("id,name,deleted,createUserId,createDate,contentType,parentId,literalType,meta,description,hash"),
+            String::from("id,name,deleted,createUserId,createDate,contentType,parentId,literalType,meta,description,hash,lastCommentId,commentCount"),
             $query
         )
     };
@@ -203,9 +213,9 @@ pub struct QueryImage
 }
 
 
-// -----------------------------
-// *     QUERY PARAMETERS      *
-// -----------------------------
+// ---------------------
+// *     POST DATA     *
+// ---------------------
 
 #[derive(Serialize)]
 pub struct Login
@@ -214,11 +224,6 @@ pub struct Login
     pub password: String,
     pub expireSeconds: i64 
 }
-
-
-// ---------------------
-// *     POST DATA     *
-// ---------------------
 
 #[serde_with::skip_serializing_none] //MUST COME BEFORE
 #[derive(Serialize, Deserialize, Debug)]
@@ -236,7 +241,7 @@ pub struct Request
 macro_rules! build_request {
     //All these expect the RequestType enum
     ($type:expr) => { 
-        build_request!($type, String::from("*"), None, None, 0, 0, None) 
+        build_request!($type, "*", None, None, 0, 0, None) 
     };
     ($type:expr, $fields:expr) => { 
         build_request!($type, $fields, None, None, 0, 0, None) 

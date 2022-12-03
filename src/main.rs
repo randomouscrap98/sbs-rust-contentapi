@@ -1,11 +1,7 @@
 #[macro_use] extern crate rocket;
 
-//use rocket::response::Redirect;
-//use rocket::{State, http::Cookie};
-//use rocket::form::Form;
 use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
-//use rocket::http::CookieJar;
 use rocket::response::status::Custom as RocketCustom;
 use rocket_dyn_templates::Template;
 
