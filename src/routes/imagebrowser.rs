@@ -6,7 +6,6 @@ use crate::conversion;
 use crate::hbs_custom;
 use super::*;
 use rocket::form::Form;
-use rocket::response::status::Custom as RocketCustom;
 use rocket_dyn_templates::Template;
 
 
@@ -52,11 +51,11 @@ async fn imagebrowser_request(context: &Context, search: &forms::ImageBrowseSear
     post_request(context, &request).await
 }
 
-async fn widget_imagebrowser_base(context: &Context, search: &forms::ImageBrowseSearch<'_>, errors: Option<Vec::<String>>) -> Result<Template, RocketCustom<String>>
+async fn widget_imagebrowser_base(context: &Context, search: &forms::ImageBrowseSearch<'_>, errors: Option<Vec::<String>>) -> Result<Template, RouteError>
 {
-    let result = imagebrowser_request(context, search).await.map_err(rocket_error!())?;
-    let images = conversion::cast_result_safe::<MinimalContent>(&result, "content").map_err(rocket_error!())?;
-    let previews = conversion::cast_result_safe::<MinimalContent>(&result, "preview").map_err(rocket_error!())?;
+    let result = imagebrowser_request(context, search).await?;
+    let images = conversion::cast_result_safe::<MinimalContent>(&result, "content")?;
+    let previews = conversion::cast_result_safe::<MinimalContent>(&result, "preview")?;
     let mut searchprev = search.clone();
     let mut searchnext = search.clone();
     searchprev.page = searchprev.page - 1;
@@ -83,13 +82,13 @@ async fn widget_imagebrowser_base(context: &Context, search: &forms::ImageBrowse
 }
 
 #[get("/widget/imagebrowser?<search..>")]
-pub async fn widget_imagebrowser_get(context: Context, search: forms::ImageBrowseSearch<'_>) -> Result<Template, RocketCustom<String>> 
+pub async fn widget_imagebrowser_get(context: Context, search: forms::ImageBrowseSearch<'_>) -> Result<Template, RouteError> 
 {
     widget_imagebrowser_base(&context, &search, None).await
 }
 
 #[post("/widget/imagebrowser", data = "<upload>")]
-pub async fn widget_imagebrowser_post(context: Context, mut upload: Form<forms::FileUpload<'_>>) -> Result<Template, RocketCustom<String>> 
+pub async fn widget_imagebrowser_post(context: Context, mut upload: Form<forms::FileUpload<'_>>) -> Result<Template, RouteError> 
 {
     let mut search = forms::ImageBrowseSearch::new();
     match upload_file(&context, &mut upload).await

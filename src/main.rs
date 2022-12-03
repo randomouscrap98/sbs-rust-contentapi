@@ -2,7 +2,6 @@
 
 use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
-use rocket::response::status::Custom as RocketCustom;
 use rocket_dyn_templates::Template;
 
 mod config;
@@ -30,12 +29,12 @@ use routes::*;
 // ------------------------
 
 #[get("/activity")] //this ofc has param values
-async fn activity_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
+async fn activity_get(context: context::Context) -> Result<Template, RouteError> {
     Ok(basic_template!("activity", context, {}))
 }
 
 #[get("/search")] //this ofc has param values
-async fn search_get(context: context::Context) -> Result<Template, RocketCustom<String>> {
+async fn search_get(context: context::Context) -> Result<Template, RouteError> {
     Ok(basic_template!("search", context, {}))
 }
 

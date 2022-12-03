@@ -5,11 +5,70 @@ pub mod user;
 pub mod register;
 pub mod basic;
 
+use crate::api::ApiError;
+use rocket::http::Status;
+use rocket::response;
+
 #[derive(Debug, Responder)]
 pub enum MultiResponse {
     Template(rocket_dyn_templates::Template),
     Redirect(rocket::response::Redirect),
 }
+
+//The over-arching error that I expect routes to emit
+#[derive(Debug)]
+pub struct RouteError(Status, String);
+
+impl From<ApiError> for RouteError { //RocketCustom<String> {
+    fn from(error: ApiError) -> Self {
+        let status = match error {
+            ApiError::Network(_) => Status::ServiceUnavailable,
+            ApiError::User(_,_) => Status::BadRequest,
+            _ => Status::InternalServerError
+        };
+
+        RouteError(status, error.to_string())
+        //RocketCustom(status, error.to_string())
+    }
+}
+
+impl From<anyhow::Error> for RouteError { //RocketCustom<String> {
+    fn from(error: anyhow::Error) -> Self {
+        RouteError(Status::InternalServerError, error.to_string())
+        //RocketCustom(status, error.to_string())
+    }
+}
+
+impl<'r, 'o: 'r> rocket::response::Responder<'r, 'o> for RouteError {
+    fn respond_to(self, req: &'r rocket::Request<'_>) -> response::Result<'o> {
+        println!("[{}]:{}", &self.0, &self.1);
+        self.0.respond_to(req)
+        //match self {
+        //    // in our simplistic example, we're happy to respond with the default 500 responder in all cases 
+        //    _ => rocket::http::Status::InternalServerError.respond_to(req)
+        //}
+    }
+}
+
+
+
+
+//impl From<anyhow::Error> for RocketCustom<String> {
+//    fn from(error: anyhow::Error) -> Self {
+//        RocketCustom(Status::InternalServerError, error.to_string())
+//    }
+//}
+//impl Into<RocketCustom<String>> for ApiError {
+//    fn into(self) -> RocketCustom<String> {
+//        let status = match self {
+//            ApiError::Network(error) => Status::ServiceUnavailable,
+//            ApiError::User(_status, error) => Status::BadRequest,
+//            _ => Status::InternalServerError
+//        };
+//
+//        RocketCustom(status, self.to_string())
+//    }
+//}
 
 macro_rules! my_redirect {
     ($config:expr, $location:expr) => {
@@ -39,7 +98,7 @@ macro_rules! basic_template{
             boot_time: &$context.init.boot_time,
             client_ip : &$context.client_ip,
             user: &$context.current_user,
-            api_about: crate::api::get_about(&$context).await.map_err(rocket_error!())?,
+            api_about: crate::api::get_about(&$context).await?,
             language_code: "en", //Eventually!!
             $($field_name: $field_value,)*
         })
@@ -98,9 +157,9 @@ pub(crate) use handle_error;
 
 //Simple conversion from server error into rocket error. This should ONLY be used where we are certain
 //the error isn't due to the user!
-macro_rules! rocket_error {
-    () => {
-        |e| rocket::response::status::Custom(rocket::http::Status::ServiceUnavailable, e.to_string())
-    };
-}
-pub(crate) use rocket_error;
+//macro_rules! rocket_error {
+//    () => {
+//        |e| rocket::response::status::Custom(rocket::http::Status::ServiceUnavailable, e.to_string())
+//    };
+//}
+//pub(crate) use rocket_error;

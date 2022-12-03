@@ -5,7 +5,6 @@ use super::*;
 
 use rocket::http::{CookieJar};
 use rocket::form::Form;
-use rocket::response::status::Custom as RocketCustom;
 use rocket_dyn_templates::Template;
 
 macro_rules! register_base {
@@ -21,17 +20,17 @@ macro_rules! registerconfirm_base {
 }
 
 #[get("/register")] 
-pub async fn register_get(context: Context) -> Result<Template, RocketCustom<String>> {
+pub async fn register_get(context: Context) -> Result<Template, RouteError> {
     Ok(register_base!(context, {}))
 }
 
 #[get("/register/confirm")] //This is a PLAIN confirmation page with no extra data
-pub async fn registerconfirm_get(context: Context) -> Result<Template, RocketCustom<String>> {
+pub async fn registerconfirm_get(context: Context) -> Result<Template, RouteError> {
     Ok(registerconfirm_base!(context, { }))
 }
 
 #[post("/register", data = "<registration>")]
-pub async fn register_post(context: Context, registration: Form<forms::Register<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
+pub async fn register_post(context: Context, registration: Form<forms::Register<'_>>) -> Result<MultiResponse, RouteError> {
     match post_register(&context, &registration).await
     {
         //On success, we render the confirmation page with the email result baked in (it's more janky because it's
@@ -57,7 +56,7 @@ pub async fn register_post(context: Context, registration: Form<forms::Register<
 }
 
 #[post("/register/confirm", data = "<confirm>")]
-pub async fn registerconfirm_post(context: Context, confirm: Form<forms::RegisterConfirm<'_>>, jar: &CookieJar<'_>) -> Result<MultiResponse, RocketCustom<String>> {
+pub async fn registerconfirm_post(context: Context, confirm: Form<forms::RegisterConfirm<'_>>, jar: &CookieJar<'_>) -> Result<MultiResponse, RouteError> {
     match post_registerconfirm(&context, &confirm).await
     {
         //If confirmation is successful, we get a token back. We login and redirect to the userhome page
@@ -74,7 +73,7 @@ pub async fn registerconfirm_post(context: Context, confirm: Form<forms::Registe
 }
 
 #[post("/register/confirm?resend", data = "<resendform>")]
-pub async fn registerresend_post(context: Context, resendform: Form<forms::RegisterResend<'_>>) -> Result<MultiResponse, RocketCustom<String>> {
+pub async fn registerresend_post(context: Context, resendform: Form<forms::RegisterResend<'_>>) -> Result<MultiResponse, RouteError> {
     let mut errors = Vec::new();
     handle_email!(post_email_confirm(&context, resendform.email).await, errors);
     Ok(MultiResponse::Template(registerconfirm_base!(context, {

@@ -6,7 +6,6 @@ use crate::api_data::*;
 use crate::api::*;
 use crate::conversion;
 use super::*;
-use rocket::response::status::Custom as RocketCustom;
 
 
 // Build a request for JUST forum categories
@@ -80,8 +79,17 @@ fn get_thread_request(category_ids: &Vec<i64>, limit: i32) -> FullRequest
 #[derive(Serialize, Clone, Debug)]
 struct ForumThread {
     thread: MinimalContent,
-    posts: Vec<MinimalMessage>,
-    posts_count: i32,
+    posts: Vec<MinimalMessage>
+}
+
+impl ForumThread {
+    fn new(thread: MinimalContent, messages_raw: &Vec<MinimalMessage>) -> Self {
+        let thread_id = thread.id;
+        ForumThread { 
+            thread,
+            posts: messages_raw.iter().filter(|m| m.contentId == thread_id).map(|m| m.clone()).collect()
+        }
+    }
 }
 
 //Structs JUST for building data for the forum templates (so no need to be public)
@@ -92,20 +100,39 @@ struct ForumCategory {
     threads_count: i32
 }
 
+impl ForumCategory {
+    fn from_result(category: MinimalContent, thread_result: &RequestResult, messages_raw: &Vec<MinimalMessage>) -> Result<Self, anyhow::Error> {
+        let id = category.id;
+        let threadcount_name = format!("threadcount_{}", id);
+        let threads_name = format!("threads_{}", id);
+
+        let special_counts = conversion::cast_result_required::<SpecialCount>(&thread_result, &threadcount_name)?;//.map_err(rocket_error!())?;
+        let threads_raw = conversion::cast_result_required::<MinimalContent>(&thread_result, &threads_name)?;//.map_err(rocket_error!())?;
+
+        Ok(ForumCategory {
+            category,
+            threads: threads_raw.into_iter().map(|thread| ForumThread::new(thread, messages_raw)).collect(),
+            threads_count: special_counts.get(0)
+                .ok_or(ApiError::Usage(format!("Didn't get specialCount for category {}", id)))?.specialCount
+        })
+    }
+
+}
+
 #[get("/forum")]
-pub async fn forum_get(context: Context) -> Result<Template, RocketCustom<String>> 
+pub async fn forum_get(context: Context) -> Result<Template, RouteError> 
 {
     //First request: just get categories
     let request = get_category_request();
-    let category_result = post_request(&context, &request).await.map_err(rocket_error!())?;
-    let mut categories_raw = conversion::cast_result_required::<MinimalContent>(&category_result, "category").map_err(rocket_error!())?;
+    let category_result = post_request(&context, &request).await?;
+    let mut categories_raw = conversion::cast_result_required::<MinimalContent>(&category_result, "category")?;
 
     //Next request: get the complicated dataset for each category (this somehow includes comments???)
     let category_ids : Vec<i64> = categories_raw.iter().map(|catraw| catraw.id).collect();
     let thread_request = get_thread_request(&category_ids, context.config.default_recent_threads);
-    let thread_result = post_request(&context, &thread_request).await.map_err(rocket_error!())?;
+    let thread_result = post_request(&context, &thread_request).await?;
 
-    let messages_raw = conversion::cast_result_required::<MinimalMessage>(&thread_result, "message").map_err(rocket_error!())?;
+    let messages_raw = conversion::cast_result_required::<MinimalMessage>(&thread_result, "message")?;
 
     //Sort the categories by their name AGAINST the default list in the config. So, it should sort the categories
     //by the order defined in the config, with stuff not present going at the end. Tiebreakers are resolved alphabetically
@@ -117,28 +144,7 @@ pub async fn forum_get(context: Context) -> Result<Template, RocketCustom<String
     let mut categories = Vec::new();
 
     for catraw in categories_raw {
-        let id = catraw.id;
-        let threadcount_name = format!("threadcount_{}", id);
-        let threads_name = format!("threads_{}", id);
-        let special_counts = conversion::cast_result_required::<SpecialCount>(&thread_result, &threadcount_name).map_err(rocket_error!())?;
-        let threads_raw = conversion::cast_result_required::<MinimalContent>(&thread_result, &threads_name).map_err(rocket_error!())?;
-
-        let category = ForumCategory {
-            category: catraw,
-            threads: threads_raw.into_iter().map(|thread| {
-                    let thread_id = thread.id;
-                    ForumThread { 
-                        thread,
-                        posts: messages_raw.iter().filter(|m| m.contentId == thread_id).map(|m| m.clone()).collect(),
-                        posts_count: 0
-                    }
-                }).collect(),
-            threads_count: special_counts.get(0)
-                .and_then(|sp| Some(sp.specialCount))
-                .ok_or(ApiError::Precondition(format!("Didn't get specialCount for category {}", id)))
-                .map_err(rocket_error!())?
-        };
-        categories.push(category);
+        categories.push(ForumCategory::from_result(catraw, &thread_result, &messages_raw)?);
     }
 
     println!("Template categories: {:?}", &categories);

@@ -6,25 +6,44 @@ use serde::Serialize;
 use crate::context::Context;
 use crate::forms;
 use crate::api_data::*;
+use thiserror::Error;
 
 //These are the specific types of errors we'll care about from the api
+#[derive(Error, Debug)]
 pub enum ApiError
 {
+    #[error("Pre-API Preparation Error: {0}")]
     Precondition(String),   //Something BEFORE the api failed (some kind of setup?)
+    #[error("Network Error: {0}")]
     Network(String),    //Is the API reachable?
+    #[error("API Usage Error: {0}")]
     Usage(String),      //Did I (the programmer) use it correctly?
-    User(Option<reqwest::StatusCode>, String) //Did the user submit proper data?
+    #[error("Request Error[{0}]: {1}")]
+    User(RequestStatus, String) //Did the user submit proper data?
 }
 
-impl fmt::Display for ApiError 
-{
+#[derive(Debug)]
+pub enum RequestStatus {
+    Reqwest(reqwest::StatusCode),
+    None
+}
+
+
+impl fmt::Display for RequestStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", match self {
-            ApiError::Precondition(s) => format!("Pre-API Preparation Error: {}", s),
-            ApiError::Network(s) => format!("Network Error: {}", s),
-            ApiError::Usage(s) => format!("API Usage Error: {}", s),
-            ApiError::User(_, s) => format!("Request Error: {}", s),
-        })
+        match self {
+            Self::Reqwest(status) => write!(f, "{}", status),
+            Self::None => write!(f, "???")
+        }
+    }
+}
+
+impl From<Option<reqwest::StatusCode>> for RequestStatus {
+    fn from(item: Option<reqwest::StatusCode>) -> Self {
+        match item {
+            Some(status) => RequestStatus::Reqwest(status),
+            None => RequestStatus::None
+        }
     }
 }
 
@@ -67,7 +86,7 @@ macro_rules! handle_response {
                 //The result from the API was 400, 500, etc. Try to parse the body as the error
                 Err(response_error) => {
                     match $response.text().await.map_err(parse_error!($endpoint, status)) {
-                        Ok(real_error) => Err(ApiError::User(response_error.status(), real_error)),
+                        Ok(real_error) => Err(ApiError::User(response_error.status().into(), real_error)),
                         Err(p_error) => Err(p_error)
                     }
                 }
