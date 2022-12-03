@@ -4,6 +4,8 @@ use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
 use rocket_dyn_templates::Template;
 
+// Every extra file gets turned into a module if you define it here.
+// These modules can do the same thing for their own children
 mod config;
 mod api;
 mod api_data;
@@ -15,19 +17,6 @@ mod routes;
 
 use routes::*;
 
-/* 
-    OK so this file should be entirely just routing and the top level stuff required to route. 
-    Think of it as all your 'controllers' from ASP.NET put into one. Anything more complicated 
-    than rendering a template or basic data parsing should be put in some OTHER function. We 
-    have a module 'special_queries' which houses a lot of the complex functionality, and 'api' 
-    for general calls to API endpoints.
-*/
-
-
-// ------------------------
-// ------- ROUTES ---------
-// ------------------------
-
 #[get("/activity")] //this ofc has param values
 async fn activity_get(context: context::Context) -> Result<Template, RouteError> {
     Ok(basic_template!("activity", context, {}))
@@ -37,8 +26,6 @@ async fn activity_get(context: context::Context) -> Result<Template, RouteError>
 async fn search_get(context: context::Context) -> Result<Template, RouteError> {
     Ok(basic_template!("search", context, {}))
 }
-
-
 
 // -------------------------
 // ------- LAUNCH ----------

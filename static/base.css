@@ -13,6 +13,7 @@
     --bg_error: rgba(255,0,0,0.05);
     --tc_success: green;
     --font: sans-serif;
+    --simple_hover: brightness(1.2);
 }
 
 /* ----------------------------- *
@@ -91,7 +92,20 @@
     overflow-x: hidden;
 }
 
-a.titlelink:link, a.titlelink:visited {
+a.coolbutton {
+    padding: 0.2em;
+    background: var(--bg_activeselect);
+    color: var(--tc_header);
+    border-radius: 0.3em;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* These properties themselves are fine, but consider what should get them. */
+.hover { transition: filter 0.2s ease, background-color 0.2s ease; }
+.hover:hover { filter: var(--simple_hover); }
+
+a.flatlink:link, a.flatlink:visited {
     text-decoration: none;
     color: var(--bg_activeselect);
 }

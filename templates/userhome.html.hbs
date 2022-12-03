@@ -47,7 +47,8 @@
                 <tr><td><b>Avatar:</b></td><td>{{user.avatar}}</td></tr>
                 <tr><td><b>Admin:</b></td><td>{{#if user.admin}}true{{else}}false{{/if}}</td></tr>
             </table>
-            <a id="logoutlink" href="{{http_root}}/logout">Logout</a>
+            <!-- Might turn this into a "coolbutton" -->
+            <a id="logoutlink" href="{{http_root}}/logout" class="flatlink">Logout</a>
         </div>
     </div>
 </section>

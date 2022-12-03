@@ -7,7 +7,7 @@
     {{#each categories}}
     <div class="category">
         <div class="categoryinfo">
-            <h1><a href="{{http_root}}/forum/category/{{category.hash}}" class="titlelink">{{category.name}}</a></h1>
+            <h1><a href="{{../http_root}}/forum/category/{{category.hash}}" class="flatlink">{{category.name}}</a></h1>
             <p class="aside">{{category.description}}</p>
         </div>
         <div class="foruminfo aside mediumseparate">
@@ -15,7 +15,7 @@
             {{#if threads.[0]}}
             <div>
                 <b><time datetime="{{threads.[0].posts.[0].createDate}}">{{timeago threads.[0].posts.[0].createDate}}</time>:</b> 
-                <a href="{{http_root}}/forum/thread/{{threads.[0].thread.hash}}/{{threads.[0].posts.[0].id}}#{{threads.[0].posts.[0].id}}" class="titlelink">{{threads.[0].thread.name}}</a>
+                <a href="{{../http_root}}/forum/thread/{{threads.[0].thread.hash}}/{{threads.[0].posts.[0].id}}#{{threads.[0].posts.[0].id}}" class="flatlink">{{threads.[0].thread.name}}</a>
             </div>
             {{/if}}
         </div>

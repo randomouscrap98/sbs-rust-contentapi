@@ -78,7 +78,8 @@ header img {
 .headertab {
     border-radius: 0.2em;
     padding: 0.2em 0.4em;
-}
+    background-color: var(--bg_header); /* need this for hover effect */
+} 
 
 .headertab.current{
     font-weight: bold;

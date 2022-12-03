@@ -50,12 +50,6 @@
             justify-content: center;
             margin: 0.5em;
         }
-        #browsepagenav a {
-            padding: 0.2em;
-            background: var(--bg_activeselect);
-            color: var(--tc_header);
-            border-radius: 0.3em;
-        }
         .imagelist {
             display: flex;
             flex-wrap: wrap;
@@ -68,7 +62,10 @@
             flex-direction: column;
             margin: 0.3em;
         }
-        .imagepreview input {
+        .imagepreview > a, .imagepreview img { 
+            display: block; 
+        }
+        .imagepreview:not(.copyable) input {
             filter: opacity(0.75);
         }
         .imagepreview.copyable img {
@@ -79,16 +76,12 @@
             border: none;
             background-color: var(--bg_header);
             color: var(--tc_header);
-            filter: none;
             border-radius: 0.3em;
             margin: 0.2em 0;
             padding: 0.2em 0.4em;
         }
         .imagepreview.copyable input.success {
             background-color: var(--tc_success);
-        }
-        .imagepreview.copyable input:hover {
-            filter: brightness(1.2);
         }
         [data-size="1"] .imagepreview { width: 100px; }
         [data-size="1"] .imagepreview input { font-size: 0.6em; }
@@ -156,21 +149,21 @@
         </form>
 {{! These are inline partials used in the next section for the repeated image stuff; no use 
     muddying up the filesystem with partials when this is the only one that will use it}}
-{{#*inline "img_b"}}
+{{#*inline "img_preview"}}
 {{#each images}}
 <div class="imagepreview">
-    <img src="{{imagelink hash ../imagesize}}">
-    <input readonly="" value="{{hash}}" title="{{hash}}">
+    <a href="{{imagelink hash}}" target="_blank"><img src="{{imagelink hash ../imagesize}}"></a>
+    <input readonly="" value="{{hash}}" title="{{hash}}" class="hover">
 </div>
 {{/each}}
 {{/inline}}
 {{#*inline "img_nav"}}
 <div id="browsepagenav" class="smallseparate">
     {{#if previouspagelink}}
-    <a href="{{http_root}}{{previouspagelink}}" class="plainlink">Previous</a>
+    <a href="{{http_root}}{{previouspagelink}}" class="coolbutton">Previous</a>
     {{/if}}
     {{#if hasimages}}
-    <a href="{{http_root}}{{nextpagelink}}" class="plainlink">Next</a>
+    <a href="{{http_root}}{{nextpagelink}}" class="coolbutton">Next</a>
     {{/if}}
 </div>
 {{/inline}}
@@ -178,7 +171,7 @@
         <!--<h4>Preview images:</h4>-->
         <div class="imagelist">
             {{#if haspreview}}
-            {{> img_b images=previewimages}}
+            {{> img_preview images=previewimages}}
             {{else}}
             <p class="aside">No images returned for preview!</p>
             {{/if}}
@@ -188,7 +181,7 @@
         <!--{{> img_nav }}-->
         <div class="imagelist">
             {{#if hasimages}}
-            {{> img_b }}
+            {{> img_preview }}
             {{else}}
             <p class="aside">No images!</p>
             {{/if}}

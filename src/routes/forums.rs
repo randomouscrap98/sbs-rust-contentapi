@@ -9,13 +9,19 @@ use super::*;
 
 
 // Build a request for JUST forum categories
-fn get_category_request() -> FullRequest
+fn get_category_request(query: Option<String>) -> FullRequest
 {
     //The request which we will spend the entire function building
     let mut request = FullRequest::new();
     add_value!(request, "category_literal", SBSContentType::forumcategory.to_string());
 
-    let mut category_request = minimal_content!(String::from("literalType = @category_literal and !notdeleted()"));
+    let mut real_query = String::from("literalType = @category_literal and !notdeleted()");
+
+    if let Some(user_query) = query {
+        real_query = format!("{} and {}", real_query, user_query);
+    }
+
+    let mut category_request = minimal_content!(real_query);
     category_request.name = Some(String::from("category"));
     request.requests.push(category_request);
 
@@ -123,13 +129,13 @@ impl ForumCategory {
 pub async fn forum_get(context: Context) -> Result<Template, RouteError> 
 {
     //First request: just get categories
-    let request = get_category_request();
+    let request = get_category_request(None);
     let category_result = post_request(&context, &request).await?;
     let mut categories_raw = conversion::cast_result_required::<MinimalContent>(&category_result, "category")?;
 
     //Next request: get the complicated dataset for each category (this somehow includes comments???)
     let category_ids : Vec<i64> = categories_raw.iter().map(|catraw| catraw.id).collect();
-    let thread_request = get_thread_request(&category_ids, context.config.default_recent_threads);
+    let thread_request = get_thread_request(&category_ids, context.config.default_category_threads);
     let thread_result = post_request(&context, &thread_request).await?;
 
     let messages_raw = conversion::cast_result_required::<MinimalMessage>(&thread_result, "message")?;
@@ -153,3 +159,8 @@ pub async fn forum_get(context: Context) -> Result<Template, RouteError>
         categories: categories
     }))
 }
+
+//fn render_threads(context: &Context) -> Result<Template, RouteError>
+//{
+//    
+//}

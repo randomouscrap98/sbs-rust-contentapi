@@ -83,7 +83,7 @@ generate_helper!{headerlink_helper, h, out, ctx, {
         get_required_str! { (HTTPROOTKEY, httproot, ctx) {
             get_required_str! { (ROUTEKEY, route, ctx) {
                 out.write(&format!("href=\"{}{}\"", httproot, path))?;
-                out.write("class=\"plainlink headertab ")?;
+                out.write("class=\"plainlink headertab ")?; //Had "hover" here at one point, not sure about it...
                 //THIS is the point of this helper! Add a special class if this is the current page!
                 if route.starts_with(path) {
                     out.write("current")?;

@@ -19,7 +19,7 @@ pub enum MultiResponse {
 #[derive(Debug)]
 pub struct RouteError(Status, String);
 
-impl From<ApiError> for RouteError { //RocketCustom<String> {
+impl From<ApiError> for RouteError { 
     fn from(error: ApiError) -> Self {
         let status = match error {
             ApiError::Network(_) => Status::ServiceUnavailable,
@@ -28,14 +28,12 @@ impl From<ApiError> for RouteError { //RocketCustom<String> {
         };
 
         RouteError(status, error.to_string())
-        //RocketCustom(status, error.to_string())
     }
 }
 
-impl From<anyhow::Error> for RouteError { //RocketCustom<String> {
+impl From<anyhow::Error> for RouteError { 
     fn from(error: anyhow::Error) -> Self {
         RouteError(Status::InternalServerError, error.to_string())
-        //RocketCustom(status, error.to_string())
     }
 }
 
@@ -43,32 +41,8 @@ impl<'r, 'o: 'r> rocket::response::Responder<'r, 'o> for RouteError {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> response::Result<'o> {
         println!("[{}]:{}", &self.0, &self.1);
         self.0.respond_to(req)
-        //match self {
-        //    // in our simplistic example, we're happy to respond with the default 500 responder in all cases 
-        //    _ => rocket::http::Status::InternalServerError.respond_to(req)
-        //}
     }
 }
-
-
-
-
-//impl From<anyhow::Error> for RocketCustom<String> {
-//    fn from(error: anyhow::Error) -> Self {
-//        RocketCustom(Status::InternalServerError, error.to_string())
-//    }
-//}
-//impl Into<RocketCustom<String>> for ApiError {
-//    fn into(self) -> RocketCustom<String> {
-//        let status = match self {
-//            ApiError::Network(error) => Status::ServiceUnavailable,
-//            ApiError::User(_status, error) => Status::BadRequest,
-//            _ => Status::InternalServerError
-//        };
-//
-//        RocketCustom(status, self.to_string())
-//    }
-//}
 
 macro_rules! my_redirect {
     ($config:expr, $location:expr) => {
@@ -154,12 +128,3 @@ macro_rules! handle_error {
     };
 }
 pub(crate) use handle_error;
-
-//Simple conversion from server error into rocket error. This should ONLY be used where we are certain
-//the error isn't due to the user!
-//macro_rules! rocket_error {
-//    () => {
-//        |e| rocket::response::status::Custom(rocket::http::Status::ServiceUnavailable, e.to_string())
-//    };
-//}
-//pub(crate) use rocket_error;
