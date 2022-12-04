@@ -12,12 +12,12 @@ use super::*;
 
 //To build the forum path at the top
 #[derive(Serialize)]
-struct ForumPath {
+struct ForumPathItem {
     link: String,
     title: String
 }
 
-impl ForumPath {
+impl ForumPathItem {
     fn from_category(category: &Content) -> Self {
         Self {
             link: format!("/forum/category/{}", if let Some(ref hash) = category.hash { hash } else { "" }),
@@ -30,6 +30,13 @@ impl ForumPath {
             title: String::from("Root")
         }
     }
+}
+
+#[derive(Serialize)]
+struct ForumPagelistItem {
+    text: String,
+    current: bool,
+    page: i32
 }
 
 
@@ -294,14 +301,25 @@ async fn render_threads(context: &Context, category_request: FullRequest, page: 
     ).await?;
 
     let category = categories.get(0).ok_or(RouteError(rocket::http::Status::NotFound, String::from("Couldn't find that category")))?;
+    let mut pagelist = Vec::new();
 
-    println!("Please: {:?}", category);
+    for i in (0..category.threads_count).step_by(context.config.default_display_threads as usize) {
+        let thispage = i / context.config.default_display_threads;
+        pagelist.push(ForumPagelistItem {
+            page: thispage,
+            text: format!("{}", thispage + 1),
+            current: thispage == page
+        });
+    }
+
+    //println!("Please: {:?}", category);
 
     Ok(basic_template!("forumcategory", context, {
         //categories: categories
         category: category,
         page: page,
-        forumpath: vec![ForumPath::root(), ForumPath::from_category(&category.category)]
+        pagelist: pagelist,
+        forumpath: vec![ForumPathItem::root(), ForumPathItem::from_category(&category.category)]
     }))
 }
 
@@ -329,11 +347,11 @@ pub async fn forum_get(context: Context) -> Result<Template, RouteError>
 
     let categories = build_categories(&context, categories_cleaned, context.config.default_category_threads, 0).await?;
 
-    println!("Template categories: {:?}", &categories);
+    //println!("Template categories: {:?}", &categories);
 
     Ok(basic_template!("forum", context, {
         categories: categories,
-        forumpath: vec![ForumPath::root()]
+        forumpath: vec![ForumPathItem::root()]
     }))
 }
 

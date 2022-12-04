@@ -14,7 +14,7 @@
     </p>
     {{/if}}
     <!-- CAN'T post to self: we could be rendering from another context -->
-    <form {{selfpost}}>
+    <form method="POST" action="{{http_root}}/register/confirm">
         {{> partials/errorlist }}
         <label for="complete_email">Email:</label>
         <input id="complete_email" type="text" name="email" required="" value="{{emailresult}}">
@@ -28,7 +28,7 @@
         to get through email filters. If you didn't receive it, you can send it again here:
     </p>
     <!-- CAN'T post to self: we could be rendering from another context (and the endpoint isn't self anyway) -->
-    <form {{selfpost "resend"}}>
+    <form method="POST" action="{{http_root}}/register/confirm?resend">
         {{> partials/errorlist errors=resenderrors }}
         {{#if resendsuccess}}
         <p class="success">Email resent!</p>

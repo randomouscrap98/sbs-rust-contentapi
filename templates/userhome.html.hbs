@@ -47,12 +47,7 @@
             <a id="logoutlink" href="{{http_root}}/logout" class="flatlink">Logout</a>
         </div>
     </div>
-</section>
-<section>
-    <!--<hr>-->
-    <iframe src="{{http_root}}/widget/imagebrowser" class="imagebrowser"></iframe>
-</section>
-    <section>
+    <hr>
     <h3 id="update-user">Update info:</h3>
     <form {{selfpost "#update-user"}}>
         {{> partials/errorlist errors=updateerrors}}
@@ -60,10 +55,15 @@
         <input id="update_username" type="text" name="username" value="{{user.username}}">
         <label for="update_avatar">Avatar:</label>
         <input id="update_avatar" type="text" name="avatar" value="{{user.avatar}}">
-        <p class="aside">Copy key/hash from image browser above</p>
+        <p class="aside">Copy key/hash from image browser below</p>
         <input type="submit" value="Update">
     </form>
-    <hr>
+</section>
+<section>
+    <!--<hr>-->
+    <iframe src="{{http_root}}/widget/imagebrowser" class="imagebrowser"></iframe>
+</section>
+    <section>
     <h3 id="update-sensitive">Update sensitive info</h3>
     <p>Only set the fields you want to change, except 'current password', which is required</p>
     <form {{selfpost "sensitive#update-sensitive"}} autocomplete="off" >

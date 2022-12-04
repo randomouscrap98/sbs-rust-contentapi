@@ -13,7 +13,7 @@
             <!--<p class="aside">{{category.description}}</p>-->
         </div>
         <div class="foruminfo aside mediumseparate">
-            <div class="threadicon separate">
+            <div class="threadicon">
                 {{#if neutral}}
                 <img src="{{@root.http_resources}}/sb-page.png">
                 {{/if}}
@@ -57,6 +57,11 @@
     <hr class="smaller">
     {{/unless}}
     {{/each}}
+    <div id="pagelist" class="smallseparate">
+        {{#each pagelist}}
+        <a class="{{#if current}}current{{/if}} " href="{{@root.http_root}}/forum/category/{{@root.category.category.hash}}?page={{page}}">{{text}}</a>
+        {{/each}}
+    </div>
 </section>
 {{/inline}}
 {{>layout}}

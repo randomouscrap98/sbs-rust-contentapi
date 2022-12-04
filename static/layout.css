@@ -30,8 +30,8 @@ footer {
 }
 
 /* Links are ugh */
-header a, header a:visited { color: var(--tc_header); }
-footer a, footera:visited { color: var(--tc_header); }
+header a:link, header a:visited { color: var(--tc_header); }
+footer a:link, footer a:visited { color: var(--tc_header); }
 
 nav {
     display: flex;
