@@ -89,6 +89,8 @@ struct Keygen();
 impl Keygen {
     fn threadcount(id: i64) -> String { format!("threadcount_{id}") }
     fn threads(id: i64) -> String { format!("threads_{id}") }
+    fn stickythreads(id: i64) -> String { format!("stickythreads_{id}") }
+    fn stickies(id: i64) -> String { format!("stickies_{id}")}
 }
 
 
@@ -97,6 +99,7 @@ impl Keygen {
 struct ForumCategory {
     category: Content,
     threads: Vec<ForumThread>,
+    stickies: Vec<ForumThread>,
     threads_count: i32,
     users: HashMap<String, User>
 }
@@ -106,14 +109,17 @@ impl ForumCategory {
         //let id = category.id.ok_or(anyhow!("Given forum category didn't have an id!"))?;
         let threadcount_name = Keygen::threadcount(category.id);
         let threads_name = Keygen::threads(category.id);
+        let stickies_name = Keygen::stickythreads(category.id);
 
         let special_counts = conversion::cast_result_required::<SpecialCount>(&thread_result, &threadcount_name)?;
         let threads_raw = conversion::cast_result_required::<Content>(&thread_result, &threads_name)?;
+        let stickies_raw = conversion::cast_result_safe::<Content>(&thread_result, &stickies_name)?;
         let users_raw = conversion::cast_result_required::<User>(&thread_result, "user")?;
 
         Ok(ForumCategory {
             category: category.category, //partial move
             threads: threads_raw.into_iter().map(|thread| ForumThread::new(thread, messages_raw, &category.stickies)).collect(),
+            stickies: stickies_raw.into_iter().map(|thread| ForumThread::new(thread, messages_raw, &category.stickies)).collect(),
             users: users_raw.into_iter().map(|u| (format!("{}", u.id), u)).collect(),
             threads_count: special_counts.get(0)
                 .ok_or(ApiError::Usage(format!("Didn't get specialCount for category {}", category.id)))?.specialCount
@@ -167,37 +173,49 @@ fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip: i3
     add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
 
     //let category_ids : Vec<i64> = categories.iter().map(|c| c.id).collect();
-    let mut comment_query = String::from("!basiccomments() and (");
-    let mut user_query = String::from("!notdeleted() and (id in @message.createUserId or ");
-    let id_count = categories.len();
+    let mut keys = Vec::new();
+
+    //let id_count = categories.len();
     //Not sure if we need values, but I NEED permissions to know if the thread is locked
     let fields = String::from("id,name,lastCommentId,literalType,hash,parentId,commentCount,createDate,values,permissions");
 
-    for (index, ref category) in categories.iter().enumerate()
+    for ref category in categories.iter()
     {
-        //Standard threads get (for latest N threads)
         let category_id = category.id;
+        let sticky_key = Keygen::stickies(category_id);
+        request.values.insert(sticky_key.clone(), category.stickies.clone().into());
+
+        //Standard threads get (for latest N threads)
         let base_query = format!("parentId = {{{{{category_id}}}}} and literalType = @thread_literal and !notdeleted()");
+
+        //Regular thread request. Needs to specifically NOT be the stickies
         let mut threads_request = build_request!(
             RequestType::content,
             fields.clone(),
-            base_query.clone(),
+            format!("{} and id not in @{}", base_query, sticky_key),
             String::from("lastCommentId_desc"),
             limit,
             skip
         );
-        let key = Keygen::threads(category_id);
 
+        let key = Keygen::threads(category_id);
         threads_request.name = Some(key.clone());
         request.requests.push(threads_request);
+        keys.push(key);
 
-        comment_query = format!("{} id in @{}.lastCommentId", comment_query, &key);
-        user_query = format!("{} id in @{}.createUserId", user_query, &key);
+        // NO limits on sticky request. The "only if no skip" might not be great
+        if skip == 0 {
+            let mut sticky_request = build_request!(
+                RequestType::content,
+                fields.clone(),
+                format!("{} and id in @{}", base_query, sticky_key),
+                String::from("lastCommentId_desc")
+            );
 
-        //Only output 'or' if we're not at the end
-        if index < id_count - 1 { 
-            comment_query.push_str(" or "); 
-            user_query.push_str(" or "); 
+            let key = Keygen::stickythreads(category_id);
+            sticky_request.name = Some(key.clone());
+            request.requests.push(sticky_request);
+            keys.push(key);
         }
 
         //Thread count get (if the previous is too expensive, consider just doing this)
@@ -210,8 +228,11 @@ fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip: i3
         request.requests.push(count_request);
     }
 
-    comment_query.push_str(")");
-    user_query.push_str(")");
+    //How many string allocations is this? I mean it shouldn't matter but ugh
+    let comment_query = format!("!basiccomments() and ({})", 
+        keys.iter().map(|k| format!("id in @{}.lastCommentId", k)).collect::<Vec<String>>().join(" or "));
+    let user_query = format!("!notdeleted() and (id in @message.createUserId or {})",
+        keys.iter().map(|k| format!("id in @{}.createUserId", k)).collect::<Vec<String>>().join(" or "));
 
     let comment_request = build_request!(
         RequestType::message,

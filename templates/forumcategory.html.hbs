@@ -5,7 +5,7 @@
     {{> partials/forumpath }}
 </section>
 <section>
-    {{#each category.threads}}
+    {{#*inline "thread_item"}}
     <div class="thread">
         <!--<div class="threaddata">-->
         <div class="threadinfo">
@@ -39,11 +39,18 @@
         </div>
         <!--</div>-->
     </div>
-    {{#if @last}}
-    {{!Rocket's handlebars implementation is very limited, don't have unless or whatever}}
-    {{else}}
+    {{/inline}}
+    {{!Right now, no distinction between the stickies and not}}
+    {{#each category.stickies}}
+    {{> thread_item}}
     <hr class="smaller">
-    {{/if}}
+    {{/each}}
+    {{!Only care about 'unless' in the main list, the only time this DOES work is if there are ONLY stickies}}
+    {{#each category.threads}}
+    {{> thread_item}}
+    {{#unless @last}}
+    <hr class="smaller">
+    {{/unless}}
     {{/each}}
 </section>
 {{/inline}}
