@@ -14,8 +14,10 @@
             <div><b>Threads:</b> {{threads_count}}</div>
             {{#if threads.[0]}}
             <div>
-                <b><time datetime="{{threads.[0].posts.[0].createDate}}">{{timeago threads.[0].posts.[0].createDate}}</time>:</b> 
-                <a href="{{../http_root}}/forum/thread/{{threads.[0].thread.hash}}/{{threads.[0].posts.[0].id}}#{{threads.[0].posts.[0].id}}" class="flatlink">{{threads.[0].thread.name}}</a>
+                {{#with threads.[0].posts.[0]}}
+                <b><time datetime="{{createDate}}">{{timeago createDate}}</time>:</b> 
+                <a href="{{../../http_root}}/forum/thread/{{../threads.[0].thread.hash}}/{{id}}#{{id}}" class="flatlink">{{../threads.[0].thread.name}}</a>
+                {{/with}}
             </div>
             {{/if}}
         </div>

@@ -16,11 +16,6 @@
     flex: auto;
 }
 
-.thread {
-    /*display: flex;*/
-    /*align-items: center;*/
-}
-
 .threadicon {
     flex: none;
     /*margin-right: 0.7em;*/

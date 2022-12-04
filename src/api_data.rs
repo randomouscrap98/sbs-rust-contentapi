@@ -3,6 +3,7 @@
 
 use std::collections::HashMap;
 
+use serde_aux::prelude::*;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -92,7 +93,7 @@ pub struct User
     pub avatar: String,
     pub special: Option<String>,
     //pub deleted: bool,
-    #[serde(alias = "super")]
+    #[serde(alias = "super", deserialize_with = "deserialize_bool_from_anything")]
     pub admin: bool,
     pub createDate : DateTime<Utc>
 }
@@ -105,7 +106,8 @@ pub struct Content //Remember, these are files, pages, threads etc. Lovely!
     //EVERYTHING is an option so we can construct these types JUST LIKE the web
     pub id: Option<i64>,
     pub name: Option<String>,
-    //pub deleted: i8, //bool, but api returns 0
+    #[serde(deserialize_with = "deserialize_bool_from_anything")]
+    pub deleted: bool, //WARN: this field may not represent reality!
     pub createUserId: Option<i64>,
     pub createDate : Option<DateTime<Utc>>,
     pub contentType : Option<i8>, // This is an enum, consider making values for this!
@@ -141,7 +143,8 @@ pub struct Message
     pub engagement: Option<HashMap<String, HashMap<String, i64>>>,
     pub editDate: Option<DateTime<Utc>>,
     pub editUserid: Option<i64>,
-    pub edited: Option<bool>, // PLEASE PLEASE be a real bool! 
+    #[serde(deserialize_with = "deserialize_bool_from_anything")]
+    pub edited: bool, 
     pub module: Option<String>
     //pub deleted: bool,
 }

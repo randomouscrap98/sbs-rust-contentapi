@@ -1,0 +1,8 @@
+<p class="forumpath">
+    {{#each forumpath}}
+    <a class="flatlink" href="{{@root.http_root}}{{link}}">{{title}}</a>
+    {{#unless @last}}
+    <span class="pathseparator">/</span>
+    {{/unless}}
+    {{/each}}
+</p>

@@ -2,18 +2,19 @@
 {{stylesheet "/forum.css"}}
 <section>
     <h1>{{category.category.name}}</h1>
+    {{> partials/forumpath }}
 </section>
 <section>
     {{#each category.threads}}
     <div class="thread">
         <!--<div class="threaddata">-->
         <div class="threadinfo">
-            <h3><a href="{{../http_root}}/forum/thread/{{thread.hash}}" class="flatlink">{{thread.name}}</a></h3>
+            <h3><a href="{{@root.http_root}}/forum/thread/{{thread.hash}}" class="flatlink">{{thread.name}}</a></h3>
             <!--<p class="aside">{{category.description}}</p>-->
         </div>
         <div class="foruminfo aside mediumseparate">
             <div class="threadicon">
-                <img src="{{../http_resources}}/sb-page.png">
+                <img src="{{@root.http_resources}}/sb-page.png">
             </div>
             <div><b>Posts:</b> {{thread.commentCount}}</div>
             <div>
@@ -22,10 +23,14 @@
             </div>
             {{#if posts.[0]}}
             <div>
-                <b>Last post:</b>
-                <a href="{{../http_root}}/forum/thread/{{thread.hash}}/{{posts.[0].id}}#{{posts.[0].id}}" class="flatlink">
+                <b>Last:</b>
+                <a href="{{@root.http_root}}/forum/thread/{{thread.hash}}/{{posts.[0].id}}#{{posts.[0].id}}" class="flatlink">
                     <time datetime="{{posts.[0].createDate}}">{{timeago posts.[0].createDate}}</time>
                 </a>
+                by
+                {{#with (lookup @root.category.users (string posts.[0].createUserId))}}
+                <a class="flatlink" href="{{@root.http_root}}/user/{{username}}">{{username}}</a>
+                {{/with}}
             </div>
             {{/if}}
         </div>

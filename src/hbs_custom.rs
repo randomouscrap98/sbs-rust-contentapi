@@ -133,6 +133,12 @@ generate_helper!{selfpost_helper, h, out, ctx, {
     }}
 }}
 
+generate_helper!{string_helper, h, out, _ctx, {
+    if let Some(int) = get_param!(h, 0, as_i64) {
+        out.write(&format!("{}",int))?;
+    }
+}}
+
 generate_helper!{timeago_helper, h, out, _ctx, {
     if let Some(time) = get_param!(h, 0, as_str) {
         match DateTime::parse_from_rfc3339(time) {
@@ -184,4 +190,5 @@ pub fn customize(hbs: &mut Handlebars) {
     hbs.register_helper("stylesheet", Box::new(stylesheet_helper));
     hbs.register_helper("script", Box::new(script_helper));
     hbs.register_helper("timeago", Box::new(timeago_helper));
+    hbs.register_helper("string", Box::new(string_helper));
 }

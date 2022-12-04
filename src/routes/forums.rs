@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use rocket_dyn_templates::Template;
 use serde::Serialize;
 use anyhow::anyhow;
@@ -7,6 +9,13 @@ use crate::api_data::*;
 use crate::api::*;
 use crate::conversion;
 use super::*;
+
+//To build the forum path at the top
+#[derive(Serialize)]
+struct ForumPath {
+    link: String,
+    title: String
+}
 
 #[derive(Serialize, Clone, Debug)]
 struct ForumThread {
@@ -29,7 +38,8 @@ impl ForumThread {
 struct ForumCategory {
     category: Content,
     threads: Vec<ForumThread>,
-    threads_count: i32
+    threads_count: i32,
+    users: HashMap<String, User>
 }
 
 impl ForumCategory {
@@ -38,12 +48,14 @@ impl ForumCategory {
         let threadcount_name = format!("threadcount_{}", id);
         let threads_name = format!("threads_{}", id);
 
-        let special_counts = conversion::cast_result_required::<SpecialCount>(&thread_result, &threadcount_name)?;//.map_err(rocket_error!())?;
-        let threads_raw = conversion::cast_result_required::<Content>(&thread_result, &threads_name)?;//.map_err(rocket_error!())?;
+        let special_counts = conversion::cast_result_required::<SpecialCount>(&thread_result, &threadcount_name)?;
+        let threads_raw = conversion::cast_result_required::<Content>(&thread_result, &threads_name)?;
+        let users_raw = conversion::cast_result_required::<User>(&thread_result, "user")?;
 
         Ok(ForumCategory {
             category,
             threads: threads_raw.into_iter().map(|thread| ForumThread::new(thread, messages_raw)).collect(),
+            users: users_raw.into_iter().map(|u| (format!("{}", u.id), u)).collect(),
             threads_count: special_counts.get(0)
                 .ok_or(ApiError::Usage(format!("Didn't get specialCount for category {}", id)))?.specialCount
         })
@@ -102,6 +114,7 @@ fn get_thread_request(category_ids: &Vec<i64>, limit: i32, skip: i32) -> FullReq
     add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
 
     let mut comment_query = String::from("!basiccomments() and (");
+    let mut user_query = String::from("!notdeleted() and (id in @message.createUserId or ");
     let id_count = category_ids.len();
     let fields = String::from("id,name,lastCommentId,literalType,hash,parentId,commentCount,createDate");
 
@@ -126,9 +139,14 @@ fn get_thread_request(category_ids: &Vec<i64>, limit: i32, skip: i32) -> FullReq
         comment_query.push_str(&key);
         comment_query.push_str(".lastCommentId");
 
+        user_query.push_str("id in @");
+        user_query.push_str(&key);
+        user_query.push_str(".createUserId");
+
         //Only output 'or' if we're not at the end
         if index < id_count - 1 { 
             comment_query.push_str(" or "); 
+            user_query.push_str(" or "); 
         }
 
         //Thread count get (if the previous is too expensive, consider just doing this)
@@ -142,6 +160,7 @@ fn get_thread_request(category_ids: &Vec<i64>, limit: i32, skip: i32) -> FullReq
     }
 
     comment_query.push_str(")");
+    user_query.push_str(")");
 
     let comment_request = build_request!(
         RequestType::message,
@@ -149,7 +168,13 @@ fn get_thread_request(category_ids: &Vec<i64>, limit: i32, skip: i32) -> FullReq
         comment_query);
     request.requests.push(comment_request);
 
-    println!("Threads request: {:?}", &request);
+    let user_request = build_request!(
+        RequestType::user,
+        String::from("*"),
+        user_query);
+    request.requests.push(user_request);
+
+    //println!("Threads request: {:?}", &request);
 
     request
 }
@@ -204,12 +229,31 @@ async fn render_threads(context: &Context, category_request: FullRequest, page: 
 
     let category = categories.get(0).ok_or(RouteError(rocket::http::Status::NotFound, String::from("Couldn't find that category")))?;
 
+    println!("Please: {:?}", category);
+
     Ok(basic_template!("forumcategory", context, {
         //categories: categories
         category: category,
-        page: page
+        page: page,
+        forumpath: vec![root_forum_path(), category_forum_path(&category)]
     }))
 }
+
+fn category_forum_path(category: &ForumCategory) -> ForumPath {
+    ForumPath {
+        link: format!("/forum/category/{}", if let Some(ref hash) = category.category.hash { hash } else { "" }),
+        title: if let Some(ref name) = category.category.name { name.clone() } else { String::from("NOTFOUND") }
+    }
+}
+
+fn root_forum_path() -> ForumPath
+{
+    ForumPath {
+        link: String::from("/forum"),
+        title: String::from("Root")
+    }
+}
+
 
 
 // ----------------------
@@ -237,7 +281,8 @@ pub async fn forum_get(context: Context) -> Result<Template, RouteError>
     println!("Template categories: {:?}", &categories);
 
     Ok(basic_template!("forum", context, {
-        categories: categories
+        categories: categories,
+        forumpath: vec![root_forum_path()]
     }))
 }
 

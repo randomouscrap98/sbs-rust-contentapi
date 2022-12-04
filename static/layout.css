@@ -50,6 +50,7 @@ section {
     max-width: 70em;
     margin: 0.5em auto;
     border-radius: 1em;
+    overflow: hidden;
 }
 
 h1 {
@@ -143,6 +144,12 @@ form input, form textbox {
     main { 
         padding: 0;
     }
+
+    /* Not sure about this one */
+    /*hr {  
+        margin-left: -2em;
+        margin-right: -2em;
+    }*/
 
     /* Remove decorations, turn into simple page */
     section {
