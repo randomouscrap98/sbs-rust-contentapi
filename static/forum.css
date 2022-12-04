@@ -16,9 +16,34 @@
     flex: auto;
 }
 
+.thread {
+    /*display: flex;*/
+    /*align-items: center;*/
+}
+
+.threadicon {
+    flex: none;
+    /*margin-right: 0.7em;*/
+}
+.threadicon img {
+    /*width: 1.7em;*/
+    width: 1.5em;
+}
+
+.thread h3 {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+}
+
 .foruminfo {
     display: flex;
     align-items: center;
     overflow: hidden;
     margin-left: auto;
 }
+
+/*@media screen and (max-width: 30em)
+{
+    .threadicon { margin-right: 0.4em; }
+    .threadicon img { width: 1em; }
+}*/

@@ -64,15 +64,15 @@ macro_rules! network_error {
 //actually happen and indicate an error with the API, so I'm fine just outputting a general
 //error with additional info.
 macro_rules! parse_error {
-    ($endpoint:expr, $status:expr) => {
-       |err| ApiError::Usage(String::from(format!("Could not parse result/body from {}({}): response error: {}!", $endpoint, $status, err)))
+    ($endpoint:expr, $status:expr, $data:expr) => {
+       |err| ApiError::Usage(String::from(format!("Could not parse RESPONSE body from {}[{}], serde error: {}\nREQUEST DATA:\n{:?}", $endpoint, $status, err, $data)))
     };
 }
 
 
 //Once a response comes back from the API, figure out the appropriate errors or data to parse and return
 macro_rules! handle_response {
-    ($response:ident, $endpoint:expr) => 
+    ($response:ident, $endpoint:expr, $data:expr) => 
     {
         //Another block so we can copy some values out of the response
         {
@@ -81,11 +81,11 @@ macro_rules! handle_response {
             {
                 //The result from the API was fine, try to parse it as json
                 Ok(_) => {
-                    $response.json::<T>().await.map_err(parse_error!($endpoint, status))
+                    $response.json::<T>().await.map_err(parse_error!($endpoint, status, $data))
                 },
                 //The result from the API was 400, 500, etc. Try to parse the body as the error
                 Err(response_error) => {
-                    match $response.text().await.map_err(parse_error!($endpoint, status)) {
+                    match $response.text().await.map_err(parse_error!($endpoint, status, $data)) {
                         Ok(real_error) => Err(ApiError::User(response_error.status().into(), real_error)),
                         Err(p_error) => Err(p_error)
                     }
@@ -116,7 +116,7 @@ pub async fn basic_get_request<T>(endpoint: &str, context: &Context) -> Result<T
         .send().await
         .map_err(network_error!())?;
     
-    handle_response!(response, endpoint)
+    handle_response!(response, endpoint, "GET REQUEST (empty)")
 }
 
 // The basis for creating POST requests (since we have a couple types)
@@ -134,7 +134,7 @@ fn create_post_request(endpoint: &str, context: &Context) -> reqwest::RequestBui
 //Construct a basic POST request to the given endpoint (including ?params) using the given
 //request context. Automatically add bearer headers and all that
 pub async fn basic_post_request<U, T>(endpoint: &str, data: &U, context: &Context) -> Result<T, ApiError>
-    where U : Serialize, T: DeserializeOwned
+    where U : Serialize+core::fmt::Debug, T: DeserializeOwned
 {
     let request = create_post_request(endpoint, context);
 
@@ -145,7 +145,7 @@ pub async fn basic_post_request<U, T>(endpoint: &str, data: &U, context: &Contex
         .send().await
         .map_err(network_error!())?;
     
-    handle_response!(response, endpoint)
+    handle_response!(response, endpoint, data)
 }
 
 pub async fn get_about(context: &Context) -> Result<About, ApiError>

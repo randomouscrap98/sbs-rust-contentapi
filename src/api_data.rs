@@ -83,7 +83,7 @@ pub struct SpecialCount
 // *     VIEWS (READ AND WRITE)     *
 // ----------------------------------
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct User
 {
     pub id: i64,
@@ -126,58 +126,6 @@ pub struct Content //Remember, these are files, pages, threads etc. Lovely!
     pub lastRevisionId: Option<i64>
 }
 
-//#[derive(Serialize, Deserialize, Debug)]
-//pub struct Content //Remember, these are files, pages, threads etc. Lovely!
-//{
-//    pub id: i64,
-//    pub name: String,
-//    //pub deleted: i8, //bool, but api returns 0
-//    pub createUserId: i64,
-//    pub createDate : DateTime<Utc>,
-//    pub contentType : i8, // This is an enum, consider making values for this!
-//    pub parentId : i64,
-//    pub text: String, //This could be big?
-//    pub literalType: Option<String>,
-//    pub meta: Option<String>,
-//    pub description: Option<String>,
-//    pub hash: String,
-//    pub permissions: HashMap<i64, String>,
-//    pub values: HashMap<String, serde_json::Value>,
-//    pub keywords: Vec<String>,
-//    pub engagement: HashMap<String, HashMap<String, i64>>,
-//    pub lastCommentId: Option<i64>,
-//    pub commentCount: i64,
-//    pub watchCount: i64,
-//    pub keywordCount: i64,
-//    pub lastRevisionId: i64
-//}
-
-//impl Content {
-//    pub fn new(contentType: i8) -> Self {
-//        Content {
-//            id: 0,
-//            name: String::from(""),
-//            createUserId: 0,
-//            createDate : Utc::now(),
-//            contentType, //from params
-//            parentId: 0,
-//            text: String::from(""),
-//            literalType: None,
-//            meta: None,
-//            description: None,
-//            hash: String::from(""),
-//            permissions: HashMap::new(),
-//            values: HashMap::new(),
-//            keywords: Vec::new(),
-//            engagement: HashMap::new(),
-//            lastCommentId: None,
-//            commentCount: 0,
-//            watchCount: 0,
-//            keywordCount: 0,
-//            lastRevisionId: 0
-//        }
-//    }
-//}
 
 #[serde_with::skip_serializing_none] //MUST COME BEFORE
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
@@ -197,82 +145,6 @@ pub struct Message
     pub module: Option<String>
     //pub deleted: bool,
 }
-//pub struct Message
-//{
-//    pub id: i64,
-//    pub contentId: i64,
-//    pub createUserId: i64,
-//    pub createDate : DateTime<Utc>,
-//    pub text: String,
-//    pub values: HashMap<String, serde_json::Value>,
-//    pub engagement: HashMap<String, HashMap<String, i64>>,
-//    pub editDate: Option<DateTime<Utc>>,
-//    pub editUserid: Option<i64>,
-//    pub edited: bool, // PLEASE PLEASE be a real bool! 
-//    pub module: Option<String>
-//    //pub deleted: bool,
-//}
-
-//#[derive(Serialize, Deserialize, Clone, Debug)]
-//pub struct MinimalMessage
-//{
-//    pub id: i64,
-//    pub contentId: i64,
-//    pub createUserId: i64,
-//    pub createDate : DateTime<Utc>,
-//    //pub text: String,
-//    //pub editDate: Option<DateTime<Utc>>,
-//    //pub editUserid: Option<i64>,
-//    //pub edited: bool, // PLEASE PLEASE be a real bool! 
-//    pub module: Option<String>
-//    //pub deleted: bool,
-//}
-//
-//macro_rules! minimal_message {
-//    ($query:expr) => { 
-//        build_request!(
-//            RequestType::message, 
-//            //Have to select delete even if we're not putting it in the struct, for the contentapi macros
-//            String::from("id,deleted,contentId,createUserId,createDate,module"),
-//            $query
-//        )
-//    };
-//}
-//pub(crate) use minimal_message;
-
-//The content format will never change, so this "duplicate" is fine. This is
-//used for the many queries that do NOT need everything
-//#[derive(Serialize, Deserialize, Clone, Debug)]
-//pub struct MinimalContent
-//{
-//    pub id: i64,
-//    pub name: String,
-//    //pub deleted: i8, //bool, but the api returns 0
-//    pub createUserId: i64,
-//    pub createDate : DateTime<Utc>,
-//    pub contentType : i8, // This is an enum, consider making values for this!
-//    pub parentId : i64,
-//    pub literalType: Option<String>,
-//    pub meta: Option<String>,
-//    pub description: Option<String>, // Is USUALLY small, and instantly retrievable
-//    pub hash: String,
-//    //These are expensive on QCS ONLY because off-topic takes a not-insignificant time to compute. but
-//    //they should be fast on SBS and they're just kinda necessary for too many 'minimal' things.
-//    pub lastCommentId: Option<i64>,
-//    pub commentCount: i64,
-//}
-//
-//macro_rules! minimal_content {
-//    ($query:expr) => { 
-//        build_request!(
-//            RequestType::content, 
-//            //Have to select delete even if we're not putting it in the struct, for the contentapi macros
-//            String::from("id,deleted,name,createUserId,createDate,contentType,parentId,literalType,meta,description,hash,lastCommentId,commentCount"),
-//            $query
-//        )
-//    };
-//}
-//pub(crate) use minimal_content;
 
 
 #[derive(Serialize, Deserialize)]
@@ -289,7 +161,7 @@ pub struct RequestResult
     pub objects: HashMap<String, Vec<serde_json::Value>>,
     pub totalTime: f64,
     pub nonDbTime: f64,
-    pub requestUser: i64
+    pub requestUser: Option<i64>
 }
 
 
@@ -309,7 +181,7 @@ pub struct QueryImage
 // *     POST DATA     *
 // ---------------------
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Login
 {
     pub username: String,

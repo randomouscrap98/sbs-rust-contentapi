@@ -3,7 +3,7 @@
 use rocket::{form::FromForm, fs::TempFile};
 use serde::Serialize;
 
-#[derive(Serialize, FromForm)]
+#[derive(Serialize, FromForm, Debug)]
 pub struct Login<'a>
 {
     pub username: &'a str,
@@ -11,7 +11,7 @@ pub struct Login<'a>
     pub long_session : bool  //This is from the form itself, just a checkbox
 }
 
-#[derive(Serialize, FromForm)]
+#[derive(Serialize, FromForm, Debug)]
 pub struct Register<'a>
 {
     pub username: &'a str,
@@ -19,26 +19,26 @@ pub struct Register<'a>
     pub email: &'a str 
 }
 
-#[derive(Serialize, FromForm)]
+#[derive(Serialize, FromForm, Debug)]
 pub struct RegisterConfirm<'a>
 {
     pub email: &'a str,
     pub key: &'a str
 }
 
-#[derive(Serialize, FromForm)]
+#[derive(Serialize, FromForm, Debug)]
 pub struct RegisterResend<'a>
 {
     pub email: &'a str
 }
 
-#[derive(Serialize, FromForm)]
+#[derive(Serialize, FromForm, Debug)]
 pub struct LoginRecover<'a>
 {
     pub email: &'a str
 }
 
-#[derive(Serialize, FromForm)]
+#[derive(Serialize, FromForm, Debug)]
 pub struct UserSensitive<'a>
 {
     pub username: Option<&'a str>,

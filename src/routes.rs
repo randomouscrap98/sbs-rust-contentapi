@@ -39,7 +39,7 @@ impl From<anyhow::Error> for RouteError {
 
 impl<'r, 'o: 'r> rocket::response::Responder<'r, 'o> for RouteError {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> response::Result<'o> {
-        println!("[{}]:{}", &self.0, &self.1);
+        println!("[{}]: {}", &self.0, &self.1);
         self.0.respond_to(req)
     }
 }

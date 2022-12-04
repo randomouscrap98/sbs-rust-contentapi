@@ -1,0 +1,42 @@
+{{#*inline "page"}}
+{{stylesheet "/forum.css"}}
+<section>
+    <h1>{{category.category.name}}</h1>
+</section>
+<section>
+    {{#each category.threads}}
+    <div class="thread">
+        <!--<div class="threaddata">-->
+        <div class="threadinfo">
+            <h3><a href="{{../http_root}}/forum/thread/{{thread.hash}}" class="flatlink">{{thread.name}}</a></h3>
+            <!--<p class="aside">{{category.description}}</p>-->
+        </div>
+        <div class="foruminfo aside mediumseparate">
+            <div class="threadicon">
+                <img src="{{../http_resources}}/sb-page.png">
+            </div>
+            <div><b>Posts:</b> {{thread.commentCount}}</div>
+            <div>
+                <b>Created:</b>
+                <time datetime="{{thread.createDate}}">{{timeago thread.createDate}}</time></b> 
+            </div>
+            {{#if posts.[0]}}
+            <div>
+                <b>Last post:</b>
+                <a href="{{../http_root}}/forum/thread/{{thread.hash}}/{{posts.[0].id}}#{{posts.[0].id}}" class="flatlink">
+                    <time datetime="{{posts.[0].createDate}}">{{timeago posts.[0].createDate}}</time>
+                </a>
+            </div>
+            {{/if}}
+        </div>
+        <!--</div>-->
+    </div>
+    {{#if @last}}
+    {{!Rocket's handlebars implementation is very limited, don't have unless or whatever}}
+    {{else}}
+    <hr class="smaller">
+    {{/if}}
+    {{/each}}
+</section>
+{{/inline}}
+{{>layout}}
