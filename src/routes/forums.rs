@@ -1,5 +1,6 @@
 use rocket_dyn_templates::Template;
 use serde::Serialize;
+use anyhow::anyhow;
 
 use crate::context::*;
 use crate::api_data::*;
@@ -7,9 +8,8 @@ use crate::api::*;
 use crate::conversion;
 use super::*;
 
-
 // Build a request for JUST forum categories
-fn get_category_request(query: Option<String>) -> FullRequest
+fn get_category_request(hash: Option<String>, fcid: Option<i64>) -> FullRequest
 {
     //The request which we will spend the entire function building
     let mut request = FullRequest::new();
@@ -17,11 +17,19 @@ fn get_category_request(query: Option<String>) -> FullRequest
 
     let mut real_query = String::from("literalType = @category_literal and !notdeleted()");
 
-    if let Some(user_query) = query {
-        real_query = format!("{} and {}", real_query, user_query);
+    if let Some(hash) = hash {
+        add_value!(request, "hash", hash);
+        real_query.push_str(" and hash = @hash");
+    }
+    else if let Some(fcid) = fcid {
+        add_value!(request, "fcid_key", "fcid");
+        add_value!(request, "fcid", fcid);
+        real_query.push_str(" and !valuelike(@fcid_key, @fcid)");
     }
 
-    let mut category_request = minimal_content!(real_query);
+    let mut category_request = build_request!(RequestType::content, 
+        String::from("id,hash,name,description,literalType"),
+        real_query);
     category_request.name = Some(String::from("category"));
     request.requests.push(category_request);
 
@@ -40,17 +48,22 @@ fn get_thread_request(category_ids: &Vec<i64>, limit: i32) -> FullRequest
 
     let mut comment_query = String::from("!basiccomments() and (");
     let id_count = category_ids.len();
+    let fields = String::from("id,name,lastCommentId,literalType,hash,parentId");
 
     for (index, category_id) in category_ids.iter().enumerate()
     {
         //Standard threads get (for latest N threads)
         let base_query = format!("parentId = {{{{{category_id}}}}} and literalType = @thread_literal and !notdeleted()");
-        let mut threads_request = minimal_content!(base_query.clone());
+        let mut threads_request = build_request!(
+            RequestType::content,
+            fields.clone(),
+            base_query.clone(),
+            String::from("lastCommentId_desc"),
+            limit
+        );
         let key = format!("threads_{}", category_id);
 
         threads_request.name = Some(key.clone());
-        threads_request.order = Some(String::from("lastCommentId_desc"));
-        threads_request.limit = limit.into(); 
         request.requests.push(threads_request);
 
         comment_query.push_str("id in @");
@@ -74,7 +87,10 @@ fn get_thread_request(category_ids: &Vec<i64>, limit: i32) -> FullRequest
 
     comment_query.push_str(")");
 
-    let comment_request = minimal_message!(comment_query);
+    let comment_request = build_request!(
+        RequestType::message,
+        String::from("id,createDate,contentId"),
+        comment_query);
     request.requests.push(comment_request);
 
     println!("Threads request: {:?}", &request);
@@ -84,12 +100,12 @@ fn get_thread_request(category_ids: &Vec<i64>, limit: i32) -> FullRequest
 
 #[derive(Serialize, Clone, Debug)]
 struct ForumThread {
-    thread: MinimalContent,
-    posts: Vec<MinimalMessage>
+    thread: Content,
+    posts: Vec<Message>
 }
 
 impl ForumThread {
-    fn new(thread: MinimalContent, messages_raw: &Vec<MinimalMessage>) -> Self {
+    fn new(thread: Content, messages_raw: &Vec<Message>) -> Self {
         let thread_id = thread.id;
         ForumThread { 
             thread,
@@ -101,19 +117,19 @@ impl ForumThread {
 //Structs JUST for building data for the forum templates (so no need to be public)
 #[derive(Serialize, Clone, Debug)]
 struct ForumCategory {
-    category: MinimalContent,
+    category: Content,
     threads: Vec<ForumThread>,
     threads_count: i32
 }
 
 impl ForumCategory {
-    fn from_result(category: MinimalContent, thread_result: &RequestResult, messages_raw: &Vec<MinimalMessage>) -> Result<Self, anyhow::Error> {
-        let id = category.id;
+    fn from_result(category: Content, thread_result: &RequestResult, messages_raw: &Vec<Message>) -> Result<Self, anyhow::Error> {
+        let id = category.id.ok_or(anyhow!("Given forum category didn't have an id!"))?;
         let threadcount_name = format!("threadcount_{}", id);
         let threads_name = format!("threads_{}", id);
 
         let special_counts = conversion::cast_result_required::<SpecialCount>(&thread_result, &threadcount_name)?;//.map_err(rocket_error!())?;
-        let threads_raw = conversion::cast_result_required::<MinimalContent>(&thread_result, &threads_name)?;//.map_err(rocket_error!())?;
+        let threads_raw = conversion::cast_result_required::<Content>(&thread_result, &threads_name)?;//.map_err(rocket_error!())?;
 
         Ok(ForumCategory {
             category,
@@ -125,32 +141,55 @@ impl ForumCategory {
 
 }
 
+//Dumb thing because name is option
+struct ForumCategorySortElement {
+    category: Content,
+    id: i64,
+    name: String
+}
+
+fn clean_categories(categories: Vec<Content>) -> Result<Vec<ForumCategorySortElement>, anyhow::Error> {
+    categories.into_iter().map(|c| {
+        let name = match c.name {
+            Some(ref n) => Ok(n.clone()),
+            None => Err(anyhow!("Category search didn't have name!"))
+        }?;
+        let id = c.id.ok_or(anyhow!("Categories didn't have ids!"))?;
+        Ok(ForumCategorySortElement {
+            category: c,
+            id,
+            name
+        })
+    }).collect()
+}
+
 #[get("/forum")]
 pub async fn forum_get(context: Context) -> Result<Template, RouteError> 
 {
     //First request: just get categories
-    let request = get_category_request(None);
+    let request = get_category_request(None, None);
     let category_result = post_request(&context, &request).await?;
-    let mut categories_raw = conversion::cast_result_required::<MinimalContent>(&category_result, "category")?;
+    let mut categories_cleaned = clean_categories(conversion::cast_result_required::<Content>(&category_result, "category")?)?;
 
     //Next request: get the complicated dataset for each category (this somehow includes comments???)
-    let category_ids : Vec<i64> = categories_raw.iter().map(|catraw| catraw.id).collect();
+    let category_ids : Vec<i64> = categories_cleaned.iter().map(|c| c.id).collect();
     let thread_request = get_thread_request(&category_ids, context.config.default_category_threads);
     let thread_result = post_request(&context, &thread_request).await?;
 
-    let messages_raw = conversion::cast_result_required::<MinimalMessage>(&thread_result, "message")?;
+    let messages_raw = conversion::cast_result_required::<Message>(&thread_result, "message")?;
 
     //Sort the categories by their name AGAINST the default list in the config. So, it should sort the categories
     //by the order defined in the config, with stuff not present going at the end. Tiebreakers are resolved alphabetically
-    categories_raw.sort_by_key(|catraw| {
+    categories_cleaned.sort_by_key(|category| {
         //Nicole made this a tuple so tiebreakers are sorted alphabetically, which is coool
-        (context.config.forum_category_order.iter().position(|prefix| catraw.name.starts_with(prefix)).unwrap_or(usize::MAX), catraw.name.clone())
+        (context.config.forum_category_order.iter().position(
+            |prefix| category.name.starts_with(prefix)).unwrap_or(usize::MAX), category.name.clone())
     });
 
     let mut categories = Vec::new();
 
-    for catraw in categories_raw {
-        categories.push(ForumCategory::from_result(catraw, &thread_result, &messages_raw)?);
+    for category in categories_cleaned {
+        categories.push(ForumCategory::from_result(category.category, &thread_result, &messages_raw)?);
     }
 
     println!("Template categories: {:?}", &categories);
@@ -160,7 +199,23 @@ pub async fn forum_get(context: Context) -> Result<Template, RouteError>
     }))
 }
 
-//fn render_threads(context: &Context) -> Result<Template, RouteError>
-//{
-//    
-//}
+async fn render_threads(context: &Context, category_request: FullRequest, page: Option<u32>) -> Result<Template, RouteError>
+{
+    let page = page.unwrap_or(0);
+
+    Ok(basic_template!("forumcategory", context, {
+        //categories: categories
+    }))
+}
+
+#[get("/forum/category/<hash>?<page>")]
+pub async fn forum_categoryhash_get(context: Context, hash: String, page: Option<u32>) -> Result<Template, RouteError> 
+{
+    render_threads(&context, get_category_request(Some(hash), None), page).await
+}
+
+#[get("/forum?<fcid>&<page>")]
+pub async fn forum_categoryfcid_get(context: Context, fcid: i64, page: Option<u32>) -> Result<Template, RouteError> 
+{
+    render_threads(&context, get_category_request(None, Some(fcid)), page).await
+}

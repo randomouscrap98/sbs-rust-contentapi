@@ -249,10 +249,13 @@ pub async fn upload_file<'a>(context: &Context, form: &mut forms::FileUpload<'_>
     //Now, persist the uploaded file to the path. Remember, temp_path needs to be persisted, so don't transfer ownership!
     form.file.persist_to(&temp_path).await.map_err(precondition_error!())?;
 
+    let mut content = Content::default();
+    content.contentType = Some(ContentType::FILE);
+
     //This is the data we're uploading. We'll be filling in the base64 next
     let mut data = FileUploadAsObject {
         base64blob : String::new(), 
-        object : Content::new(ContentType::FILE) 
+        object : content//Content::new(ContentType::FILE) 
     };
     
     //OK now that it's on the filesystem, gotta read it as base64

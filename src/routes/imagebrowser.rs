@@ -9,7 +9,7 @@ use rocket::form::Form;
 use rocket_dyn_templates::Template;
 
 
-async fn imagebrowser_request(context: &Context, search: &forms::ImageBrowseSearch<'_>) -> Result<RequestResult, ApiError>
+async fn imagebrowser_request(context: &Context, search: &forms::ImageBrowseSearch) -> Result<RequestResult, ApiError>
 {
     //The request which we will spend the entire function building
     let mut request = FullRequest::new();
@@ -26,22 +26,27 @@ async fn imagebrowser_request(context: &Context, search: &forms::ImageBrowseSear
         }
     }
 
-    let mut main_request = minimal_content!(query);
-    main_request.limit = context.config.default_imagebrowser_count.into();
-    main_request.skip = (search.page as i64) * main_request.limit;
-
-    //Oldest means default ordering, so 'not' oldest is actually inverted order
-    if !search.oldest {
-        main_request.order = Some(String::from("id_desc"));
-    }
-
+    let fields = "id,hash,contentType,createUserId";
+    let order = String::from(if search.oldest { "id" } else { "id_desc" });
+    let main_request = build_request!(
+        RequestType::content, 
+        String::from(fields), 
+        query, 
+        order, 
+        context.config.default_imagebrowser_count, 
+        search.page * context.config.default_imagebrowser_count
+    ); 
     request.requests.push(main_request);
 
     //But what if we were passed preview?
-    if let Some(preview) = search.preview {
+    if let Some(ref preview) = search.preview {
         let hashes: Vec<String> = preview.split(",").map(|h| String::from(h.trim())).collect();
         add_value!(request, "preview_hashes", hashes);
-        let mut preview_request = minimal_content!(format!("{} and hash in @preview_hashes", base_query));
+        let mut preview_request = build_request!(
+            RequestType::content, 
+            String::from(fields),
+            format!("{} and hash in @preview_hashes", base_query)
+        );
         preview_request.name = Some(String::from("preview"));
         request.requests.push(preview_request);
     }
@@ -51,11 +56,11 @@ async fn imagebrowser_request(context: &Context, search: &forms::ImageBrowseSear
     post_request(context, &request).await
 }
 
-async fn widget_imagebrowser_base(context: &Context, search: &forms::ImageBrowseSearch<'_>, errors: Option<Vec::<String>>) -> Result<Template, RouteError>
+async fn widget_imagebrowser_base(context: &Context, search: &forms::ImageBrowseSearch, errors: Option<Vec::<String>>) -> Result<Template, RouteError>
 {
     let result = imagebrowser_request(context, search).await?;
-    let images = conversion::cast_result_safe::<MinimalContent>(&result, "content")?;
-    let previews = conversion::cast_result_safe::<MinimalContent>(&result, "preview")?;
+    let images = conversion::cast_result_safe::<Content>(&result, "content")?;
+    let previews = conversion::cast_result_safe::<Content>(&result, "preview")?;
     let mut searchprev = search.clone();
     let mut searchnext = search.clone();
     searchprev.page = searchprev.page - 1;
@@ -82,7 +87,7 @@ async fn widget_imagebrowser_base(context: &Context, search: &forms::ImageBrowse
 }
 
 #[get("/widget/imagebrowser?<search..>")]
-pub async fn widget_imagebrowser_get(context: Context, search: forms::ImageBrowseSearch<'_>) -> Result<Template, RouteError> 
+pub async fn widget_imagebrowser_get(context: Context, search: forms::ImageBrowseSearch) -> Result<Template, RouteError> 
 {
     widget_imagebrowser_base(&context, &search, None).await
 }
@@ -94,7 +99,7 @@ pub async fn widget_imagebrowser_post(context: Context, mut upload: Form<forms::
     match upload_file(&context, &mut upload).await
     {
         Ok(result) => {
-            search.preview = Some(&result.hash); 
+            search.preview = result.hash;
             widget_imagebrowser_base(&context, &search, None).await
         }
         Err(error) => { 

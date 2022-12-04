@@ -48,7 +48,7 @@ pub struct UserSensitive<'a>
 }
 
 #[derive(Serialize, FromForm, Debug, Clone)]
-pub struct ImageBrowseSearch<'a>
+pub struct ImageBrowseSearch
 {
     #[field(default = 1i32, validate=range(1..=3))]
     pub size: i32,
@@ -56,10 +56,10 @@ pub struct ImageBrowseSearch<'a>
     pub oldest: bool,
     #[field(default = 0, validate=range(0..))]
     pub page: i32,
-    pub preview: Option<&'a str>,
+    pub preview: Option<String>
 }
 
-impl<'a> ImageBrowseSearch<'a> {
+impl ImageBrowseSearch {
     pub fn new() -> Self {
         ImageBrowseSearch { size: 1, global: false, oldest: false, page: 0, preview: None }
     }

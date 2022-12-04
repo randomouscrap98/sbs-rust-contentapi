@@ -50,6 +50,8 @@ fn rocket() -> _ {
             routes::register::registerconfirm_post,
             routes::register::registerresend_post,
             routes::forums::forum_get,
+            routes::forums::forum_categoryfcid_get,
+            routes::forums::forum_categoryhash_get,
             activity_get,
             search_get,
             routes::imagebrowser::widget_imagebrowser_get,
