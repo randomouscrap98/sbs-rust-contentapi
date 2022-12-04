@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use serde_aux::prelude::*;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+//use anyhow::anyhow;
 
 
 // --------------------
@@ -117,7 +118,7 @@ pub struct Content //Remember, these are files, pages, threads etc. Lovely!
     pub meta: Option<String>,
     pub description: Option<String>,
     pub hash: Option<String>,
-    pub permissions: Option<HashMap<i64, String>>,
+    pub permissions: Option<HashMap<String, String>>, //JSON doesn't have int keys right? You'll just have to parse it
     pub values: Option<HashMap<String, serde_json::Value>>,
     pub keywords: Option<Vec<String>>,
     pub engagement: Option<HashMap<String, HashMap<String, i64>>>,
@@ -127,6 +128,19 @@ pub struct Content //Remember, these are files, pages, threads etc. Lovely!
     pub keywordCount: Option<i64>,
     pub lastRevisionId: Option<i64>
 }
+
+//impl Content {
+//    pub fn get_stickies(&self) -> Result<Vec<i64>, anyhow::Error> {
+//        //Need to get the list of stickies
+//        let cvalues = match self.values {
+//            Some(ref values) => Ok(values),
+//            None => Err(anyhow!("Given category didn't have values!"))
+//        }?;
+//        let sticky_value = cvalues.get("stickies").ok_or(anyhow!("Category didn't have stickes value!!"))?;
+//        let sticky_array = sticky_value.as_array().ok_or(anyhow!("Sticky wasn't array!"))?;
+//        sticky_array.iter().map(|s| -> Result<i64, anyhow::Error> { s.as_i64().ok_or(anyhow!("Couldn't convert sticky value {}", s))}).collect()
+//    }
+//}
 
 
 #[serde_with::skip_serializing_none] //MUST COME BEFORE

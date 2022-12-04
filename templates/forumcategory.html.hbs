@@ -13,8 +13,11 @@
             <!--<p class="aside">{{category.description}}</p>-->
         </div>
         <div class="foruminfo aside mediumseparate">
-            <div class="threadicon">
+            <div class="threadicon separate">
                 <img src="{{@root.http_resources}}/sb-page.png">
+                {{#if sticky}}
+                <span>📌</span>
+                {{/if}}
             </div>
             <div><b>Posts:</b> {{thread.commentCount}}</div>
             <div>

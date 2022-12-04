@@ -18,6 +18,8 @@
 
 .threadicon {
     flex: none;
+    display: flex;
+    align-items: center;
     /*margin-right: 0.7em;*/
 }
 .threadicon img {
