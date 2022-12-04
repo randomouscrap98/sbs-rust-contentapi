@@ -14,9 +14,14 @@
         </div>
         <div class="foruminfo aside mediumseparate">
             <div class="threadicon separate">
+                {{#if neutral}}
                 <img src="{{@root.http_resources}}/sb-page.png">
+                {{/if}}
                 {{#if sticky}}
                 <span>📌</span>
+                {{/if}}
+                {{#if locked}}
+                <span>🔒</span>
                 {{/if}}
             </div>
             <div><b>Posts:</b> {{thread.commentCount}}</div>

@@ -37,17 +37,27 @@ impl ForumPath {
 struct ForumThread {
     thread: Content,
     sticky: bool,
+    locked: bool,
+    neutral: bool, //Used by the frontend
     posts: Vec<Message>
 }
 
 impl ForumThread {
-    fn new(thread: Content, messages_raw: &Vec<Message>, stickies: &Vec<i64>) -> Self {
+    fn new(thread: Content, messages_raw: &Vec<Message>, stickies: &Vec<i64>) -> Result<Self, anyhow::Error> {
         let thread_id = thread.id;
-        ForumThread { 
-            thread,
-            sticky: stickies.contains(&thread_id.unwrap_or(0)),
+        let permissions = match thread.permissions {
+            Some(ref p) => Ok(p),
+            None => Err(anyhow!("Thread didn't have permissions in resultset!"))
+        }?;
+        //"get" luckily already gets the thing as a reference
+        let global_perms = permissions.get("0").ok_or(anyhow!("Thread didn't have global permissions!"))?;
+        let locked = !global_perms.contains('C'); //Right... the order matters. need to finish using it before you give up thread
+        let sticky = stickies.contains(&thread_id.unwrap_or(0));
+        Ok(ForumThread { 
+            locked, sticky, thread,
+            neutral: !locked && !sticky,
             posts: messages_raw.iter().filter(|m| m.contentId == thread_id).map(|m| m.clone()).collect()
-        }
+        })
     }
 }
 
@@ -118,8 +128,8 @@ impl ForumCategory {
 
         Ok(ForumCategory {
             category: category.category, //partial move
-            threads: threads_raw.into_iter().map(|thread| ForumThread::new(thread, messages_raw, &category.stickies)).collect(),
-            stickies: stickies_raw.into_iter().map(|thread| ForumThread::new(thread, messages_raw, &category.stickies)).collect(),
+            threads: threads_raw.into_iter().map(|thread| ForumThread::new(thread, messages_raw, &category.stickies)).collect::<Result<Vec<_>,_>>()?,
+            stickies: stickies_raw.into_iter().map(|thread| ForumThread::new(thread, messages_raw, &category.stickies)).collect::<Result<Vec<_>,_>>()?,
             users: users_raw.into_iter().map(|u| (format!("{}", u.id), u)).collect(),
             threads_count: special_counts.get(0)
                 .ok_or(ApiError::Usage(format!("Didn't get specialCount for category {}", category.id)))?.specialCount

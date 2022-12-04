@@ -22,7 +22,7 @@
     align-items: center;
     /*margin-right: 0.7em;*/
 }
-.threadicon img {
+.threadicon > * {
     /*width: 1.7em;*/
     width: 1.5em;
 }
