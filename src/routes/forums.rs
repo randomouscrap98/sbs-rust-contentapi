@@ -10,6 +10,23 @@ use crate::api::*;
 use crate::conversion;
 use super::*;
 
+//Not sure if we need values, but I NEED permissions to know if the thread is locked
+static THREADFIELDS : &str = "id,name,lastCommentId,literalType,hash,parentId,commentCount,createDate,values,permissions";
+//Need values to know the stickies
+static CATEGORYFIELDS: &str = "id,hash,name,description,literalType,values";
+static THREADKEY: &str = "thread";
+static CATEGORYKEY: &str = "category";
+static PREMESSAGEKEY: &str = "premessage";
+
+struct Keygen();
+
+impl Keygen {
+    fn threadcount(id: i64) -> String { format!("threadcount_{id}") }
+    fn threads(id: i64) -> String { format!("threads_{id}") }
+    fn stickythreads(id: i64) -> String { format!("stickythreads_{id}") }
+    fn stickies(id: i64) -> String { format!("stickies_{id}")}
+}
+
 //To build the forum path at the top
 #[derive(Serialize)]
 struct ForumPathItem {
@@ -50,7 +67,7 @@ struct ForumThread {
 }
 
 impl ForumThread {
-    fn new(thread: Content, messages_raw: &Vec<Message>, stickies: &Vec<i64>) -> Result<Self, anyhow::Error> {
+    fn from_content(thread: Content, messages_raw: &Vec<Message>, stickies: &Vec<i64>) -> Result<Self, anyhow::Error> {
         let thread_id = thread.id;
         let permissions = match thread.permissions {
             Some(ref p) => Ok(p),
@@ -101,14 +118,20 @@ impl CleanedPreCategory {
     }
 }
 
-struct Keygen();
-
-impl Keygen {
-    fn threadcount(id: i64) -> String { format!("threadcount_{id}") }
-    fn threads(id: i64) -> String { format!("threads_{id}") }
-    fn stickythreads(id: i64) -> String { format!("stickythreads_{id}") }
-    fn stickies(id: i64) -> String { format!("stickies_{id}")}
+//This struct is all the data to render a page in a single thread. Note that
+//because of how complicated forum thread lookup is, this struct will be partially
+//filled before completion
+struct ThreadViewData {
+    category: CleanedPreCategory,
+    thread: ForumThread,
+    users: HashMap<String, User>
 }
+
+//impl ThreadViewData {
+//    fn prep_from_result(context: &Context, result: &RequestResult) -> Result<Self, anyhow::Error> {
+//
+//    }
+//}
 
 
 //Structs JUST for building data for the forum templates (so no need to be public)
@@ -135,8 +158,8 @@ impl ForumCategory {
 
         Ok(ForumCategory {
             category: category.category, //partial move
-            threads: threads_raw.into_iter().map(|thread| ForumThread::new(thread, messages_raw, &category.stickies)).collect::<Result<Vec<_>,_>>()?,
-            stickies: stickies_raw.into_iter().map(|thread| ForumThread::new(thread, messages_raw, &category.stickies)).collect::<Result<Vec<_>,_>>()?,
+            threads: threads_raw.into_iter().map(|thread| ForumThread::from_content(thread, messages_raw, &category.stickies)).collect::<Result<Vec<_>,_>>()?,
+            stickies: stickies_raw.into_iter().map(|thread| ForumThread::from_content(thread, messages_raw, &category.stickies)).collect::<Result<Vec<_>,_>>()?,
             users: users_raw.into_iter().map(|u| (format!("{}", u.id), u)).collect(),
             threads_count: special_counts.get(0)
                 .ok_or(ApiError::Usage(format!("Didn't get specialCount for category {}", category.id)))?.specialCount
@@ -170,10 +193,9 @@ fn get_category_request(hash: Option<String>, fcid: Option<i64>) -> FullRequest
     }
 
     let mut category_request = build_request!(RequestType::content, 
-        //Need values to know the stickies
-        String::from("id,hash,name,description,literalType,values"),
+        String::from(CATEGORYKEY),
         real_query);
-    category_request.name = Some(String::from("category"));
+    category_request.name = Some(String::from(CATEGORYKEY));
     request.requests.push(category_request);
 
     request
@@ -189,12 +211,7 @@ fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip: i3
     let mut request = FullRequest::new();
     add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
 
-    //let category_ids : Vec<i64> = categories.iter().map(|c| c.id).collect();
     let mut keys = Vec::new();
-
-    //let id_count = categories.len();
-    //Not sure if we need values, but I NEED permissions to know if the thread is locked
-    let fields = String::from("id,name,lastCommentId,literalType,hash,parentId,commentCount,createDate,values,permissions");
 
     for ref category in categories.iter()
     {
@@ -208,7 +225,7 @@ fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip: i3
         //Regular thread request. Needs to specifically NOT be the stickies
         let mut threads_request = build_request!(
             RequestType::content,
-            fields.clone(),
+            String::from(THREADFIELDS),
             format!("{} and id not in @{}", base_query, sticky_key),
             String::from("lastCommentId_desc"),
             limit,
@@ -224,7 +241,7 @@ fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip: i3
         if skip == 0 {
             let mut sticky_request = build_request!(
                 RequestType::content,
-                fields.clone(),
+                String::from(THREADFIELDS),
                 format!("{} and id in @{}", base_query, sticky_key),
                 String::from("lastCommentId_desc")
             );
@@ -268,6 +285,127 @@ fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip: i3
     request
 }
 
+//fn add_prepost_content_request(mut request: &FullRequest, thread_query_extra: String) {
+//
+//}
+
+//"prepost" means the main query before finding the main data before gathering the posts. The post offset
+//often depends on the prepost
+fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option<i64>, thread_hash: Option<String>) -> FullRequest 
+{
+    let mut request = FullRequest::new();
+    add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
+    add_value!(request, "category_literal", SBSContentType::forumcategory.to_string());
+
+    let mut post_limited = false;
+    let mut post_query = String::from("!basiccomments()");
+    let mut thread_query = format!("literalType = @thread_literal and !notdeleted()");
+
+    //If you call it with both, it will limit to both (chances are that's not what you want)
+    if let Some(fpid) = fpid {
+        add_value!(request, "fpid", fpid);
+        add_value!(request, "fpidkey", "fpid");
+        post_query = format!("{} and !valuelike(@fpidkey, @fpid)", post_query);
+        post_limited = true;
+    }
+    if let Some(post_id) = post_id{
+        add_value!(request, "postId", post_id);
+        post_query = format!("{} and id = @postId", post_query);
+        post_limited = true;
+    }
+
+    //Add the pre-lookup post get so we can limit the thread by it. This will prevent users
+    //from sending random hashes but with valid post ids, since the thread won't be found
+    if post_limited {
+        let mut message_request = build_request!(
+            RequestType::message,
+            //Dont' need values for fpid, you already know it was there if it exists
+            String::from("id,contentId"),
+            post_query
+        );
+        message_request.name = Some(String::from(PREMESSAGEKEY));
+        request.requests.push(message_request);
+        thread_query = format!("{} and id in @{}.contentId", thread_query, PREMESSAGEKEY);
+    }
+
+    //Limit thread lookup based on given params. You probably don't want both of these limits course
+    if let Some(ftid) = ftid {
+        add_value!(request, "ftid", ftid);
+        add_value!(request, "ftidkey", "ftid");
+        thread_query = format!("{} and !valuelike(@ftidkey, @ftid)", thread_query);
+    }
+    if let Some(thread_hash) = thread_hash {
+        add_value!(request, "hash", thread_hash);
+        thread_query = format!("{} and hash = @hash", thread_query);
+    }
+
+    let mut thread_request = build_request!(
+        RequestType::content,
+        String::from(THREADFIELDS),
+        thread_query
+    );
+    thread_request.name = Some(String::from(THREADKEY));
+    request.requests.push(thread_request);
+
+    //And one last thing: you still need the category of course
+    let mut category_request = build_request!(
+        RequestType::content, 
+        String::from(CATEGORYFIELDS),
+        format!("literalType = @category_literal and !notdeleted() and id in @{}.parentId", THREADKEY)
+    );
+    category_request.name = Some(String::from(CATEGORYKEY));
+    request.requests.push(category_request);
+
+    request
+}
+
+//This is special because it needs many pieces of information, but not necessarily a bunch of 
+//threads. The other thread request does complicated searches to get many threads; this one assumes
+//a single thread with many posts. There is a chance the combination of data you give won't produce a thread
+//fn get_posts_request(ftid: Option<i64>, fpid: Option<i64>, threadHash: Option<i64>, postId: Option<i64>, limit: i32, skip: i32) -> Result<FullRequest, anyhow::Error> {
+//    let mut request = FullRequest::new();
+//    add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
+//    add_value!(request, "category_literal", SBSContentType::forumcategory.to_string());
+//
+//    //Can't get category or messages until you find the thread
+//    let mut thread_query = format!("literalType = @thread_literal and !notdeleted()");
+//
+//    //It is an error to call this function with both fpid and postId, or ftid and threadHash
+//    if ftid.is_some() && threadHash.is_some() {
+//        return Err(anyhow!("You can't call get_posts_request with both an ftid and threadHash, they are simultaneous systems"));
+//    }
+//
+//    //This is unfortunately complicated. If fpid or postId are given, we must lookup a message first.
+//    if let Some(fpid) = fpid {
+//        add_value!(request, "fpid", fpid);
+//        add_value!(request, "fpidkey", "fpid");
+//        let mut premessage_request = build_request!(
+//            RequestType::message,
+//            String::from("id,contentId"),
+//            format!("!valuelike(@fpidkey, @fpid) and !basiccomments()")
+//        );
+//        premessage_request.name = Some(String::from(PREMESSAGEKEY));
+//        //The thread needs to be the parent of the given fpid
+//        thread_query = format!("{} and id in @{}.contentId", thread_query, PREMESSAGEKEY);
+//    }
+//
+//
+//    //Regular thread request. Needs to specifically NOT be the stickies
+//    let mut threads_request = build_request!(
+//        RequestType::content,
+//        String::from(THREADFIELDS),
+//        format!("{} and id not in @{}", base_query, sticky_key),
+//        String::from("lastCommentId_desc"),
+//        limit,
+//        skip
+//    );
+//
+//        let key = Keygen::threads(category_id);
+//        threads_request.name = Some(key.clone());
+//        request.requests.push(threads_request);
+//
+//    Ok(request)
+//}
 
 // --------------------------
 // *    FORUM FUNCTIONS     *
@@ -289,12 +427,13 @@ async fn build_categories(context: &Context, categories_cleaned: Vec<CleanedPreC
     Ok(categories)
 }
 
+
 async fn render_threads(context: &Context, category_request: FullRequest, page: Option<i32>) -> Result<Template, RouteError>
 {
     let page = page.unwrap_or(0);
 
     let category_result = post_request(context, &category_request).await?;
-    let categories_cleaned = CleanedPreCategory::from_many(conversion::cast_result_required::<Content>(&category_result, "category")?)?;
+    let categories_cleaned = CleanedPreCategory::from_many(conversion::cast_result_required::<Content>(&category_result, CATEGORYKEY)?)?;
     let categories = build_categories(&context, categories_cleaned, 
         context.config.default_display_threads, 
         page * context.config.default_display_threads
@@ -324,6 +463,17 @@ async fn render_threads(context: &Context, category_request: FullRequest, page: 
 }
 
 
+async fn render_thread(context: &Context, pre_request: FullRequest, page: Option<i32>) -> Result<Template, RouteError> 
+{
+    let page = page.unwrap_or(0);
+
+    let pre_result = post_request(context, &pre_request).await?;
+
+    Ok(basic_template!("forumthread", context, {
+
+    }))
+}
+
 
 // ----------------------
 // *       ROUTES       *
@@ -335,7 +485,7 @@ pub async fn forum_get(context: Context) -> Result<Template, RouteError>
     //First request: just get categories
     let request = get_category_request(None, None);
     let category_result = post_request(&context, &request).await?;
-    let mut categories_cleaned = CleanedPreCategory::from_many(conversion::cast_result_required::<Content>(&category_result, "category")?)?;
+    let mut categories_cleaned = CleanedPreCategory::from_many(conversion::cast_result_required::<Content>(&category_result, CATEGORYKEY)?)?;
 
     //Sort the categories by their name AGAINST the default list in the config. So, it should sort the categories
     //by the order defined in the config, with stuff not present going at the end. Tiebreakers are resolved alphabetically
@@ -355,6 +505,9 @@ pub async fn forum_get(context: Context) -> Result<Template, RouteError>
     }))
 }
 
+// Category view (list threads)
+// ----------------------------
+
 #[get("/forum/category/<hash>?<page>")]
 pub async fn forum_categoryhash_get(context: Context, hash: String, page: Option<i32>) -> Result<Template, RouteError> 
 {
@@ -365,4 +518,30 @@ pub async fn forum_categoryhash_get(context: Context, hash: String, page: Option
 pub async fn forum_categoryfcid_get(context: Context, fcid: i64, page: Option<i32>) -> Result<Template, RouteError> 
 {
     render_threads(&context, get_category_request(None, Some(fcid)), page).await
+}
+
+// Thread view (list posts)
+// ----------------------------
+#[get("/forum/thread/<hash>?<page>")]
+pub async fn forum_threadhash_get(context: Context, hash: String, page: Option<i32>) -> Result<Template, RouteError> 
+{
+    render_thread(&context, get_prepost_request(None, None, None, Some(hash)), page).await
+}
+
+#[get("/forum/thread/<hash>/<post_id>")]
+pub async fn forum_threadhash_postid_get(context: Context, hash: String, post_id: i64) -> Result<Template, RouteError> 
+{
+    render_thread(&context, get_prepost_request(None, Some(post_id), None, Some(hash)), None).await
+}
+
+#[get("/forum?<ftid>&<page>", rank=3)]
+pub async fn forum_thread_ftid_get(context: Context, ftid: i64, page: Option<i32>) -> Result<Template, RouteError> 
+{
+    render_thread(&context, get_prepost_request(None, None, Some(ftid), None), page).await
+}
+
+#[get("/forum?<fpid>", rank=4)]
+pub async fn forum_thread_fpid_get(context: Context, fpid: i64) -> Result<Template, RouteError> 
+{
+    render_thread(&context, get_prepost_request(Some(fpid), None, None, None), None).await
 }
