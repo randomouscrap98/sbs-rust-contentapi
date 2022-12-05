@@ -1,4 +1,4 @@
-use regex::Regex;
+use regex::{Regex, Captures};
 
 //So:
 //- dupes auto close previous scope.
@@ -27,6 +27,7 @@ impl TagInfo {
 
 #[derive(Debug, Clone)]
 enum TagType {
+    Start,           //Should ONLY have one of these! It's like S in a grammar!
     Simple,
     DefinedArg(&'static str),   //CAN have argument defined, attribute name is given
     SelfClosing(&'static str),  //No closing tag, value is 
@@ -36,6 +37,7 @@ enum TagType {
 impl TagType {
     fn is_verbatim(&self) -> bool {
         match self {
+            Self::Start => false,
             Self::Simple => false,
             Self::DefinedArg(_) => false,
             Self::SelfClosing(_) => true,
@@ -60,37 +62,49 @@ pub struct TagDo {
     //pub info : TagInfo 
 }
 
-struct BBScope<'a> {
-    scopes : Vec<&'a TagInfo>
+struct BBScope<'main, 'scopeonly> {
+    info: &'main TagInfo,
+    inner: &'main str,
+    captures: &'main Captures<'scopeonly> //the capture only has to live as long as the scope
+}
+struct BBScoper<'main, 'scopeonly> {
+    scopes : Vec<BBScope<'main, 'scopeonly>>
 }
 
-impl<'a> BBScope<'a> {
-    fn new() -> Self { BBScope { scopes: Vec::new() }}
+//Everything inside BBScoper expects to live as long as the object itself. So everything is 'a
+impl<'main, 'scopeonly> BBScoper<'main, 'scopeonly> {
+    fn new() -> Self { BBScoper { scopes: Vec::new() }}
 
     //Add a scope, which may close some existing scopes. The closed scopes are returned in display order.
     //NOTE: the added infos must live as long as the scope container!
-    fn add_scope(&mut self, info: &'a TagInfo) -> Vec<&TagInfo> {
+    fn add_scope(&mut self, scope: BBScope<'main, 'scopeonly>) -> Vec<BBScope<'main, 'scopeonly>> {
         //here we assume all taginfos have unique tags because why wouldn't they
+        let mut result = Vec::new();
         if let Some(topinfo) = self.scopes.last() {
-            //Duplicate scopes close the preceding one.
-            //Do nothing, but tell the caller that we "closed" the top scope
-            vec![*topinfo]
+            if topinfo.info.tag == scope.info.tag {
+                //It's the same, close the last one
+                if let Some(scope) = self.scopes.pop() {
+                    result.push(scope);
+                }
+                else {
+                    println!("BBScoper::add_scope HOW DID THIS HAPPEN? There were scopes from .last but pop returned none!");
+                }
+            }
         }
-        else {
-            self.scopes.push(info);
-            Vec::new()
-        }
+
+        self.scopes.push(scope);
+        result
     }
 
     //Close the given scope, which should return the scopes that got closed (including the self).
     //If no scope could be found, the vector is empty
-    fn close_scope(&mut self, info: &'a TagInfo) -> Vec<&TagInfo> {
+    fn close_scope(&mut self, info: &'main TagInfo) -> Vec<BBScope<'main, 'scopeonly>> {
         let mut scope_count = 0;
         let mut tag_found = false;
 
         for scope in self.scopes.iter().rev() {
             scope_count += 1;
-            if info.tag == scope.tag {
+            if info.tag == scope.info.tag {
                 tag_found = true;
                 break;
             }
@@ -114,7 +128,7 @@ impl<'a> BBScope<'a> {
     }
 
     //Consume the scope system while dumping the rest of the scopes in the right order for display
-    fn dump_remaining(self) -> Vec<&'a TagInfo> {
+    fn dump_remaining(self) -> Vec<BBScope<'main, 'scopeonly>> {
         self.scopes.into_iter().rev().collect()
     }
 }
@@ -207,6 +221,7 @@ impl BBCode {
         }
         //Now output different stuff depending on the type
         match info.tag_type {
+            TagType::Start => {}, //Do nothing
             TagType::Simple => {
                 result.push_str(">"); //Just close it, all done!
             },
@@ -219,30 +234,21 @@ impl BBCode {
             TagType::DefaultArg(argname) => {
                 if capture.len() > 1 { //If an argument exists, push it
                     result = Self::push_tagarg(result, argname, Some(&capture[1]));
+                    result.push_str(">"); //THEN close it!
                 }
-                else { //But if it doesn't, use the... value... wait a sec... how will this work
-
+                else { //But if it doesn't, output like it's a SelfClosing
+                    result = Self::push_tagarg(result, argname, None);
                 }
-                result.push_str(">"); //THEN close it!
+            }
+            TagType::SelfClosing(argname) => {
+                result = Self::push_tagarg(result, argname, None);
             }
         }
 
-        //You can have both an argout AND a valout. Your implementation of valout might be dangerous!
-        if let Some(argout) = info.argout {
-            if capture.len() > 1 {
-                result = Self::push_tagarg(result, argout, Some(&capture[1]));
-            }
-        }
-        if let Some(valout) = info.valout {
-            result = Self::push_tagarg(result, valout, None); //Leave the arg open
-        }
-        else {
-            result.push_str(">");
-        }
         result
     }
 
-    fn push_close_tag(mut result: String, info: &TagInfo) -> String {
+    fn push_close_tag(mut result: String, scope: &BBScope) -> String {
         if let TagType::SelfClosing(_) = info.tag_type {
             //Need to finish closing the attribute, self closing tags have
             //no... well, closing tag
