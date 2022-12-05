@@ -14,6 +14,7 @@ mod forms;
 mod hbs_custom;
 mod conversion;
 mod routes;
+mod bbcode;
 
 use routes::*;
 

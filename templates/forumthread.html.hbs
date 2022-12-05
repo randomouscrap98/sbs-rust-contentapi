@@ -28,12 +28,12 @@
         </div>
         <div class="postright">
             <div class="postheader">
-                <a class="flatlink" href="{{@root.http_root}}/user/{{user.username}}">{{user.username}}</a>
+                <a class="flatlink username" href="{{@root.http_root}}/user/{{user.username}}">{{user.username}}</a>
                 {{!TODO: this link needs to be generated or something! Too much room for mistakes!}}
                 <a class="sequence" href="{{@root.http_root}}/forum/thread/{{@root.thread.thread.hash}}/{{../id}}#post_{{../id}}">#{{lookup @root.sequence (string ../id)}}</a>
             </div>
             <!-- Need a bbcode render helper -->
-            <div class="content">{{../text}}</div>
+<div class="content">{{../text}}</div>
             <div class="postfooter">
                 <div class="history">
                     <time class="aside" datetime="{{../createDate}}">{{timeago ../createDate}}</time>
@@ -52,7 +52,7 @@
     {{/inline}}
     {{!Only care about 'unless' in the main list, the only time this DOES work is if there are ONLY stickies}}
     {{#each thread.posts}}
-    {{> post_item}}
+    {{~> post_item}}
     {{#unless @last}}
     <hr class="smaller">
     {{/unless}}

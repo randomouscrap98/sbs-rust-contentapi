@@ -59,6 +59,10 @@
     display: flex;
 }
 
+.postheader .username {
+    font-size: 1.1em;
+}
+
 .sequence {
     margin-left: auto;
     filter: opacity(0.6);
@@ -84,6 +88,8 @@
 .content {
     margin: 0.5em 0.1em;
     line-height: 1.4;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 
 
@@ -116,6 +122,7 @@
     .content { font-size: 0.9em; }
     .post .avatar { width: 3em; }
     .postleft { margin-right: 0.6em; }
+    .postheader .username { font-size: 1em; }
     /*.threadicon { margin-right: 0.4em; }
     .threadicon img { width: 1em; }*/
 }
