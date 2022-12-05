@@ -67,8 +67,6 @@ struct BBScope<'a> {
     info: &'a TagInfo,
     inner_start: usize, //TERRIBLE! MAYBE?!
     has_arg: bool, //May need to change if more configuration needed
-    //inner: &'a str,
-    //captures: Option<&'a Captures<'a>> //the capture must live the whole time too
 }
 struct BBScoper<'a> {
     scopes : Vec<BBScope<'a>>
@@ -99,12 +97,6 @@ impl<'a> BBScoper<'a> {
         (self.scopes.last().unwrap(), result)
     }
     
-    //fn update_inners(&mut self, string: &String) {
-    //    for ref scope in self.scopes {
-    //        scope.
-    //    }
-    //}
-
     //Close the given scope, which should return the scopes that got closed (including the self).
     //If no scope could be found, the vector is empty
     fn close_scope(&mut self, info: &'a TagInfo) -> Vec<BBScope<'a>> {
@@ -213,6 +205,7 @@ impl BBCode {
         ]
     }
 
+    //Push an argument="value" part onto the result. Will omit the last " if argval is None
     fn push_tagarg(mut result: String, argname: &str, argval: Option<&str>) -> String {
         result.push_str(" ");
         result.push_str(argname);
@@ -225,14 +218,14 @@ impl BBCode {
         result
     }
 
+    //Write the "open" tag to the given result for the given new scope. 
     fn push_open_tag(mut result: String, scope: &BBScope, captures: &Captures) -> String {
         result.push_str("<");
         result.push_str(scope.info.outtag);
-        result.push_str(" ");
         //Put the raw stuff first (maybe class, other)
         if let Some(rawextra) = scope.info.rawextra {
-            result.push_str(rawextra);
             result.push_str(" ");
+            result.push_str(rawextra);
         }
         //Now output different stuff depending on the type
         match scope.info.tag_type {
@@ -249,11 +242,15 @@ impl BBCode {
                     result = Self::push_tagarg(result, argname, Some(&captures[1]));
                     result.push_str(">"); //THEN close it!
                 }
-                else { //But if it doesn't, output like it's a SelfClosing
+                else {  
+                    //But if it doesn't, output like it's a SelfClosing, meaning the inner value
+                    //in bbcode becomes the 'default arg'. This requires a special handler in the
+                    //closing tag
                     result = Self::push_tagarg(result, argname, None);
                 }
-            }
+            },
             TagType::SelfClosing(argname) => {
+                //Self closing is basic: we assume the value within the tag is just the argument.
                 result = Self::push_tagarg(result, argname, None);
             }
         }
@@ -261,17 +258,40 @@ impl BBCode {
         result
     }
 
-    fn push_close_tag(mut result: String, scope: &BBScope, input: &str) -> String {
-        if let TagType::SelfClosing(_) = scope.info.tag_type {
-            //Need to finish closing the attribute, self closing tags have
-            //no... well, closing tag
-            result.push_str(r#"">"#);
+    fn push_just_close_tag(mut result: String, info: &TagInfo) -> String {
+        result.push_str("</");
+        result.push_str(info.outtag);
+        result.push_str(">");
+        result
+    }
+
+    fn push_close_tag(mut result: String, scope: &BBScope, input: &str, end: usize) -> String {
+        match scope.info.tag_type {
+            TagType::SelfClosing(_) => {
+                //Need to finish closing the attribute, self closing tags have no... well, closing tag
+                result.push_str(r#"">"#);
+            },
+            TagType::DefaultArg(_) => {
+                //This one is complicated. If there were arguments, we simply output the closing 
+                //tag, same as a normal tag. But if there was NOT an argument, we're still in the original
+                //tag, AND we still have to output the value we captured in this scope
+                if scope.has_arg {
+                    result = Self::push_just_close_tag(result, scope.info);
+                }
+                else {
+                    result.push_str(r#"">"#);
+                    result.push_str(&input[scope.inner_start..end]);
+                    result = Self::push_just_close_tag(result, scope.info);
+                }
+            }
+            TagType::Start => {
+                //Do nothing
+            },
+            _ => {
+                result = Self::push_just_close_tag(result, scope.info);
+            }
         }
-        else {
-            result.push_str("</");
-            result.push_str(scope.info.outtag);
-            result.push_str(">");
-        }
+
         result
     }
 
@@ -326,6 +346,7 @@ impl BBCode {
                 //There should only be one but whatever
                 for capture in tagdo.regex.captures_iter(slice) {
                     //do this pre-emptively so we're AT the start of the inside of the tag
+                    let scope_end : usize = slice.as_ptr() as usize - input.as_ptr() as usize;
                     slice = &slice[capture[0].len()..];
                     match &tagdo.match_type {
                         MatchType::Passthrough => {
@@ -348,7 +369,7 @@ impl BBCode {
                             //starting scope looks like (it may change? probably not though)
                             let scope_result = scoper.add_scope(new_scope);
                             for cscope in scope_result.1 {
-                                result = Self::push_close_tag(result, &cscope, input);
+                                result = Self::push_close_tag(result, &cscope, input, scope_end);
                             }
                             //The add_scope function only gives us the close scopes, so we
                             //still need to emit the open tag
@@ -358,7 +379,7 @@ impl BBCode {
                             //Attempt to close the given scope. The scoper will return all the actual scopes
                             //that were closed, which we can dump
                             for cscope in scoper.close_scope(info) {
-                                result = Self::push_close_tag(result, &cscope, input);
+                                result = Self::push_close_tag(result, &cscope, input, scope_end);
                             }
                             //The close_scope function gives us the scopes to close
                         }
@@ -389,7 +410,7 @@ impl BBCode {
 
         //At the end, we should close any unclosed scopes
         for cscope in scoper.dump_remaining() {
-            result = Self::push_close_tag(result, &cscope, input);
+            result = Self::push_close_tag(result, &cscope, input, input.len() as usize);
         }
 
         result
