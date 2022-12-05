@@ -23,6 +23,9 @@ impl TagInfo {
         TagInfo { tag, outtag: tag, tag_type: TagType::Simple, rawextra: None }
         //argout: None, valout: None, verbatim: false, rawextra: None }
     }
+    fn start() -> TagInfo {
+        TagInfo { tag: "", outtag: "", tag_type: TagType::Start, rawextra: None }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -62,22 +65,24 @@ pub struct TagDo {
     //pub info : TagInfo 
 }
 
-struct BBScope<'main, 'scopeonly> {
-    info: &'main TagInfo,
-    inner: &'main str,
-    captures: &'main Captures<'scopeonly> //the capture only has to live as long as the scope
+//For the following section, it is assumed the entire scoper and all elements within will have the same lifetime
+//as the calling function, which also houses the input string
+struct BBScope<'a> {
+    info: &'a TagInfo,
+    inner: &'a str,
+    captures: Option<&'a Captures<'a>> //the capture must live the whole time too
 }
-struct BBScoper<'main, 'scopeonly> {
-    scopes : Vec<BBScope<'main, 'scopeonly>>
+struct BBScoper<'a> {
+    scopes : Vec<BBScope<'a>>
 }
 
 //Everything inside BBScoper expects to live as long as the object itself. So everything is 'a
-impl<'main, 'scopeonly> BBScoper<'main, 'scopeonly> {
+impl<'a> BBScoper<'a> {
     fn new() -> Self { BBScoper { scopes: Vec::new() }}
 
     //Add a scope, which may close some existing scopes. The closed scopes are returned in display order.
     //NOTE: the added infos must live as long as the scope container!
-    fn add_scope(&mut self, scope: BBScope<'main, 'scopeonly>) -> Vec<BBScope<'main, 'scopeonly>> {
+    fn add_scope(&mut self, scope: BBScope<'a>) -> Vec<BBScope<'a>> {
         //here we assume all taginfos have unique tags because why wouldn't they
         let mut result = Vec::new();
         if let Some(topinfo) = self.scopes.last() {
@@ -95,10 +100,16 @@ impl<'main, 'scopeonly> BBScoper<'main, 'scopeonly> {
         self.scopes.push(scope);
         result
     }
+    
+    //fn update_inners(&mut self, string: &String) {
+    //    for ref scope in self.scopes {
+    //        scope.
+    //    }
+    //}
 
     //Close the given scope, which should return the scopes that got closed (including the self).
     //If no scope could be found, the vector is empty
-    fn close_scope(&mut self, info: &'main TagInfo) -> Vec<BBScope<'main, 'scopeonly>> {
+    fn close_scope(&mut self, info: &'a TagInfo) -> Vec<BBScope<'a>> {
         let mut scope_count = 0;
         let mut tag_found = false;
 
@@ -128,7 +139,7 @@ impl<'main, 'scopeonly> BBScoper<'main, 'scopeonly> {
     }
 
     //Consume the scope system while dumping the rest of the scopes in the right order for display
-    fn dump_remaining(self) -> Vec<BBScope<'main, 'scopeonly>> {
+    fn dump_remaining(self) -> Vec<BBScope<'a>> {
         self.scopes.into_iter().rev().collect()
     }
 }
@@ -210,30 +221,28 @@ impl BBCode {
         result
     }
 
-    fn push_open_tag(mut result: String, info: &TagInfo, capture: &regex::Captures) -> String {
+    fn push_open_tag(mut result: String, scope: &BBScope) -> String {
         result.push_str("<");
-        result.push_str(info.outtag);
+        result.push_str(scope.info.outtag);
         result.push_str(" ");
         //Put the raw stuff first (maybe class, other)
-        if let Some(rawextra) = info.rawextra {
+        if let Some(rawextra) = scope.info.rawextra {
             result.push_str(rawextra);
             result.push_str(" ");
         }
         //Now output different stuff depending on the type
-        match info.tag_type {
+        match scope.info.tag_type {
             TagType::Start => {}, //Do nothing
-            TagType::Simple => {
-                result.push_str(">"); //Just close it, all done!
-            },
+            TagType::Simple => { result.push_str(">"); }, //Just close it, all done!
             TagType::DefinedArg(argname) => {
-                if capture.len() > 1 { //Push the argument first
-                    result = Self::push_tagarg(result, argname, Some(&capture[1]));
+                if let Some(captures) = scope.captures { //Push the argument first
+                    result = Self::push_tagarg(result, argname, Some(&captures[1]));
                 }
                 result.push_str(">"); //THEN close it!
             },
             TagType::DefaultArg(argname) => {
-                if capture.len() > 1 { //If an argument exists, push it
-                    result = Self::push_tagarg(result, argname, Some(&capture[1]));
+                if let Some(captures) = scope.captures { //If an argument exists, push it
+                    result = Self::push_tagarg(result, argname, Some(&captures[1]));
                     result.push_str(">"); //THEN close it!
                 }
                 else { //But if it doesn't, output like it's a SelfClosing
@@ -272,19 +281,28 @@ impl BBCode {
         let mut slice = &input[0..]; //Not necessary to be this explicit ofc
 
         //Only 'Taginfo' can create scope, so don't worry about "DirectReplace" types
-        let mut scopes = BBScope::new();
+        let mut scoper = BBScoper::new();
+        let start_info = TagInfo::start();
+        scoper.add_scope(BBScope { info: &start_info, inner: &result, captures: None });
 
         //While there is string left, keep checking against all the regex. Remove some regex
         //if the current scope is a meanie
         while slice.len() > 0
         {
-            //Slow? IDK
-            let verbatim_scope = scopes.scopes.last().and_then(|i| Some(TagType::is_verbatim(&i.tag_type))).unwrap_or(false);
+            //Slow? IDK, fix it later
+            let current_scope = match scoper.scopes.last() {
+                Some(cs) => cs,
+                None => {
+                    println!("BBCode::parse, ran out of scopes somehow!");
+                    break;
+                }
+            };
+            //let verbatim_scope = scoper.scopes.last().and_then(|i| Some(TagType::is_verbatim(&i.tag_type))).unwrap_or(false);
 
             let mut matched_do : Option<&TagDo> = None;
 
             for tagdo in &self.tags {
-                if verbatim_scope && !matches!(tagdo.match_type, MatchType::DirectReplace(_)) {
+                if current_scope.info.tag_type.is_verbatim() && !matches!(tagdo.match_type, MatchType::DirectReplace(_)) {
                     continue;
                 }
                 if tagdo.regex.is_match(slice) {
