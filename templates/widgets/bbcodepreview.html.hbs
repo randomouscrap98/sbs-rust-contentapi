@@ -26,6 +26,17 @@
             background-color: var(--bg_section);
             font-family: var(--font);
         }
+        .content {
+            display: block;
+            width: 100%;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        textarea { 
+            flex: auto; 
+        }
     </style>
 </head>
 <body>
@@ -33,7 +44,7 @@
 <div class="content bbcode">{{{result}}}</div>
 {{else}}
 <form {{selfpost}}>
-    <textarea placeholder="Enter text to test here"></textarea>
+    <textarea placeholder="Enter text to test here" name="text"></textarea>
     <input type="submit" value="Test">
 </form>
 {{/if}}

@@ -80,3 +80,9 @@ pub struct UserUpdate<'a>
     //#[field(default = false)]
     //pub admin: bool
 }
+
+#[derive(FromForm, Debug)]
+pub struct BasicText<'a> //Use for anything that's just text
+{
+    pub text: &'a str
+}
