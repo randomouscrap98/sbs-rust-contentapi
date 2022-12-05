@@ -1,0 +1,12 @@
+<!-- Need "this" to be inside the thread context -->
+<div class="threadicon">
+    {{#if neutral}}
+    <img src="{{@root.http_resources}}/sb-page.png">
+    {{/if}}
+    {{#if sticky}}
+    <span>📌</span>
+    {{/if}}
+    {{#if locked}}
+    <span>🔒</span>
+    {{/if}}
+</div>

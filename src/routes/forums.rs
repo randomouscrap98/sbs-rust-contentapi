@@ -12,7 +12,7 @@ use crate::conversion;
 use super::*;
 
 //Not sure if we need values, but I NEED permissions to know if the thread is locked
-static THREADFIELDS : &str = "id,name,lastCommentId,literalType,hash,parentId,commentCount,createDate,values,permissions";
+static THREADFIELDS : &str = "id,name,lastCommentId,literalType,hash,parentId,commentCount,createDate,createUserId,values,permissions";
 //Need values to know the stickies
 static CATEGORYFIELDS: &str = "id,hash,name,description,literalType,values";
 static THREADKEY: &str = "thread";
@@ -366,6 +366,34 @@ fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option<i64
     request
 }
 
+//Apparently can't decide on transfered ownership or not
+fn get_finishpost_request(thread_id: i64, extra_uids: Vec<i64>, limit: i32, skip: i32) -> FullRequest 
+{
+    let mut request = FullRequest::new();
+    add_value!(request, "thread_id", thread_id);
+    add_value!(request, "uids", extra_uids);
+
+    let message_request = build_request!(
+        RequestType::message,
+        String::from("*"),
+        String::from("!basiccomments() and contentId = @thread_id"),
+        String::from("id"),
+        limit,
+        skip
+    );
+    request.requests.push(message_request);
+
+    //users in messages OR in extra_uids
+    let user_request = build_request!(
+        RequestType::user,
+        String::from("*"),
+        String::from("id in @message.createUserId or id in @message.editUserId or id in @uids")
+    );
+    request.requests.push(user_request);
+
+    request
+}
+
 
 // --------------------------
 // *    FORUM FUNCTIONS     *
@@ -378,7 +406,7 @@ fn get_pagelist(total: i32, page_size: i32, current: i32) -> Vec<ForumPagelistIt
     for i in (0..total).step_by(page_size as usize) {
         let thispage = i / page_size;
         pagelist.push(ForumPagelistItem {
-            page: thispage,
+            page: thispage + 1,
             text: format!("{}", thispage + 1),
             current: thispage == current
         });
@@ -406,7 +434,7 @@ async fn build_categories_with_threads(context: &Context, categories_cleaned: Ve
 
 async fn render_threads(context: &Context, category_request: FullRequest, page: Option<i32>) -> Result<Template, RouteError>
 {
-    let page = page.unwrap_or(0);
+    let page = page.unwrap_or(1) - 1;
 
     let category_result = post_request(context, &category_request).await?;
     let categories_cleaned = CleanedPreCategory::from_many(conversion::cast_result_required::<Content>(&category_result, CATEGORYKEY)?)?;
@@ -432,7 +460,7 @@ async fn render_threads(context: &Context, category_request: FullRequest, page: 
 
 async fn render_thread(context: &Context, pre_request: FullRequest, page: Option<i32>) -> Result<Template, RouteError> 
 {
-    let mut page = page.unwrap_or(0);
+    let mut page = page.unwrap_or(1) - 1; //we assume 1-based pages
 
     let pre_result = post_request(context, &pre_request).await?;
     let mut categories_cleaned = CleanedPreCategory::from_many(conversion::cast_result_required::<Content>(&pre_result, CATEGORYKEY)?)?;
@@ -449,20 +477,23 @@ async fn render_thread(context: &Context, pre_request: FullRequest, page: Option
         page = message_index.specialCount / context.config.default_display_posts;
     }
 
-    //Instead of blank vec. just actually get the posts. 
-    let blank_vec = Vec::new();
-    let thread = ForumThread::from_content(thread, &blank_vec, &category.stickies)?; //We get the messages later...
-    let users : HashMap<String, User> = HashMap::new();
-    let comment_count = thread.thread.commentCount.ok_or(anyhow!("Thread result did not have commentCount field!"))?;
-    let pagelist = get_pagelist(comment_count as i32, context.config.default_display_threads, page);
+    let thread_id = thread.id.ok_or(anyhow!("Thread result did not have id field?!"))?;
+    let thread_create_uid = thread.createUserId.ok_or(anyhow!("Thread result did not have createUserId field!"))?;
+    let comment_count = thread.commentCount.ok_or(anyhow!("Thread result did not have commentCount field!"))?;
 
+    let after_request = get_finishpost_request(thread_id, vec![thread_create_uid], 
+        context.config.default_display_posts, page * context.config.default_display_posts);
+    let after_result = post_request(context, &after_request).await?;
+
+    let messages_raw = conversion::cast_result_required::<Message>(&after_result, "message")?;
+    let users_raw = conversion::cast_result_required::<User>(&after_result, "user")?;
 
     Ok(basic_template!("forumthread", context, {
-        forumpath: vec![ForumPathItem::root(), ForumPathItem::from_category(&category.category), ForumPathItem::from_thread(&thread.thread)],
+        forumpath: vec![ForumPathItem::root(), ForumPathItem::from_category(&category.category), ForumPathItem::from_thread(&thread)],
         category: category.category,
-        thread: thread,
-        users: users,
-        pagelist: pagelist
+        thread: ForumThread::from_content(thread, &messages_raw, &category.stickies)?,
+        users: users_raw.into_iter().map(|u| (format!("{}", u.id), u)).collect::<HashMap<String, User>>(),
+        pagelist: get_pagelist(comment_count as i32, context.config.default_display_posts, page)
     }))
 }
 
@@ -491,7 +522,7 @@ pub async fn forum_get(context: Context) -> Result<Template, RouteError>
 
     //println!("Template categories: {:?}", &categories);
 
-    Ok(basic_template!("forum", context, {
+    Ok(basic_template!("forumroot", context, {
         categories: categories,
         forumpath: vec![ForumPathItem::root()]
     }))

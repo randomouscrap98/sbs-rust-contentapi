@@ -16,6 +16,11 @@
     flex: auto;
 }
 
+.threadcontrols {
+    display: flex;
+    align-items: center;
+}
+
 .threadicon {
     flex: none;
     display: flex;

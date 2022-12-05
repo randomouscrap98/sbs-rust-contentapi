@@ -129,19 +129,6 @@ pub struct Content //Remember, these are files, pages, threads etc. Lovely!
     pub lastRevisionId: Option<i64>
 }
 
-//impl Content {
-//    pub fn get_stickies(&self) -> Result<Vec<i64>, anyhow::Error> {
-//        //Need to get the list of stickies
-//        let cvalues = match self.values {
-//            Some(ref values) => Ok(values),
-//            None => Err(anyhow!("Given category didn't have values!"))
-//        }?;
-//        let sticky_value = cvalues.get("stickies").ok_or(anyhow!("Category didn't have stickes value!!"))?;
-//        let sticky_array = sticky_value.as_array().ok_or(anyhow!("Sticky wasn't array!"))?;
-//        sticky_array.iter().map(|s| -> Result<i64, anyhow::Error> { s.as_i64().ok_or(anyhow!("Couldn't convert sticky value {}", s))}).collect()
-//    }
-//}
-
 
 #[serde_with::skip_serializing_none] //MUST COME BEFORE
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
