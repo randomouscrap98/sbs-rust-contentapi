@@ -14,6 +14,7 @@ pub struct Config
     pub default_imagebrowser_count: i32,
     pub default_category_threads : i32,
     pub default_display_threads : i32,
+    pub default_display_posts : i32,
     pub forum_category_order: Vec<String>
 }
 

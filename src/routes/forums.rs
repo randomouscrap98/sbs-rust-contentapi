@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use rocket::http::Status;
 use rocket_dyn_templates::Template;
 use serde::Serialize;
 use anyhow::anyhow;
@@ -17,6 +18,7 @@ static CATEGORYFIELDS: &str = "id,hash,name,description,literalType,values";
 static THREADKEY: &str = "thread";
 static CATEGORYKEY: &str = "category";
 static PREMESSAGEKEY: &str = "premessage";
+static PREMESSAGEINDEXKEY: &str = "premessage_index";
 
 struct Keygen();
 
@@ -39,6 +41,12 @@ impl ForumPathItem {
         Self {
             link: format!("/forum/category/{}", if let Some(ref hash) = category.hash { hash } else { "" }),
             title: if let Some(ref name) = category.name { name.clone() } else { String::from("NOTFOUND") }
+        }
+    }
+    fn from_thread(thread: &Content) -> Self {
+        Self {
+            link: format!("/forum/thread/{}", if let Some(ref hash) = thread.hash { hash } else { "" }),
+            title: if let Some(ref name) = thread.name { name.clone() } else { String::from("NOTFOUND") }
         }
     }
     fn root() -> Self {
@@ -121,16 +129,10 @@ impl CleanedPreCategory {
 //This struct is all the data to render a page in a single thread. Note that
 //because of how complicated forum thread lookup is, this struct will be partially
 //filled before completion
-struct ThreadViewData {
-    category: CleanedPreCategory,
-    thread: ForumThread,
-    users: HashMap<String, User>
-}
-
-//impl ThreadViewData {
-//    fn prep_from_result(context: &Context, result: &RequestResult) -> Result<Self, anyhow::Error> {
-//
-//    }
+//struct ThreadViewData {
+//    category: CleanedPreCategory,
+//    thread: ForumThread,
+//    users: HashMap<String, User>
 //}
 
 
@@ -285,9 +287,6 @@ fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip: i3
     request
 }
 
-//fn add_prepost_content_request(mut request: &FullRequest, thread_query_extra: String) {
-//
-//}
 
 //"prepost" means the main query before finding the main data before gathering the posts. The post offset
 //often depends on the prepost
@@ -323,6 +322,7 @@ fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option<i64
             String::from("id,contentId"),
             post_query
         );
+        message_request.limit = 1; //Just in case
         message_request.name = Some(String::from(PREMESSAGEKEY));
         request.requests.push(message_request);
         thread_query = format!("{} and id in @{}.contentId", thread_query, PREMESSAGEKEY);
@@ -356,62 +356,45 @@ fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option<i64
     category_request.name = Some(String::from(CATEGORYKEY));
     request.requests.push(category_request);
 
+    //OK one last ACTUAL thing: need to get the premessage index if it was there
+    if post_limited {
+        let mut index_request = build_request!(
+            RequestType::message,
+            String::from("specialCount,id,contentId"),
+            //This query DOES NOT fail if no premessage is found (like on user error). It needs to be LESS THAN
+            //while ordered by id (default) to produce a proper index. The first message will be 0, and the second
+            //will have one message with id lower than it.
+            format!("!basiccomments() and contentId in @{}.id and id < @{}.id", THREADKEY, PREMESSAGEKEY)
+        );
+        index_request.name = Some(String::from(PREMESSAGEINDEXKEY));
+        request.requests.push(index_request);
+    }
+
     request
 }
 
-//This is special because it needs many pieces of information, but not necessarily a bunch of 
-//threads. The other thread request does complicated searches to get many threads; this one assumes
-//a single thread with many posts. There is a chance the combination of data you give won't produce a thread
-//fn get_posts_request(ftid: Option<i64>, fpid: Option<i64>, threadHash: Option<i64>, postId: Option<i64>, limit: i32, skip: i32) -> Result<FullRequest, anyhow::Error> {
-//    let mut request = FullRequest::new();
-//    add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
-//    add_value!(request, "category_literal", SBSContentType::forumcategory.to_string());
-//
-//    //Can't get category or messages until you find the thread
-//    let mut thread_query = format!("literalType = @thread_literal and !notdeleted()");
-//
-//    //It is an error to call this function with both fpid and postId, or ftid and threadHash
-//    if ftid.is_some() && threadHash.is_some() {
-//        return Err(anyhow!("You can't call get_posts_request with both an ftid and threadHash, they are simultaneous systems"));
-//    }
-//
-//    //This is unfortunately complicated. If fpid or postId are given, we must lookup a message first.
-//    if let Some(fpid) = fpid {
-//        add_value!(request, "fpid", fpid);
-//        add_value!(request, "fpidkey", "fpid");
-//        let mut premessage_request = build_request!(
-//            RequestType::message,
-//            String::from("id,contentId"),
-//            format!("!valuelike(@fpidkey, @fpid) and !basiccomments()")
-//        );
-//        premessage_request.name = Some(String::from(PREMESSAGEKEY));
-//        //The thread needs to be the parent of the given fpid
-//        thread_query = format!("{} and id in @{}.contentId", thread_query, PREMESSAGEKEY);
-//    }
-//
-//
-//    //Regular thread request. Needs to specifically NOT be the stickies
-//    let mut threads_request = build_request!(
-//        RequestType::content,
-//        String::from(THREADFIELDS),
-//        format!("{} and id not in @{}", base_query, sticky_key),
-//        String::from("lastCommentId_desc"),
-//        limit,
-//        skip
-//    );
-//
-//        let key = Keygen::threads(category_id);
-//        threads_request.name = Some(key.clone());
-//        request.requests.push(threads_request);
-//
-//    Ok(request)
-//}
 
 // --------------------------
 // *    FORUM FUNCTIONS     *
 // --------------------------
 
-async fn build_categories(context: &Context, categories_cleaned: Vec<CleanedPreCategory>, limit: i32, skip: i32) -> Result<Vec<ForumCategory>, anyhow::Error> {
+fn get_pagelist(total: i32, page_size: i32, current: i32) -> Vec<ForumPagelistItem>
+{
+    let mut pagelist = Vec::new();
+
+    for i in (0..total).step_by(page_size as usize) {
+        let thispage = i / page_size;
+        pagelist.push(ForumPagelistItem {
+            page: thispage,
+            text: format!("{}", thispage + 1),
+            current: thispage == current
+        });
+    }
+
+    pagelist
+}
+
+async fn build_categories_with_threads(context: &Context, categories_cleaned: Vec<CleanedPreCategory>, limit: i32, skip: i32) -> Result<Vec<ForumCategory>, anyhow::Error> {
     //Next request: get the complicated dataset for each category (this somehow includes comments???)
     let thread_request = get_thread_request(&categories_cleaned, limit, skip); //context.config.default_category_threads, 0);
     let thread_result = post_request(context, &thread_request).await?;
@@ -434,22 +417,13 @@ async fn render_threads(context: &Context, category_request: FullRequest, page: 
 
     let category_result = post_request(context, &category_request).await?;
     let categories_cleaned = CleanedPreCategory::from_many(conversion::cast_result_required::<Content>(&category_result, CATEGORYKEY)?)?;
-    let categories = build_categories(&context, categories_cleaned, 
+    let categories = build_categories_with_threads(&context, categories_cleaned, 
         context.config.default_display_threads, 
         page * context.config.default_display_threads
     ).await?;
 
-    let category = categories.get(0).ok_or(RouteError(rocket::http::Status::NotFound, String::from("Couldn't find that category")))?;
-    let mut pagelist = Vec::new();
-
-    for i in (0..category.threads_count).step_by(context.config.default_display_threads as usize) {
-        let thispage = i / context.config.default_display_threads;
-        pagelist.push(ForumPagelistItem {
-            page: thispage,
-            text: format!("{}", thispage + 1),
-            current: thispage == page
-        });
-    }
+    let category = categories.get(0).ok_or(RouteError(Status::NotFound, String::from("Couldn't find that category")))?;
+    let pagelist = get_pagelist(category.threads_count, context.config.default_display_threads, page);
 
     //println!("Please: {:?}", category);
 
@@ -465,12 +439,42 @@ async fn render_threads(context: &Context, category_request: FullRequest, page: 
 
 async fn render_thread(context: &Context, pre_request: FullRequest, page: Option<i32>) -> Result<Template, RouteError> 
 {
-    let page = page.unwrap_or(0);
+    let mut page = page.unwrap_or(0);
 
     let pre_result = post_request(context, &pre_request).await?;
+    let mut categories_cleaned = CleanedPreCategory::from_many(conversion::cast_result_required::<Content>(&pre_result, CATEGORYKEY)?)?;
+    let mut threads_raw = conversion::cast_result_required::<Content>(&pre_result, THREADKEY)?;
+
+    //There must be one category, and one thread, otherwise return 404
+    let thread = threads_raw.pop().ok_or(RouteError(Status::NotFound, String::from("Could not find thread!")))?;
+    let category = categories_cleaned.pop().ok_or(RouteError(Status::NotFound, String::from("Could not find category!")))?;
+    if let Some(message_index) = conversion::cast_result_safe::<SpecialCount>(&pre_result, PREMESSAGEINDEXKEY)?.pop() {
+        //The index is the special count. This means we change the page given. If page wasn't already 0, we warn
+        if page != 0 {
+            println!("Page was nonzero ({}) while there was a message index ({})", page, message_index.specialCount);
+        }
+        page = message_index.specialCount / context.config.default_display_posts;
+    }
+
+    //Instead of blank vec. just actually get the posts. 
+    let blank_vec = Vec::new();
+    let thread = ForumThread::from_content(thread, &blank_vec, &category.stickies)?; //We get the messages later...
+    let users : HashMap<String, User> = HashMap::new();
+    let comment_count = thread.thread.commentCount.ok_or(anyhow!("Thread result did not have commentCount field!"))?;
+    let pagelist = get_pagelist(comment_count as i32, context.config.default_display_threads, page);
+
+    //let mut result = ThreadViewData {
+    //    category: category,
+    //    thread: thread,
+    //    users: HashMap::new() //We'll fill this later, don't worry
+    //};
 
     Ok(basic_template!("forumthread", context, {
-
+        forumpath: vec![ForumPathItem::root(), ForumPathItem::from_category(&category.category), ForumPathItem::from_thread(&thread.thread)],
+        category: category.category,
+        thread: thread,
+        users: users,
+        pagelist: pagelist
     }))
 }
 
@@ -495,7 +499,7 @@ pub async fn forum_get(context: Context) -> Result<Template, RouteError>
             |prefix| category.name.starts_with(prefix)).unwrap_or(usize::MAX), category.name.clone())
     });
 
-    let categories = build_categories(&context, categories_cleaned, context.config.default_category_threads, 0).await?;
+    let categories = build_categories_with_threads(&context, categories_cleaned, context.config.default_category_threads, 0).await?;
 
     //println!("Template categories: {:?}", &categories);
 
