@@ -12,16 +12,12 @@ pub struct TagInfo {
     //The tag to put out as html
     pub outtag: &'static str,
     pub tag_type: TagType,
-    //pub argout : Option<&'static str>,
-    //pub valout: Option<&'static str>, //Put the value in this attribute, if defined
-    //pub verbatim : bool, //whether tags are allowed inside, basically
     pub rawextra: Option<&'static str>, //Just dump this directly into the tag at the end. No checks performed
 }
 
 impl TagInfo {
     fn simple(tag: &'static str) -> TagInfo {
         TagInfo { tag, outtag: tag, tag_type: TagType::Simple, rawextra: None }
-        //argout: None, valout: None, verbatim: false, rawextra: None }
     }
     fn start() -> TagInfo {
         TagInfo { tag: "", outtag: "", tag_type: TagType::Start, rawextra: None }
@@ -29,7 +25,7 @@ impl TagInfo {
 }
 
 #[derive(Debug, Clone)]
-enum TagType {
+pub enum TagType {
     Start,           //Should ONLY have one of these! It's like S in a grammar!
     Simple,
     DefinedArg(&'static str),   //CAN have argument defined, attribute name is given
@@ -52,7 +48,8 @@ impl TagType {
 //Bbcode tags come in... different flavors maybe (or this is bad?)
 #[derive(Debug, Clone)]
 pub enum MatchType { 
-    Open(TagInfo), //this is so small, it's fine to dupe in open/close
+    Passthrough,    //Pass this junk right out as-is
+    Open(TagInfo),  //this is so small, it's fine to dupe in open/close
     Close(TagInfo),
     DirectReplace(&'static str)
 }
@@ -62,15 +59,16 @@ pub enum MatchType {
 pub struct TagDo {
     pub regex : Regex,
     pub match_type: MatchType,
-    //pub info : TagInfo 
 }
 
 //For the following section, it is assumed the entire scoper and all elements within will have the same lifetime
 //as the calling function, which also houses the input string
 struct BBScope<'a> {
     info: &'a TagInfo,
-    inner: &'a str,
-    captures: Option<&'a Captures<'a>> //the capture must live the whole time too
+    inner_start: usize, //TERRIBLE! MAYBE?!
+    has_arg: bool, //May need to change if more configuration needed
+    //inner: &'a str,
+    //captures: Option<&'a Captures<'a>> //the capture must live the whole time too
 }
 struct BBScoper<'a> {
     scopes : Vec<BBScope<'a>>
@@ -82,7 +80,7 @@ impl<'a> BBScoper<'a> {
 
     //Add a scope, which may close some existing scopes. The closed scopes are returned in display order.
     //NOTE: the added infos must live as long as the scope container!
-    fn add_scope(&mut self, scope: BBScope<'a>) -> Vec<BBScope<'a>> {
+    fn add_scope(&mut self, scope: BBScope<'a>) -> (&BBScope, Vec<BBScope<'a>>) {
         //here we assume all taginfos have unique tags because why wouldn't they
         let mut result = Vec::new();
         if let Some(topinfo) = self.scopes.last() {
@@ -98,7 +96,7 @@ impl<'a> BBScoper<'a> {
         }
 
         self.scopes.push(scope);
-        result
+        (self.scopes.last().unwrap(), result)
     }
     
     //fn update_inners(&mut self, string: &String) {
@@ -145,8 +143,6 @@ impl<'a> BBScoper<'a> {
 }
 
 pub struct BBCode {
-    //These are ALWAYS processed
-    //pub directs : Vec<(&'static str, &'static str)>,
     //These are SOMETIMES processed (based on context)
     pub tags : Vec<TagDo>
 }
@@ -165,6 +161,13 @@ impl BBCode {
                 match_type : MatchType::DirectReplace(e.1)
             })
         }).collect::<Result<Vec<TagDo>,anyhow::Error>>()?;
+
+        //This is an optimization: any large block of characters that has no meaning in bbcode can go straight through.
+        //Put it FIRST because this is the common case
+        tags.insert(0, TagDo {
+            regex: Regex::new(r#"^[^\[\]<>'"&/]+"#)?,
+            match_type : MatchType::Passthrough
+        });
 
         //Next, convert the taginfos to even more "do".
         for tag in taginfos.iter() {
@@ -185,6 +188,7 @@ impl BBCode {
         Ok(BBCode { tags })
     }
 
+    //The basic direct replacement escapes for HTML
     pub fn html_escapes() -> Vec<(&'static str, &'static str)> {
         vec![
             ("<", "&lt;"),
@@ -221,7 +225,7 @@ impl BBCode {
         result
     }
 
-    fn push_open_tag(mut result: String, scope: &BBScope) -> String {
+    fn push_open_tag(mut result: String, scope: &BBScope, captures: &Captures) -> String {
         result.push_str("<");
         result.push_str(scope.info.outtag);
         result.push_str(" ");
@@ -235,13 +239,13 @@ impl BBCode {
             TagType::Start => {}, //Do nothing
             TagType::Simple => { result.push_str(">"); }, //Just close it, all done!
             TagType::DefinedArg(argname) => {
-                if let Some(captures) = scope.captures { //Push the argument first
+                if captures.len() > 1 { //Push the argument first
                     result = Self::push_tagarg(result, argname, Some(&captures[1]));
                 }
                 result.push_str(">"); //THEN close it!
             },
             TagType::DefaultArg(argname) => {
-                if let Some(captures) = scope.captures { //If an argument exists, push it
+                if captures.len() > 1 { //If an argument exists, push it
                     result = Self::push_tagarg(result, argname, Some(&captures[1]));
                     result.push_str(">"); //THEN close it!
                 }
@@ -257,15 +261,15 @@ impl BBCode {
         result
     }
 
-    fn push_close_tag(mut result: String, scope: &BBScope) -> String {
-        if let TagType::SelfClosing(_) = info.tag_type {
+    fn push_close_tag(mut result: String, scope: &BBScope, input: &str) -> String {
+        if let TagType::SelfClosing(_) = scope.info.tag_type {
             //Need to finish closing the attribute, self closing tags have
             //no... well, closing tag
             result.push_str(r#"">"#);
         }
         else {
             result.push_str("</");
-            result.push_str(info.outtag);
+            result.push_str(scope.info.outtag);
             result.push_str(">");
         }
         result
@@ -283,7 +287,10 @@ impl BBCode {
         //Only 'Taginfo' can create scope, so don't worry about "DirectReplace" types
         let mut scoper = BBScoper::new();
         let start_info = TagInfo::start();
-        scoper.add_scope(BBScope { info: &start_info, inner: &result, captures: None });
+        scoper.add_scope(BBScope { info: &start_info, inner_start: 0, has_arg: false });
+
+        //To determine how far into the string we are
+        let input_ptr = input.as_ptr();
 
         //While there is string left, keep checking against all the regex. Remove some regex
         //if the current scope is a meanie
@@ -297,10 +304,12 @@ impl BBCode {
                     break;
                 }
             };
-            //let verbatim_scope = scoper.scopes.last().and_then(|i| Some(TagType::is_verbatim(&i.tag_type))).unwrap_or(false);
 
             let mut matched_do : Option<&TagDo> = None;
 
+            //figure out which next element matches (if any). This is the terrible optimization part, but
+            //these are such small state machines with nothing too crazy that I think it's fine.... maybe.
+            //Especially since they all start at the start of the string
             for tagdo in &self.tags {
                 if current_scope.info.tag_type.is_verbatim() && !matches!(tagdo.match_type, MatchType::DirectReplace(_)) {
                     continue;
@@ -311,32 +320,53 @@ impl BBCode {
                 }
             }
 
-            if let Some(tagdo) = matched_do {
+            //SOMETHING matched, which means we do something special to consume the output
+            if let Some(tagdo) = matched_do 
+            {
                 //There should only be one but whatever
                 for capture in tagdo.regex.captures_iter(slice) {
+                    //do this pre-emptively so we're AT the start of the inside of the tag
+                    slice = &slice[capture[0].len()..];
                     match &tagdo.match_type {
+                        MatchType::Passthrough => {
+                            //The entire matched portion can go straight through. This gets us quickly
+                            //through chunks of non-bbcode 
+                            result.push_str(&capture[0]);
+                        },
                         MatchType::DirectReplace(new_text) => {
+                            //The matched chunk has a simple replacement with no rules
                             result.push_str(new_text);
                         },
                         MatchType::Open(info) => {
-                            for cscope in scopes.add_scope(info) {
-                                result = Self::push_close_tag(result, cscope);
+                            //Need to enter a scope. Remember where the beginning of this scope is just in case we need it
+                            let new_scope = BBScope {
+                                info, 
+                                inner_start : (slice.as_ptr() as usize) - (input_ptr as usize),
+                                has_arg: capture.len() > 1
+                            };
+                            //By starting a scope, we may close many scopes. Also it'll tell us what it thinks the 
+                            //starting scope looks like (it may change? probably not though)
+                            let scope_result = scoper.add_scope(new_scope);
+                            for cscope in scope_result.1 {
+                                result = Self::push_close_tag(result, &cscope, input);
                             }
                             //The add_scope function only gives us the close scopes, so we
                             //still need to emit the open tag
-                            result = Self::push_open_tag(result, info, &capture);
+                            result = Self::push_open_tag(result, scope_result.0, &capture);
                         },
                         MatchType::Close(info) => {
-                            for cscope in scopes.close_scope(info) {
-                                result = Self::push_close_tag(result, cscope);
+                            //Attempt to close the given scope. The scoper will return all the actual scopes
+                            //that were closed, which we can dump
+                            for cscope in scoper.close_scope(info) {
+                                result = Self::push_close_tag(result, &cscope, input);
                             }
                             //The close_scope function gives us the scopes to close
                         }
                     }
-                    slice = &slice[capture[0].len()..];
                 }
             }
-            else {
+            else  //Nothing matched, so we just consume the next character. This should be very rare
+            {
                 //just move forward and emit the char. Note that the slice is in bytes, but the char
                 //is a unicode scalar that could be up to 4 bytes, so we need to know how many 'bytes'
                 //we just popped off
@@ -358,8 +388,8 @@ impl BBCode {
         }
 
         //At the end, we should close any unclosed scopes
-        for cscope in scopes.dump_remaining() {
-            result = Self::push_close_tag(result, cscope);
+        for cscope in scoper.dump_remaining() {
+            result = Self::push_close_tag(result, &cscope, input);
         }
 
         result
