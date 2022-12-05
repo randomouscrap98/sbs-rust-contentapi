@@ -9,8 +9,39 @@ use regex::Regex;
 pub struct TagInfo {
     //The tag identity, such as "b", "youtube", etc
     pub tag : &'static str,
-    pub argout : Option<&'static str>,
-    pub verbatim : bool //whether tags are allowed inside, basically
+    //The tag to put out as html
+    pub outtag: &'static str,
+    pub tag_type: TagType,
+    //pub argout : Option<&'static str>,
+    //pub valout: Option<&'static str>, //Put the value in this attribute, if defined
+    //pub verbatim : bool, //whether tags are allowed inside, basically
+    pub rawextra: Option<&'static str>, //Just dump this directly into the tag at the end. No checks performed
+}
+
+impl TagInfo {
+    fn simple(tag: &'static str) -> TagInfo {
+        TagInfo { tag, outtag: tag, tag_type: TagType::Simple, rawextra: None }
+        //argout: None, valout: None, verbatim: false, rawextra: None }
+    }
+}
+
+#[derive(Debug, Clone)]
+enum TagType {
+    Simple,
+    DefinedArg(&'static str),   //CAN have argument defined, attribute name is given
+    SelfClosing(&'static str),  //No closing tag, value is 
+    DefaultArg(&'static str),   //The tag enclosed value provides a default for the given attribute, or not if defined
+}
+
+impl TagType {
+    fn is_verbatim(&self) -> bool {
+        match self {
+            Self::Simple => false,
+            Self::DefinedArg(_) => false,
+            Self::SelfClosing(_) => true,
+            Self::DefaultArg(_) => true
+        }
+    }
 }
 
 //Bbcode tags come in... different flavors maybe (or this is bad?)
@@ -27,6 +58,65 @@ pub struct TagDo {
     pub regex : Regex,
     pub match_type: MatchType,
     //pub info : TagInfo 
+}
+
+struct BBScope<'a> {
+    scopes : Vec<&'a TagInfo>
+}
+
+impl<'a> BBScope<'a> {
+    fn new() -> Self { BBScope { scopes: Vec::new() }}
+
+    //Add a scope, which may close some existing scopes. The closed scopes are returned in display order.
+    //NOTE: the added infos must live as long as the scope container!
+    fn add_scope(&mut self, info: &'a TagInfo) -> Vec<&TagInfo> {
+        //here we assume all taginfos have unique tags because why wouldn't they
+        if let Some(topinfo) = self.scopes.last() {
+            //Duplicate scopes close the preceding one.
+            //Do nothing, but tell the caller that we "closed" the top scope
+            vec![*topinfo]
+        }
+        else {
+            self.scopes.push(info);
+            Vec::new()
+        }
+    }
+
+    //Close the given scope, which should return the scopes that got closed (including the self).
+    //If no scope could be found, the vector is empty
+    fn close_scope(&mut self, info: &'a TagInfo) -> Vec<&TagInfo> {
+        let mut scope_count = 0;
+        let mut tag_found = false;
+
+        for scope in self.scopes.iter().rev() {
+            scope_count += 1;
+            if info.tag == scope.tag {
+                tag_found = true;
+                break;
+            }
+        }
+
+        if tag_found {
+            let mut result = Vec::with_capacity(scope_count + 1);
+            for _ in [0..result.len()] {
+                if let Some(scope) = self.scopes.pop() {
+                    result.push(scope);
+                }
+                else {
+                    println!("BBScope::close_scope LOGIC ERROR: SCANNED PAST END OF SCOPELIST");
+                }
+            }
+            result
+        }
+        else {
+            Vec::new()
+        }
+    }
+
+    //Consume the scope system while dumping the rest of the scopes in the right order for display
+    fn dump_remaining(self) -> Vec<&'a TagInfo> {
+        self.scopes.into_iter().rev().collect()
+    }
 }
 
 pub struct BBCode {
@@ -83,39 +173,86 @@ impl BBCode {
     //Get a vector of the basic taginfos of bbcode
     pub fn basics() -> Vec<TagInfo> {
         vec![
-            TagInfo { tag: "b", argout: None, verbatim: false },
-            TagInfo { tag: "i", argout: None, verbatim: false },
-            TagInfo { tag: "sup", argout: None, verbatim: false },
-            TagInfo { tag: "sub", argout: None, verbatim: false },
-            TagInfo { tag: "url", argout: None, verbatim: true },
-            TagInfo { tag: "img", argout: None, verbatim: true },
-            TagInfo { tag: "s", argout: None, verbatim: false },
-            TagInfo { tag: "u", argout: None, verbatim: false }
+            TagInfo::simple("b"),
+            TagInfo::simple("i"),
+            TagInfo::simple("sup"),
+            TagInfo::simple("sub"),
+            TagInfo::simple("u"),
+            TagInfo::simple("s"),
+            TagInfo { tag: "url", outtag: "a", tag_type: TagType::DefaultArg("href"), rawextra: Some(r#"target="_blank""#) },
+            TagInfo { tag: "img", outtag: "img", tag_type: TagType::SelfClosing("src"), rawextra: None },
         ]
+    }
+
+    fn push_tagarg(mut result: String, argname: &str, argval: Option<&str>) -> String {
+        result.push_str(" ");
+        result.push_str(argname);
+        result.push_str("=\"");
+        //Now we need an html escaper
+        if let Some(argval) = argval {
+            result.push_str(&html_escape::encode_quoted_attribute(argval));
+            result.push_str("\"");
+        }
+        result
     }
 
     fn push_open_tag(mut result: String, info: &TagInfo, capture: &regex::Captures) -> String {
         result.push_str("<");
-        result.push_str(info.tag);
-        if let Some(argout) = info.argout {
-            if capture.len() > 1 {
-                result.push_str(" ");
-                result.push_str(argout);
-                result.push_str("=\"");
-                //Now we need an html escaper
-                result.push_str(&html_escape::encode_quoted_attribute(&capture[1]));
-                //html_escape::encode_quoted_attribute_to_string(capture[1].into(), mut result);
-                result.push_str("\"");
+        result.push_str(info.outtag);
+        result.push_str(" ");
+        //Put the raw stuff first (maybe class, other)
+        if let Some(rawextra) = info.rawextra {
+            result.push_str(rawextra);
+            result.push_str(" ");
+        }
+        //Now output different stuff depending on the type
+        match info.tag_type {
+            TagType::Simple => {
+                result.push_str(">"); //Just close it, all done!
+            },
+            TagType::DefinedArg(argname) => {
+                if capture.len() > 1 { //Push the argument first
+                    result = Self::push_tagarg(result, argname, Some(&capture[1]));
+                }
+                result.push_str(">"); //THEN close it!
+            },
+            TagType::DefaultArg(argname) => {
+                if capture.len() > 1 { //If an argument exists, push it
+                    result = Self::push_tagarg(result, argname, Some(&capture[1]));
+                }
+                else { //But if it doesn't, use the... value... wait a sec... how will this work
+
+                }
+                result.push_str(">"); //THEN close it!
             }
         }
-        result.push_str(">");
+
+        //You can have both an argout AND a valout. Your implementation of valout might be dangerous!
+        if let Some(argout) = info.argout {
+            if capture.len() > 1 {
+                result = Self::push_tagarg(result, argout, Some(&capture[1]));
+            }
+        }
+        if let Some(valout) = info.valout {
+            result = Self::push_tagarg(result, valout, None); //Leave the arg open
+        }
+        else {
+            result.push_str(">");
+        }
         result
     }
 
     fn push_close_tag(mut result: String, info: &TagInfo) -> String {
-        result.push_str("</");
-        result.push_str(info.tag);
-        result.push_str(">");
+        if let TagType::SelfClosing(_) = info.tag_type {
+            //Need to finish closing the attribute, self closing tags have
+            //no... well, closing tag
+            result.push_str(r#"">"#);
+        }
+        else {
+            result.push_str("</");
+            result.push_str(info.outtag);
+            result.push_str(">");
+        }
         result
     }
 
@@ -129,14 +266,14 @@ impl BBCode {
         let mut slice = &input[0..]; //Not necessary to be this explicit ofc
 
         //Only 'Taginfo' can create scope, so don't worry about "DirectReplace" types
-        let mut scopes : Vec<&TagInfo> = Vec::new();
+        let mut scopes = BBScope::new();
 
         //While there is string left, keep checking against all the regex. Remove some regex
         //if the current scope is a meanie
         while slice.len() > 0
         {
             //Slow? IDK
-            let verbatim_scope = scopes.last().and_then(|i| Some(i.verbatim)).unwrap_or(false);
+            let verbatim_scope = scopes.scopes.last().and_then(|i| Some(TagType::is_verbatim(&i.tag_type))).unwrap_or(false);
 
             let mut matched_do : Option<&TagDo> = None;
 
@@ -158,10 +295,18 @@ impl BBCode {
                             result.push_str(new_text);
                         },
                         MatchType::Open(info) => {
+                            for cscope in scopes.add_scope(info) {
+                                result = Self::push_close_tag(result, cscope);
+                            }
+                            //The add_scope function only gives us the close scopes, so we
+                            //still need to emit the open tag
                             result = Self::push_open_tag(result, info, &capture);
                         },
                         MatchType::Close(info) => {
-                            result = Self::push_close_tag(result, info);
+                            for cscope in scopes.close_scope(info) {
+                                result = Self::push_close_tag(result, cscope);
+                            }
+                            //The close_scope function gives us the scopes to close
                         }
                     }
                     slice = &slice[capture[0].len()..];
@@ -186,6 +331,11 @@ impl BBCode {
             //result. if open tag, dump it to stream too, add to scope. if closing tag, scan backwards
             //until a matching scope is found, pop all scopes and write them in pop order to the result,
             //and finally the last scope too. if none are found, fully ignore close and continue.
+        }
+
+        //At the end, we should close any unclosed scopes
+        for cscope in scopes.dump_remaining() {
+            result = Self::push_close_tag(result, cscope);
         }
 
         result
@@ -274,4 +424,15 @@ mod tests {
         assert_eq!(bbcode.parse("[b]hello[/b]"), "<b>hello</b>");
     }
 
+    #[test]
+    fn simple_nospaces() {
+        let bbcode = BBCode::build(BBCode::basics()).unwrap();
+        assert_eq!(bbcode.parse("[b ]hello[/ b]"), "[b ]hello[/ b]");
+    }
+
+    #[test]
+    fn simple_bolditalic() {
+        let bbcode = BBCode::build(BBCode::basics()).unwrap();
+        assert_eq!(bbcode.parse("[b][i]hello[/i][/b]"), "<b><i>hello</i></b>");
+    }
 }
