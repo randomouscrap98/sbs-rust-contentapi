@@ -4,6 +4,7 @@ pub mod forums;
 pub mod user;
 pub mod register;
 pub mod basic;
+pub mod bbcodepreview;
 
 use crate::api::ApiError;
 use rocket::http::Status;

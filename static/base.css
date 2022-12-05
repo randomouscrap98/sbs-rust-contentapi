@@ -158,3 +158,11 @@ hr.smaller {
     margin-top: 1.0em; /* Split so left/right are left alone */
     margin-bottom: 1.0em; 
 }
+
+
+/* Some important stuff, like content rendering */
+.content {
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}

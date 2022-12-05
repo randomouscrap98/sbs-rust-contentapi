@@ -64,7 +64,9 @@ fn rocket() -> _ {
             activity_get,
             search_get,
             routes::imagebrowser::widget_imagebrowser_get,
-            routes::imagebrowser::widget_imagebrowser_post
+            routes::imagebrowser::widget_imagebrowser_post,
+            routes::bbcodepreview::widget_bbcodepreview_get,
+            routes::bbcodepreview::widget_bbcodepreview_post
         ])
         .mount("/static", FileServer::from("static/"))
         .manage(context::InitData {
