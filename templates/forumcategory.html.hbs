@@ -15,12 +15,12 @@
             <div><b>Posts:</b> {{thread.commentCount}}</div>
             <div>
                 <b>Created:</b>
-                <time datetime="{{thread.createDate}}">{{timeago thread.createDate}}</time></b> 
+                <time datetime="{{thread.createDate}}">{{timeago thread.createDate}}</time>
             </div>
             {{#if posts.[0]}}
             <div>
                 <b>Last:</b>
-                <a href="{{@root.http_root}}/forum/thread/{{thread.hash}}/{{posts.[0].id}}#{{posts.[0].id}}" class="flatlink">
+                <a href="{{@root.http_root}}/forum/thread/{{thread.hash}}/{{posts.[0].id}}#post_{{posts.[0].id}}" class="flatlink">
                     <time datetime="{{posts.[0].createDate}}">{{timeago posts.[0].createDate}}</time>
                 </a>
                 by

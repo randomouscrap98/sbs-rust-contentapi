@@ -44,6 +44,19 @@
     margin-left: auto;
 }
 
+.post {
+    display: flex;
+    align-items: flex-start;
+}
+
+.postleft {
+    flex: none;
+}
+
+.postright {
+    flex: auto;
+}
+
 #pagelist {
     display: flex;
     align-items: center;

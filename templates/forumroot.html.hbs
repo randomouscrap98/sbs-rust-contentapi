@@ -16,7 +16,7 @@
             <div>
                 {{#with threads.[0].posts.[0]}}
                 <b><time datetime="{{createDate}}">{{timeago createDate}}</time>:</b> 
-                <a href="{{../../http_root}}/forum/thread/{{../threads.[0].thread.hash}}/{{id}}#{{id}}" class="flatlink">{{../threads.[0].thread.name}}</a>
+                <a href="{{../../http_root}}/forum/thread/{{../threads.[0].thread.hash}}/{{id}}#post_{{id}}" class="flatlink">{{../threads.[0].thread.name}}</a>
                 {{/with}}
             </div>
             {{/if}}

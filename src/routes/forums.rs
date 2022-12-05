@@ -469,6 +469,10 @@ async fn render_thread(context: &Context, pre_request: FullRequest, page: Option
     //There must be one category, and one thread, otherwise return 404
     let thread = threads_raw.pop().ok_or(RouteError(Status::NotFound, String::from("Could not find thread!")))?;
     let category = categories_cleaned.pop().ok_or(RouteError(Status::NotFound, String::from("Could not find category!")))?;
+    let mut selected_post : Option<i64> = None;
+    if let Some(message) = conversion::cast_result_safe::<Message>(&pre_result, PREMESSAGEKEY)?.pop() {
+        selected_post = message.id;
+    }
     if let Some(message_index) = conversion::cast_result_safe::<SpecialCount>(&pre_result, PREMESSAGEINDEXKEY)?.pop() {
         //The index is the special count. This means we change the page given. If page wasn't already 0, we warn
         if page != 0 {
@@ -491,6 +495,7 @@ async fn render_thread(context: &Context, pre_request: FullRequest, page: Option
     Ok(basic_template!("forumthread", context, {
         forumpath: vec![ForumPathItem::root(), ForumPathItem::from_category(&category.category), ForumPathItem::from_thread(&thread)],
         category: category.category,
+        selected_post: selected_post,
         thread: ForumThread::from_content(thread, &messages_raw, &category.stickies)?,
         users: users_raw.into_iter().map(|u| (format!("{}", u.id), u)).collect::<HashMap<String, User>>(),
         pagelist: get_pagelist(comment_count as i32, context.config.default_display_posts, page)

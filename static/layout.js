@@ -27,6 +27,16 @@ function upgrade_times()
         var date = new Date(times[i].innerHTML);
         times[i].textContent = date.toLocaleDateString();
     }
+
+    //Here we're looking for datetime times and adding a title that's the easy read version.
+    //This can't be done by the SSR because of the "locale" thing (or at least, it's super hard)
+    var times = document.querySelectorAll('time[datetime]');
+    for(var i = 0; i < times.length; i++)
+    {
+        var date = new Date(times[i].getAttribute("datetime"));
+        times[i].setAttribute("title", date.toLocaleString());
+    }
+
 }
 
 //Onsubmit for standard (non-javascript) forms. This isn't required to

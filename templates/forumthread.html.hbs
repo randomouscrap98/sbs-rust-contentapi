@@ -19,10 +19,27 @@
         </span>
     </div>
 </section>
-<section>
+<section {{#with selected_post}}data-selected="{{this}}"{{/with}}>
     {{#*inline "post_item"}}
-    <div class="post">
+    {{#with (lookup @root.users (string createUserId)) as | user |}}
+    <div class="post {{#if (eq ../id @root.selected_post)}}current{{/if}}" id="post_{{../id}}">
+        <div class="postleft">
+            <img class="avatar" src="{{imagelink user.avatar 100 true}}">
+        </div>
+        <div class="postright">
+            <div class="postheader">
+                <a class="flatlink" href="{{@root.http_root}}/user/{{user.username}}">{{user.username}}</a>
+                {{!TODO: this link needs to be generated or something! Too much room for mistakes!}}
+                <a href="{{@root.http_root}}/forum/thread/{{@root.thread.thread.hash}}/{{../id}}#post_{{../id}}">link</a>
+            </div>
+            <!-- Need a bbcode render helper -->
+            <div class="content">{{../text}}</div>
+            <div class="postfooter">
+                <time datetime="{{../createDate}}">{{timeago ../createDate}}</time>
+            </div>
+        </div>
     </div>
+    {{/with}}
     {{/inline}}
     {{!Only care about 'unless' in the main list, the only time this DOES work is if there are ONLY stickies}}
     {{#each thread.posts}}
