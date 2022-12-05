@@ -1,12 +1,6 @@
-/*.forumdescription {
-    font-size: 0.9em;
-}*/
-
-/*.category {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-}*/
+/*  -------------------
+ *        ROOT        *
+ *  ----------------- */
 
 .category h1 {
     margin-top: 0; 
@@ -16,10 +10,9 @@
     flex: auto;
 }
 
-.threadcontrols {
-    display: flex;
-    align-items: center;
-}
+/*  -------------------
+ *     CATEGORIES     *
+ *  ----------------- */
 
 .threadicon {
     flex: none;
@@ -27,6 +20,7 @@
     align-items: center;
     /*margin-right: 0.7em;*/
 }
+
 .threadicon > * {
     /*width: 1.7em;*/
     width: 1.5em;
@@ -37,12 +31,10 @@
     margin-bottom: 0.5em;
 }
 
-.foruminfo {
-    display: flex;
-    align-items: center;
-    overflow: hidden;
-    margin-left: auto;
-}
+
+/*  -------------------
+ *        THREAD      *
+ *  ----------------- */
 
 .post {
     display: flex;
@@ -51,10 +43,49 @@
 
 .postleft {
     flex: none;
+    margin-right: 0.75em;
 }
 
 .postright {
     flex: auto;
+}
+
+.post .avatar {
+    width: 4em;
+    border-radius: 0.5em;
+}
+
+.postheader {
+    display: flex;
+}
+
+.sequence {
+    margin-left: auto;
+    filter: opacity(0.6);
+    font-size: 0.8em;
+    text-decoration: none;
+}
+
+.postfooter {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.content {
+    margin: 0.5em 0.1em;
+    line-height: 1.4;
+}
+
+
+/*  -------------------
+ *       GENERAL      *
+ *  ----------------- */
+
+.foruminfo {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    margin-left: auto;
 }
 
 #pagelist {
@@ -69,8 +100,12 @@
     font-weight: bold;
 }
 
-/*@media screen and (max-width: 30em)
+
+@media screen and (max-width: 30em)
 {
-    .threadicon { margin-right: 0.4em; }
-    .threadicon img { width: 1em; }
-}*/
+    .content { font-size: 0.9em; }
+    .post .avatar { width: 3em; }
+    .postleft { margin-right: 0.6em; }
+    /*.threadicon { margin-right: 0.4em; }
+    .threadicon img { width: 1em; }*/
+}

@@ -462,17 +462,13 @@ async fn render_thread(context: &Context, pre_request: FullRequest, page: Option
 {
     let mut page = page.unwrap_or(1) - 1; //we assume 1-based pages
 
+    //Go lookup all the 'initial' data, which everything except posts and users
     let pre_result = post_request(context, &pre_request).await?;
+
+    //Pull out and parse all that stupid data. It's fun using strongly typed languages!! maybe...
     let mut categories_cleaned = CleanedPreCategory::from_many(conversion::cast_result_required::<Content>(&pre_result, CATEGORYKEY)?)?;
     let mut threads_raw = conversion::cast_result_required::<Content>(&pre_result, THREADKEY)?;
-
-    //There must be one category, and one thread, otherwise return 404
-    let thread = threads_raw.pop().ok_or(RouteError(Status::NotFound, String::from("Could not find thread!")))?;
-    let category = categories_cleaned.pop().ok_or(RouteError(Status::NotFound, String::from("Could not find category!")))?;
-    let mut selected_post : Option<i64> = None;
-    if let Some(message) = conversion::cast_result_safe::<Message>(&pre_result, PREMESSAGEKEY)?.pop() {
-        selected_post = message.id;
-    }
+    let selected_post = conversion::cast_result_safe::<Message>(&pre_result, PREMESSAGEKEY)?.pop();
     if let Some(message_index) = conversion::cast_result_safe::<SpecialCount>(&pre_result, PREMESSAGEINDEXKEY)?.pop() {
         //The index is the special count. This means we change the page given. If page wasn't already 0, we warn
         if page != 0 {
@@ -481,21 +477,40 @@ async fn render_thread(context: &Context, pre_request: FullRequest, page: Option
         page = message_index.specialCount / context.config.default_display_posts;
     }
 
+    //There must be one category, and one thread, otherwise return 404
+    let thread = threads_raw.pop().ok_or(RouteError(Status::NotFound, String::from("Could not find thread!")))?;
+    let category = categories_cleaned.pop().ok_or(RouteError(Status::NotFound, String::from("Could not find category!")))?;
+
+    //Also I need some fields to exist.
     let thread_id = thread.id.ok_or(anyhow!("Thread result did not have id field?!"))?;
     let thread_create_uid = thread.createUserId.ok_or(anyhow!("Thread result did not have createUserId field!"))?;
     let comment_count = thread.commentCount.ok_or(anyhow!("Thread result did not have commentCount field!"))?;
 
+    let sequence_start = page * context.config.default_display_posts;
+
+    //OK NOW you can go lookup the posts, since we are sure about where in the postlist we want
     let after_request = get_finishpost_request(thread_id, vec![thread_create_uid], 
-        context.config.default_display_posts, page * context.config.default_display_posts);
+        context.config.default_display_posts, sequence_start);
     let after_result = post_request(context, &after_request).await?;
 
+    //Pull the data out of THAT request
     let messages_raw = conversion::cast_result_required::<Message>(&after_result, "message")?;
     let users_raw = conversion::cast_result_required::<User>(&after_result, "user")?;
+
+    //Create a mapping of message ids to their sequence number (for display). This seems VERY compute intensive
+    //for how little its doing, especially since you have to do all the lookups and helpers to get the value OUT of this.
+    //Although all this code might compile to almost nothing, and the hash could overshadow everything. I don't knoowwww
+    let sequence : HashMap<String, usize> = messages_raw.iter()
+        .map(|m| m.id.ok_or(anyhow!("No id on messages!"))).collect::<Result<Vec<i64>,_>>()? //filter errors on message ids
+        .iter().enumerate()
+        .map(|(i,m)| (format!("{}", m), i + sequence_start as usize + 1))
+        .collect();
 
     Ok(basic_template!("forumthread", context, {
         forumpath: vec![ForumPathItem::root(), ForumPathItem::from_category(&category.category), ForumPathItem::from_thread(&thread)],
         category: category.category,
         selected_post: selected_post,
+        sequence : sequence, //Kinda stupid... idk
         thread: ForumThread::from_content(thread, &messages_raw, &category.stickies)?,
         users: users_raw.into_iter().map(|u| (format!("{}", u.id), u)).collect::<HashMap<String, User>>(),
         pagelist: get_pagelist(comment_count as i32, context.config.default_display_posts, page)

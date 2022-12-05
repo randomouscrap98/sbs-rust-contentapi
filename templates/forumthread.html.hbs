@@ -3,7 +3,7 @@
 <section>
     <h1>{{thread.thread.name}}</h1>
     {{> partials/forumpath }}
-    <div class="threadcontrols smallseparate aside">
+    <div class="foruminfo smallseparate aside">
         {{#with thread}}
         {{> partials/threadicon }}
         {{/with}}
@@ -30,12 +30,12 @@
             <div class="postheader">
                 <a class="flatlink" href="{{@root.http_root}}/user/{{user.username}}">{{user.username}}</a>
                 {{!TODO: this link needs to be generated or something! Too much room for mistakes!}}
-                <a href="{{@root.http_root}}/forum/thread/{{@root.thread.thread.hash}}/{{../id}}#post_{{../id}}">link</a>
+                <a class="sequence" href="{{@root.http_root}}/forum/thread/{{@root.thread.thread.hash}}/{{../id}}#post_{{../id}}">#{{lookup @root.sequence (string ../id)}}</a>
             </div>
             <!-- Need a bbcode render helper -->
             <div class="content">{{../text}}</div>
             <div class="postfooter">
-                <time datetime="{{../createDate}}">{{timeago ../createDate}}</time>
+                <time class="aside" datetime="{{../createDate}}">{{timeago ../createDate}}</time>
             </div>
         </div>
     </div>
