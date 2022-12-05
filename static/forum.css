@@ -71,6 +71,16 @@
     justify-content: flex-end;
 }
 
+.history {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.history > *:not(:last-child) {
+    margin-bottom: 0.4em;
+}
+
 .content {
     margin: 0.5em 0.1em;
     line-height: 1.4;

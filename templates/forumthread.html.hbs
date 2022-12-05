@@ -35,7 +35,16 @@
             <!-- Need a bbcode render helper -->
             <div class="content">{{../text}}</div>
             <div class="postfooter">
-                <time class="aside" datetime="{{../createDate}}">{{timeago ../createDate}}</time>
+                <div class="history">
+                    <time class="aside" datetime="{{../createDate}}">{{timeago ../createDate}}</time>
+                    {{#if ../editUserId}}
+                    <time class="aside" datetime="{{../editDate}}">Edited {{timeago ../editDate}} by 
+                        {{#with (lookup @root.users (string ../editUserId))}}
+                        <a class="flatlink" href="{{@root.http_root}}/user/{{username}}">{{username}}</a>
+                        {{/with}}
+                    </time>
+                    {{/if}}
+                </div>
             </div>
         </div>
     </div>

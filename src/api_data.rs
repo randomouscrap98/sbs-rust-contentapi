@@ -143,9 +143,9 @@ pub struct Message
     pub values: Option<HashMap<String, serde_json::Value>>,
     pub engagement: Option<HashMap<String, HashMap<String, i64>>>,
     pub editDate: Option<DateTime<Utc>>,
-    pub editUserid: Option<i64>,
-    #[serde(deserialize_with = "deserialize_bool_from_anything")]
-    pub edited: bool, 
+    pub editUserId: Option<i64>,
+    //#[serde(deserialize_with = "deserialize_bool_from_anything")]
+    //pub edited: bool, 
     pub module: Option<String>
     //pub deleted: bool,
 }
