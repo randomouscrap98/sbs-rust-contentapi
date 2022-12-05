@@ -1,0 +1,62 @@
+{{#*inline "page"}}
+{{stylesheet "/forum.css"}}
+<section>
+    <h1>{{thread.thread.name}}</h1>
+    {{> partials/forumpath }}
+</section>
+<section>
+    {{#*inline "post_item"}}
+    <div class="post">
+        <!--<div class="threaddata">-->
+        <div class="postinfo">
+            <h3><a href="{{@root.http_root}}/forum/thread/{{thread.hash}}" class="flatlink">{{thread.name}}</a></h3>
+            <!--<p class="aside">{{category.description}}</p>-->
+        </div>
+        <div class="foruminfo aside mediumseparate">
+            <div class="threadicon">
+                {{#if neutral}}
+                <img src="{{@root.http_resources}}/sb-page.png">
+                {{/if}}
+                {{#if sticky}}
+                <span>📌</span>
+                {{/if}}
+                {{#if locked}}
+                <span>🔒</span>
+                {{/if}}
+            </div>
+            <div><b>Posts:</b> {{thread.commentCount}}</div>
+            <div>
+                <b>Created:</b>
+                <time datetime="{{thread.createDate}}">{{timeago thread.createDate}}</time></b> 
+            </div>
+            {{#if posts.[0]}}
+            <div>
+                <b>Last:</b>
+                <a href="{{@root.http_root}}/forum/thread/{{thread.hash}}/{{posts.[0].id}}#{{posts.[0].id}}" class="flatlink">
+                    <time datetime="{{posts.[0].createDate}}">{{timeago posts.[0].createDate}}</time>
+                </a>
+                by
+                {{#with (lookup @root.category.users (string posts.[0].createUserId))}}
+                <a class="flatlink" href="{{@root.http_root}}/user/{{username}}">{{username}}</a>
+                {{/with}}
+            </div>
+            {{/if}}
+        </div>
+        <!--</div>-->
+    </div>
+    {{/inline}}
+    {{!Only care about 'unless' in the main list, the only time this DOES work is if there are ONLY stickies}}
+    {{#each thread.posts}}
+    {{> post_item}}
+    {{#unless @last}}
+    <hr class="smaller">
+    {{/unless}}
+    {{/each}}
+    <div id="pagelist" class="smallseparate">
+        {{#each pagelist}}
+        <a class="{{#if current}}current{{/if}} " href="{{@root.http_root}}/forum/thread/{{@root.thread.thread.hash}}?page={{page}}">{{text}}</a>
+        {{/each}}
+    </div>
+</section>
+{{/inline}}
+{{>layout}}

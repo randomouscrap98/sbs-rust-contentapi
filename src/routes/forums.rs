@@ -126,15 +126,6 @@ impl CleanedPreCategory {
     }
 }
 
-//This struct is all the data to render a page in a single thread. Note that
-//because of how complicated forum thread lookup is, this struct will be partially
-//filled before completion
-//struct ThreadViewData {
-//    category: CleanedPreCategory,
-//    thread: ForumThread,
-//    users: HashMap<String, User>
-//}
-
 
 //Structs JUST for building data for the forum templates (so no need to be public)
 #[derive(Serialize, Clone, Debug)]
@@ -194,9 +185,11 @@ fn get_category_request(hash: Option<String>, fcid: Option<i64>) -> FullRequest
         real_query.push_str(" and !valuelike(@fcid_key, @fcid)");
     }
 
-    let mut category_request = build_request!(RequestType::content, 
-        String::from(CATEGORYKEY),
-        real_query);
+    let mut category_request = build_request!(
+        RequestType::content, 
+        String::from(CATEGORYFIELDS),
+        real_query
+    );
     category_request.name = Some(String::from(CATEGORYKEY));
     request.requests.push(category_request);
 
@@ -463,11 +456,6 @@ async fn render_thread(context: &Context, pre_request: FullRequest, page: Option
     let comment_count = thread.thread.commentCount.ok_or(anyhow!("Thread result did not have commentCount field!"))?;
     let pagelist = get_pagelist(comment_count as i32, context.config.default_display_threads, page);
 
-    //let mut result = ThreadViewData {
-    //    category: category,
-    //    thread: thread,
-    //    users: HashMap::new() //We'll fill this later, don't worry
-    //};
 
     Ok(basic_template!("forumthread", context, {
         forumpath: vec![ForumPathItem::root(), ForumPathItem::from_category(&category.category), ForumPathItem::from_thread(&thread.thread)],

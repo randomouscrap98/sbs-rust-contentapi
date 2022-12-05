@@ -18,7 +18,7 @@ pub enum ApiError
     Network(String),    //Is the API reachable?
     #[error("API Usage Error: {0}")]
     Usage(String),      //Did I (the programmer) use it correctly?
-    #[error("Request Error[{0}]: {1}")]
+    #[error("Request Error[APISTATUS:{0}]: {1}")]
     User(RequestStatus, String) //Did the user submit proper data?
 }
 
@@ -85,8 +85,9 @@ macro_rules! handle_response {
                 },
                 //The result from the API was 400, 500, etc. Try to parse the body as the error
                 Err(response_error) => {
+                    //Note: we map the error preemptively to let us use the macro
                     match $response.text().await.map_err(parse_error!($endpoint, status, $data)) {
-                        Ok(real_error) => Err(ApiError::User(response_error.status().into(), real_error)),
+                        Ok(api_text_error) => Err(ApiError::User(response_error.status().into(), format!("At endpoint '{}': {}\nREQUEST DATA:\n{:?}", $endpoint, api_text_error, $data))),
                         Err(p_error) => Err(p_error)
                     }
                 }
