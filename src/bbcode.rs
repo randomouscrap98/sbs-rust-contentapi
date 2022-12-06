@@ -25,6 +25,7 @@ impl TagInfo {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum TagType {
     Start,           //Should ONLY have one of these! It's like S in a grammar!
     Simple,
@@ -232,14 +233,14 @@ impl BBCode {
             TagType::Start => {}, //Do nothing
             TagType::Simple => { result.push_str(">"); }, //Just close it, all done!
             TagType::DefinedArg(argname) => {
-                if captures.len() > 1 { //Push the argument first
-                    result = Self::push_tagarg(result, argname, Some(&captures[1]));
+                if let Some(capture) = captures.get(1) { //Push the argument first
+                    result = Self::push_tagarg(result, argname, Some(capture.as_str()));
                 }
                 result.push_str(">"); //THEN close it!
             },
             TagType::DefaultArg(argname) => {
-                if captures.len() > 1 { //If an argument exists, push it
-                    result = Self::push_tagarg(result, argname, Some(&captures[1]));
+                if let Some(capture) = captures.get(1) { //If an argument exists, push it
+                    result = Self::push_tagarg(result, argname, Some(capture.as_str()));
                     result.push_str(">"); //THEN close it!
                 }
                 else {  
@@ -331,8 +332,14 @@ impl BBCode {
             //these are such small state machines with nothing too crazy that I think it's fine.... maybe.
             //Especially since they all start at the start of the string
             for tagdo in &self.tags {
-                if current_scope.info.tag_type.is_verbatim() && !matches!(tagdo.match_type, MatchType::DirectReplace(_)) {
-                    continue;
+                if current_scope.info.tag_type.is_verbatim() {
+                    match &tagdo.match_type {
+                        //If the thing to match is open or close and we're inside a verbatim string, skip the matching if
+                        //it's not the same tag as the current scope. So, [url]what[url] is fine, [url] will be found
+                        MatchType::Open(doinfo) => { if doinfo.tag != current_scope.info.tag { continue; } }
+                        MatchType::Close(doinfo) => { if doinfo.tag != current_scope.info.tag { continue; } }
+                        _ => {} //Do nothing
+                    }
                 }
                 if tagdo.regex.is_match(slice) {
                     matched_do = Some(tagdo);
@@ -344,15 +351,15 @@ impl BBCode {
             if let Some(tagdo) = matched_do 
             {
                 //There should only be one but whatever
-                for capture in tagdo.regex.captures_iter(slice) {
+                for captures in tagdo.regex.captures_iter(slice) {
                     //do this pre-emptively so we're AT the start of the inside of the tag
                     let scope_end : usize = slice.as_ptr() as usize - input.as_ptr() as usize;
-                    slice = &slice[capture[0].len()..];
+                    slice = &slice[captures[0].len()..];
                     match &tagdo.match_type {
                         MatchType::Passthrough => {
                             //The entire matched portion can go straight through. This gets us quickly
                             //through chunks of non-bbcode 
-                            result.push_str(&capture[0]);
+                            result.push_str(&captures[0]);
                         },
                         MatchType::DirectReplace(new_text) => {
                             //The matched chunk has a simple replacement with no rules
@@ -363,7 +370,7 @@ impl BBCode {
                             let new_scope = BBScope {
                                 info, 
                                 inner_start : (slice.as_ptr() as usize) - (input_ptr as usize),
-                                has_arg: capture.len() > 1
+                                has_arg: captures.get(1).is_some()
                             };
                             //By starting a scope, we may close many scopes. Also it'll tell us what it thinks the 
                             //starting scope looks like (it may change? probably not though)
@@ -373,7 +380,7 @@ impl BBCode {
                             }
                             //The add_scope function only gives us the close scopes, so we
                             //still need to emit the open tag
-                            result = Self::push_open_tag(result, scope_result.0, &capture);
+                            result = Self::push_open_tag(result, scope_result.0, &captures);
                         },
                         MatchType::Close(info) => {
                             //Attempt to close the given scope. The scoper will return all the actual scopes
@@ -427,6 +434,29 @@ impl BBCode {
 mod tests {
     use super::*;
 
+    //macro_rules! bbtest {
+    //    ($name:ident, $input:literal, $output:literal) => {
+    //        #[test]
+    //        fn $name() {
+    //            let bbcode = BBCode::build(BBCode::basics()).unwrap();
+    //            assert_eq!($input, bbcode.parse($output));
+    //        }
+    //    };
+    //}
+
+    macro_rules! bbtest_basics {
+        ($($name:ident: $value:expr;)*) => {
+        $(
+            #[test]
+            fn $name() {
+                let bbcode = BBCode::build(BBCode::basics()).unwrap();
+                let (input, expected) = $value;
+                assert_eq!(bbcode.parse(input), expected);
+            }
+        )*
+        }
+    }
+
     #[test]
     fn build_init() {
         //This shouldn't fail?
@@ -447,67 +477,25 @@ mod tests {
         }
     }
 
-    #[test]
-    fn no_alter() {
-        let bbcode = BBCode::build(BBCode::basics()).unwrap();
-        assert_eq!(bbcode.parse("hello"), "hello");
-    }
-
-    #[test]
-    fn lt_single() {
-        let bbcode = BBCode::build(BBCode::basics()).unwrap();
-        assert_eq!(bbcode.parse("h<ello"), "h&lt;ello");
-    }
-
-    #[test]
-    fn gt_single() {
-        let bbcode = BBCode::build(BBCode::basics()).unwrap();
-        assert_eq!(bbcode.parse("h>ello"), "h&gt;ello");
-    }
-
-    #[test]
-    fn amp_single() {
-        let bbcode = BBCode::build(BBCode::basics()).unwrap();
-        assert_eq!(bbcode.parse("h&ello"), "h&amp;ello");
-    }
-
-    #[test]
-    fn quote_single() {
-        let bbcode = BBCode::build(BBCode::basics()).unwrap();
-        assert_eq!(bbcode.parse("h'ello"), "h&#39;ello");
-    }
-
-    #[test]
-    fn doublequote_single() {
-        let bbcode = BBCode::build(BBCode::basics()).unwrap();
-        assert_eq!(bbcode.parse("h\"ello"), "h&quot;ello");
-    }
-
-    #[test]
-    fn complex_escape() {
-        let bbcode = BBCode::build(BBCode::basics()).unwrap();
-        assert_eq!(bbcode.parse(
-            //this has both 4 byte single scalar unicde and a big 25 byte combo one
-            "it's a %CRAZY% <world> 💙=\"yeah\" 👨‍👨‍👧‍👦>>done"), 
+    bbtest_basics! {
+        no_alter: ("hello", "hello");
+        lt_single: ("h<ello", "h&lt;ello");
+        gt_single: ("h>ello", "h&gt;ello");
+        amp_single: ("h&ello", "h&amp;ello");
+        quote_single: ("h'ello", "h&#39;ello");
+        doublequote_single: ("h\"ello", "h&quot;ello");
+        complex_escape: (
+            "it's a %CRAZY% <world> 💙=\"yeah\" 👨‍👨‍👧‍👦>>done", 
             "it&#39;s a %CRAZY% &lt;world&gt; 💙=&quot;yeah&quot; 👨‍👨‍👧‍👦&gt;&gt;done"
         );
-    }
-
-    #[test]
-    fn simple_bold() {
-        let bbcode = BBCode::build(BBCode::basics()).unwrap();
-        assert_eq!(bbcode.parse("[b]hello[/b]"), "<b>hello</b>");
-    }
-
-    #[test]
-    fn simple_nospaces() {
-        let bbcode = BBCode::build(BBCode::basics()).unwrap();
-        assert_eq!(bbcode.parse("[b ]hello[/ b]"), "[b ]hello[/ b]");
-    }
-
-    #[test]
-    fn simple_bolditalic() {
-        let bbcode = BBCode::build(BBCode::basics()).unwrap();
-        assert_eq!(bbcode.parse("[b][i]hello[/i][/b]"), "<b><i>hello</i></b>");
+        simple_bold: ("[b]hello[/b]", "<b>hello</b>");
+        simple_sup: ("[sup]hello[/sup]", "<sup>hello</sup>");
+        simple_sub: ("[sub]hello[/sub]", "<sub>hello</sub>");
+        simple_strikethrough: ("[s]hello[/s]", "<s>hello</s>");
+        simple_underline: ("[u]hello[/u]", "<u>hello</u>");
+        simple_italic: ("[i]hello[/i]", "<i>hello</i>");
+        simple_nospaces: ("[b ]hello[/ b]", "[b ]hello[/ b]");
+        simple_bolditalic: ("[b][i]hello[/i][/b]", "<b><i>hello</i></b>");
+        simple_url_default: ("[url]https://google.com[/url]", r#"<a target="_blank" href="https://google.com">https://google.com</a>"#);
     }
 }
