@@ -5,7 +5,6 @@ use regex::{Regex, Captures};
 
 //So:
 //- early closures close all tags in the previous scope
-//- dupes auto close previous scope (just one level)
 //- ignore unmatched closing tags
 //- close all unclosed tags at the end
 //- don't modify whitespace for version 1
@@ -19,20 +18,23 @@ pub struct TagInfo {
     pub outtag: &'static str,
     pub tag_type: TagType,
     pub rawextra: Option<&'static str>, //Just dump this directly into the tag at the end. No checks performed
-    pub force_verbatim: bool    //Does this NEED to be verbatim? OK
+    pub valparse: TagValueParse,
 }
 
 impl TagInfo {
     //Constructors for basic tags. Anything else, you're better off just constructing it normally
     pub fn simple(tag: &'static str) -> TagInfo {
-        TagInfo { tag, outtag: tag, tag_type: TagType::Simple, rawextra: None, force_verbatim: false }
+        TagInfo { tag, outtag: tag, tag_type: TagType::Simple, rawextra: None, valparse: TagValueParse::Normal }
     }
+    /*pub fn normal(tag: &'static str, outtag: &'static str, tag_type: TagType, rawextra: Option<&'static str>) -> TagInfo {
+        TagInfo { tag, outtag, tag_type, rawextra, valparse
+    }*/
     fn start() -> TagInfo {
-        TagInfo { tag: "", outtag: "", tag_type: TagType::Start, rawextra: None, force_verbatim: false }
+        TagInfo { tag: "", outtag: "", tag_type: TagType::Start, rawextra: None, valparse: TagValueParse::Normal }
     }
 
     pub fn is_verbatim(&self) -> bool {
-        if self.force_verbatim {
+        if let TagValueParse::ForceVerbatim = self.valparse {
             true
         }
         else {
@@ -40,11 +42,20 @@ impl TagInfo {
                 TagType::Start => false,
                 TagType::Simple => false,
                 TagType::DefinedArg(_) => false,
+                TagType::DefinedTag(_, _) => false,
                 TagType::SelfClosing(_) => true,
                 TagType::DefaultArg(_) => true
             }
         }
     }
+}
+
+//Property of value parsing
+#[derive(Debug, Clone)]
+pub enum TagValueParse {
+    Normal,
+    ForceVerbatim,
+    DoubleCloses
 }
 
 //This is the 'silly' part of the parser. Rather than making some actually generic system, I identified some
@@ -54,23 +65,10 @@ pub enum TagType {
     Start,          //Should ONLY have one of these! It's like S in a grammar!
     Simple,         //Stuff like [b][/b], no args, normal translation (can change tag name still)
     DefinedArg(&'static str),   //CAN have argument defined, attribute name is given
+    DefinedTag(&'static str, Option<&'static str>),   //Some arguments turn into tags! Crazy...
     SelfClosing(&'static str),  //No closing tag, value is 
     DefaultArg(&'static str),   //The tag enclosed value provides a default for the given attribute, or not if defined
 }
-
-//impl TagType {
-//    //Another bad thing: rather than defining what tags are allowed in or out of a tag, it's all or nothing.
-//    //This works for most situations, and it's fairly easy to add some custom list of tags later
-//    fn is_verbatim(&self) -> bool {
-//        match self {
-//            Self::Start => false,
-//            Self::Simple => false,
-//            Self::DefinedArg(_) => false,
-//            Self::SelfClosing(_) => true,
-//            Self::DefaultArg(_) => true
-//        }
-//    }
-//}
 
 //While "TagType" determines how the tag functions at a lower level (such as how it handles arguments), 
 //this determines how the whole block functions on a greater level. They define how scopes and whole blocks
@@ -122,7 +120,8 @@ impl<'a> BBScoper<'a>
         //here we assume all taginfos have unique tags because why wouldn't they
         let mut result = Vec::new();
         if let Some(topinfo) = self.scopes.last() {
-            if topinfo.info.tag == scope.info.tag {
+            //oh the thing on top is the same, if we don't want that, close it.
+            if topinfo.info.tag == scope.info.tag && matches!(scope.info.valparse, TagValueParse::DoubleCloses){
                 //It's the same, close the last one
                 if let Some(scope) = self.scopes.pop() {
                     result.push(scope);
@@ -217,13 +216,13 @@ impl BBCode
             TagInfo::simple("u"),
             TagInfo::simple("s"),
             //There's a [list=1] thing, wonder how to do that. It's nonstandard, our list format is entirely nonstandard
-            TagInfo { tag: "list", outtag: "ul", tag_type: TagType::Simple, rawextra: None, force_verbatim: false },
-            TagInfo { tag: r"\*", outtag: "li", tag_type: TagType::Simple, rawextra: None, force_verbatim: false },
-            TagInfo { tag: "url", outtag: "a", tag_type: TagType::DefaultArg("href"), rawextra: Some(r#"target="_blank""#), force_verbatim: false },
-            TagInfo { tag: "img", outtag: "img", tag_type: TagType::SelfClosing("src"), rawextra: None, force_verbatim: false },
+            TagInfo { tag: "list", outtag: "ul", tag_type: TagType::Simple, rawextra: None, valparse: TagValueParse::Normal },
+            TagInfo { tag: r"\*", outtag: "li", tag_type: TagType::Simple, rawextra: None, valparse: TagValueParse::DoubleCloses },
+            TagInfo { tag: "url", outtag: "a", tag_type: TagType::DefaultArg("href"), rawextra: Some(r#"target="_blank""#), valparse: TagValueParse::ForceVerbatim },
+            TagInfo { tag: "img", outtag: "img", tag_type: TagType::SelfClosing("src"), rawextra: None, valparse: TagValueParse::ForceVerbatim } //Not required to be forced
         ]
     }
-
+    
     //If you have extra tags you want to add, use this function to turn the basic definitions into
     //a vector of real MatchInfo for use in the bbcode system
     pub fn tags_to_matches(taginfos: Vec<TagInfo>) -> Result<Vec<MatchInfo>, anyhow::Error> {
@@ -232,12 +231,12 @@ impl BBCode
         for tag in taginfos.iter() {
             //The existing system on SBS doesn't allow spaces in tags at ALL. I don't know if this 
             //much leniency on the = value is present in the old system though...
-            let open_tag = format!(r#"^\[{}(=[^\]]*)?\]"#, tag.tag);
+            let open_tag = format!(r#"^(?i)\[{}(=[^\]]*)?\]"#, tag.tag);
             matches.push(MatchInfo {
                 regex: Regex::new(&open_tag)?,
                 match_type : MatchType::Open(tag.clone())
             });
-            let close_tag = format!(r#"^\[/{}\]"#, tag.tag);
+            let close_tag = format!(r#"^(?i)\[/{}\]"#, tag.tag);
             matches.push(MatchInfo {
                 regex: Regex::new(&close_tag)?,
                 match_type : MatchType::Close(tag.clone())
@@ -282,6 +281,21 @@ impl BBCode
         Ok(matches)
     }
 
+    //Some fancy extra bbcode. You have to append it yourself to basic!
+    pub fn extras() -> Result<Vec<MatchInfo>, anyhow::Error> {
+        BBCode::tags_to_matches(vec![
+            TagInfo { tag: "quote", outtag: "blockquote", tag_type : TagType::DefinedArg("cite"), rawextra : None, valparse: TagValueParse::Normal },
+            TagInfo { tag: "anchor", outtag: "a", tag_type : TagType::DefinedArg("name"), rawextra : None, valparse: TagValueParse::ForceVerbatim },
+            TagInfo { tag: "icode", outtag: "span", tag_type : TagType::Simple, rawextra : Some(r#"class="icode""#), valparse: TagValueParse::ForceVerbatim },
+            TagInfo { tag: "code", outtag: "pre", tag_type : TagType::Simple, rawextra : Some(r#"class="code" data-code"#), valparse: TagValueParse::ForceVerbatim },
+            TagInfo { tag: "youtube", outtag: "a", tag_type : TagType::DefaultArg("href"), rawextra : Some(r#"class="youtube" data-youtube"#), valparse: TagValueParse::ForceVerbatim },
+            TagInfo { tag: "spoiler", outtag: "details", tag_type : TagType::DefinedTag("summary", Some("Spoiler")), rawextra : Some(r#"class="spoiler""#), valparse: TagValueParse::Normal },
+            TagInfo::simple("h1"),
+            TagInfo::simple("h2"),
+            TagInfo::simple("h3"),
+        ])
+    }
+
     //Push an argument="value" part onto the result. Will omit the last " if argval is None
     fn push_tagarg(mut result: String, argname: &str, argval: Option<&str>) -> String {
         result.push_str(" ");
@@ -290,9 +304,23 @@ impl BBCode
         //Now we need an html escaper
         if let Some(argval) = argval {
             //NOTE: our matcher grabs the = (for now), that's why the 1
-            result.push_str(&html_escape::encode_quoted_attribute(&argval[1..]));
+            result.push_str(&html_escape::encode_quoted_attribute(argval));
             result.push_str("\"");
         }
+        result
+    }
+
+    fn push_newtag(mut result: String, tagname: &str, argval: &str) -> String {
+        //Close the old tag, open a new one
+        result.push_str("><");
+        result.push_str(tagname);
+        result.push_str(">");
+        //NOTE: our matcher grabs the = (for now), that's why the 1
+        result.push_str(&html_escape::encode_quoted_attribute(argval));
+        //And close the whole thing off
+        result.push_str("</");
+        result.push_str(tagname);
+        result.push_str(">");
         result
     }
 
@@ -311,16 +339,27 @@ impl BBCode
             TagType::Simple => { result.push_str(">"); }, //Just close it, all done!
             TagType::DefinedArg(argname) => {
                 if let Some(capture) = captures.get(1) { //Push the argument first
-                    result = Self::push_tagarg(result, argname, Some(capture.as_str()));
+                    result = Self::push_tagarg(result, argname, Some(&capture.as_str()[1..]));
                 }
                 result.push_str(">"); //THEN close it!
+            },
+            TagType::DefinedTag(tagname, default) => { //These make the argument a new tag 
+                if let Some(capture) = captures.get(1) { //Push the argument first
+                    result = Self::push_newtag(result, tagname, &capture.as_str()[1..]); //+1 here because it's not some?
+                }
+                else if let Some(default) = default {
+                    result = Self::push_newtag(result, tagname, default);
+                }
+                else {
+                    result.push_str(">"); //If we didn't push a new arg, gotta close the existing tag
+                }
             },
             //For the opening tag, 'DefaultArg' and 'SelfClosing' act the same. They could either have the value
             //in the arg, or in the body. Difference is on completion, where self closing just closes (or quits),
             //but DefaultArg may have to copy the value into the body, since we only scanned the arg
             TagType::SelfClosing(argname) | TagType::DefaultArg(argname) => {
                 if let Some(capture) = captures.get(1) { //If an argument exists, push it
-                    result = Self::push_tagarg(result, argname, Some(capture.as_str()));
+                    result = Self::push_tagarg(result, argname, Some(&capture.as_str()[1..]));
                     result.push_str(">"); //THEN close it!
                 }
                 else {  
@@ -532,6 +571,22 @@ mod tests {
         }
     }
 
+    macro_rules! bbtest_extras {
+        ($($name:ident: $value:expr;)*) => {
+        $(
+            #[test]
+            fn $name() {
+                let mut matchers = BBCode::basics().unwrap();
+                let mut extras = BBCode::extras().unwrap();
+                matchers.append(&mut extras);
+                let bbcode = BBCode { matchers };
+                let (input, expected) = $value;
+                assert_eq!(bbcode.parse(input), expected);
+            }
+        )*
+        }
+    }
+
     #[test]
     fn build_init() {
         //This shouldn't fail?
@@ -571,7 +626,11 @@ mod tests {
         simple_underline: ("[u]hello[/u]", "<u>hello</u>");
         simple_italic: ("[i]hello[/i]", "<i>hello</i>");
         simple_nospaces: ("[b ]hello[/ b]", "[b ]hello[/ b]");
+        //The matches are returned lowercase from regex when insensitive
+        simple_insensitive: ("[sUp]hello[/SuP]", "<sup>hello</sup>");
+        simple_sensitivevalue: ("[sUp]OK but The CAPITALS[/SuP]YEA", "<sup>OK but The CAPITALS</sup>YEA");
         simple_bolditalic: ("[b][i]hello[/i][/b]", "<b><i>hello</i></b>");
+        nested_bold: ("[b]hey[b]extra bold[/b] less bold again[/b]", "<b>hey<b>extra bold</b> less bold again</b>");
         simple_url_default: ("[url]https://google.com[/url]", r#"<a target="_blank" href="https://google.com">https://google.com</a>"#);
         simple_url_witharg: ("[url=http://haloopdy.com]furries lol[/url]", r#"<a target="_blank" href="http://haloopdy.com">furries lol</a>"#);
         simple_img: ("[img]https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png[/img]", r#"<img src="https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png">"#);
@@ -585,5 +644,34 @@ mod tests {
         inner_hack: ("[[b][/b]b]love[/[b][/b]b]", "[<b></b>b]love[/<b></b>b]");
         random_brackets: ("[][[][6][a[ab]c[i]italic[but][][* not] 8[]]][", "[][[][6][a[ab]c<i>italic[but][][* not] 8[]]][</i>");
         autolink_basic: ("this is https://google.com ok?", r#"this is <a target="_blank" href="https://google.com">https://google.com</a> ok?"#);
+
+        //Nicole's bbcode edge cases
+        e_dangling: ("[b]foo", "<b>foo</b>");
+        e_normal: ("[b]foo[/b]", "<b>foo</b>");
+        e_nested: ("[b]foo[b]bar[/b][/b]", "<b>foo<b>bar</b></b>");
+        e_empty: ("[b]foo[b][/b]bar[/b]", "<b>foo<b></b>bar</b>");
+        e_closemulti: ("[b]foo[i]bar[u]baz[/b]quux", "<b>foo<i>bar<u>baz</u></i></b>quux");
+        e_faketag: ("[b]foo[i]bar[u]baz[/fake]quux", "<b>foo<i>bar<u>baz[/fake]quux</u></i></b>");
+        e_reallyfake: ("[fake][b]foo[i]bar[u]baz[/fake]quux", "[fake]<b>foo<i>bar<u>baz[/fake]quux</u></i></b>");
+        e_ignoreclose: ("[b]foo[/b]bar[/b][/b][/b]", "<b>foo</b>bar");
+        e_weirdignoreclose: ("[b]foo[/b]bar[/fake][/b][/fake]", "<b>foo</b>bar[/fake][/fake]");
+        e_fancytag: ("[[i]b[/i]]", "[<i>b</i>]");
+        e_escapemadness: ("&[&]<[<]>[>]", "&amp;[&amp;]&lt;[&lt;]&gt;[&gt;]");
     }
+
+    bbtest_extras! {
+        e_emptyquote: ("[quote]...[/quote]", "<blockquote>...</blockquote>");
+        e_normalquote: ("[quote=foo]...[/quote]", r#"<blockquote cite="foo">...</blockquote>"#);
+        simple_spoiler: ("[spoiler=wow]amazing[/spoiler]", r#"<details class="spoiler"><summary>wow</summary>amazing</details>"#);
+        simple_emptyspoiler: ("[spoiler]this[b]is empty[/spoiler]", r#"<details class="spoiler"><summary>Spoiler</summary>this<b>is empty</b></details>"#);
+    }
+
+/* These tests are limitations of the old parser, I don't want to include them
+[quote=foo=bar]...[/quote]
+<blockquote>...</blockquote>
+
+[quote=[foo]]...[/quote]
+[quote=[foo]]...
+*/
+
 }
