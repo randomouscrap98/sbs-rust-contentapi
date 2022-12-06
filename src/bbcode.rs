@@ -1,8 +1,14 @@
 use regex::{Regex, Captures};
 
+// Carlos Sanchez - 2022-12-05
+// - For SBS
+
 //So:
-//- dupes auto close previous scope.
+//- early closures close all tags in the previous scope
+//- dupes auto close previous scope (just one level)
 //- ignore unmatched closing tags
+//- close all unclosed tags at the end
+//- don't modify whitespace for version 1
 
 //The user provides this
 #[derive(Debug, Clone)]
@@ -16,6 +22,7 @@ pub struct TagInfo {
 }
 
 impl TagInfo {
+    //Constructors for basic tags. Anything else, you're better off just constructing it normally
     fn simple(tag: &'static str) -> TagInfo {
         TagInfo { tag, outtag: tag, tag_type: TagType::Simple, rawextra: None }
     }
@@ -24,17 +31,21 @@ impl TagInfo {
     }
 }
 
+//This is the 'silly' part of the parser. Rather than making some actually generic system, I identified some
+//standard ways tags are used and just made code around those ways. Probably bad but oh well.
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub enum TagType {
-    Start,           //Should ONLY have one of these! It's like S in a grammar!
-    Simple,
+    Start,          //Should ONLY have one of these! It's like S in a grammar!
+    Simple,         //Stuff like [b][/b], no args, normal translation (can change tag name still)
     DefinedArg(&'static str),   //CAN have argument defined, attribute name is given
     SelfClosing(&'static str),  //No closing tag, value is 
     DefaultArg(&'static str),   //The tag enclosed value provides a default for the given attribute, or not if defined
 }
 
 impl TagType {
+    //Another bad thing: rather than defining what tags are allowed in or out of a tag, it's all or nothing.
+    //This works for most situations, and it's fairly easy to add some custom list of tags later
     fn is_verbatim(&self) -> bool {
         match self {
             Self::Start => false,
@@ -46,7 +57,9 @@ impl TagType {
     }
 }
 
-//Bbcode tags come in... different flavors maybe (or this is bad?)
+//While "TagType" determines how the tag functions at a lower level (such as how it handles arguments), 
+//this determines how the whole block functions on a greater level. They define how scopes and whole blocks
+//of text move into the output
 #[derive(Debug, Clone)]
 pub enum MatchType { 
     Passthrough,    //Pass this junk right out as-is
@@ -55,26 +68,34 @@ pub enum MatchType {
     DirectReplace(&'static str)
 }
 
-//The system uses this 
+//Definition for a block level matcher. Analogous to "TypeInfo" but for the greater scope. Should always be
+//readonly, it is just a definition. Not necessary a tag element, could define eating garbage, escape chars, etc.
 #[derive(Debug, Clone)]
-pub struct TagDo {
+pub struct MatchInfo {
     pub regex : Regex,
     pub match_type: MatchType,
 }
 
 //For the following section, it is assumed the entire scoper and all elements within will have the same lifetime
-//as the calling function, which also houses the input string
+//as the calling function, which also houses the input string.
+
+//A scope for bbcode tags. Scopes increase and decrease as tags are opened and closed. Scopes are placed on a stack
+//to aid with auto-closing tags
 struct BBScope<'a> {
     info: &'a TagInfo,
     inner_start: usize, //TERRIBLE! MAYBE?!
     has_arg: bool, //May need to change if more configuration needed
 }
+
+//A container with functions to help manage scopes. It doesn't understand what bbcode is or how the tags should
+//be formatted, it just handles pushing and popping scopes on the stack
 struct BBScoper<'a> {
     scopes : Vec<BBScope<'a>>
 }
 
 //Everything inside BBScoper expects to live as long as the object itself. So everything is 'a
-impl<'a> BBScoper<'a> {
+impl<'a> BBScoper<'a> 
+{
     fn new() -> Self { BBScoper { scopes: Vec::new() }}
 
     //Add a scope, which may close some existing scopes. The closed scopes are returned in display order.
@@ -95,7 +116,7 @@ impl<'a> BBScoper<'a> {
         }
 
         self.scopes.push(scope);
-        (self.scopes.last().unwrap(), result)
+        (self.scopes.last().unwrap(), result) //Kind of a silly return type, might change it later
     }
     
     //Close the given scope, which should return the scopes that got closed (including the self).
@@ -104,6 +125,8 @@ impl<'a> BBScoper<'a> {
         let mut scope_count = 0;
         let mut tag_found = false;
 
+        //Scan backwards, counting. Stop when you find a matching tag. This lets us know the open child scopes
+        //that were not closed
         for scope in self.scopes.iter().rev() {
             scope_count += 1;
             if info.tag == scope.info.tag {
@@ -112,9 +135,10 @@ impl<'a> BBScoper<'a> {
             }
         }
 
+        //Return all the scopes from the end to the found closed scope. Oh and also remove them
         if tag_found {
             let mut result = Vec::with_capacity(scope_count + 1);
-            for _ in [0..result.len()] {
+            for _i in 0..scope_count {
                 if let Some(scope) = self.scopes.pop() {
                     result.push(scope);
                 }
@@ -135,29 +159,37 @@ impl<'a> BBScoper<'a> {
     }
 }
 
+
+// ------------------------------
+// *     MAIN FUNCTIONALITY    *
+// ------------------------------
+
+//The main bbcode system. You create this to parse bbcode!
 pub struct BBCode {
     //These are SOMETIMES processed (based on context)
-    pub tags : Vec<TagDo>
+    pub tags : Vec<MatchInfo>
 }
 
 impl BBCode {
     //Maybe get rid of anyhow if you want to separate this, kind of a big thing to include.
     //Anyway, this build function precompiles all the regex for you. Try to reuse this item
-    //as much as possible, it doesn't require mutation and so can be part of the global rocket state
+    //as much as possible if you don't want to incur the compile times. Also, you need to pass
+    //ALL the tags you want to handle. Use BBCode::basics() to get the list of default bbcode
+    //tags. This might be enough for your needs!
     pub fn build(taginfos: Vec<TagInfo>) -> Result<Self, anyhow::Error> {
         //First, get the default direct replacements
         let mut tags = Self::html_escapes().iter().map(|e| {
             //Unfortunately, have to allocate string
             let regstring = format!(r"^{}", e.0);
-            Ok(TagDo { 
+            Ok(MatchInfo { 
                 regex: Regex::new(&regstring)?,
                 match_type : MatchType::DirectReplace(e.1)
             })
-        }).collect::<Result<Vec<TagDo>,anyhow::Error>>()?;
+        }).collect::<Result<Vec<MatchInfo>,anyhow::Error>>()?;
 
         //This is an optimization: any large block of characters that has no meaning in bbcode can go straight through.
         //Put it FIRST because this is the common case
-        tags.insert(0, TagDo {
+        tags.insert(0, MatchInfo {
             regex: Regex::new(r#"^[^\[\]<>'"&/]+"#)?,
             match_type : MatchType::Passthrough
         });
@@ -167,12 +199,12 @@ impl BBCode {
             //The existing system on SBS doesn't allow spaces in tags at ALL. I don't know if this 
             //much leniency on the = value is present in the old system though...
             let open_tag = format!(r#"^\[{}(=[^\]]*)?\]"#, tag.tag);
-            tags.push(TagDo {
+            tags.push(MatchInfo {
                 regex: Regex::new(&open_tag)?,
                 match_type : MatchType::Open(tag.clone())
             });
             let close_tag = format!(r#"^\[/{}\]"#, tag.tag);
-            tags.push(TagDo {
+            tags.push(MatchInfo {
                 regex: Regex::new(&close_tag)?,
                 match_type : MatchType::Close(tag.clone())
             });
@@ -257,10 +289,6 @@ impl BBCode {
                     result = Self::push_tagarg(result, argname, None);
                 }
             },
-            //TagType::SelfClosing(argname) => {
-            //    //Self closing is basic: we assume the value within the tag is just the argument.
-            //    result = Self::push_tagarg(result, argname, None);
-            //}
         }
 
         result
@@ -273,6 +301,8 @@ impl BBCode {
         result
     }
 
+    //Emit the closing tag for the given scope. This also needs the full input string and the position
+    //of the end of this scope, because certain complicated closing tags need it.
     fn push_close_tag(mut result: String, scope: &BBScope, input: &str, end: usize) -> String {
         match scope.info.tag_type {
             TagType::SelfClosing(_) => {
@@ -306,6 +336,9 @@ impl BBCode {
         result
     }
 
+    //Main function! You call this to parse your raw bbcode! It also escapes html stuff so it can
+    //be used raw!  Current version keeps newlines as-is and it's expected you use pre-wrap, later
+    //there may be modes for more standard implementations
     pub fn parse(&self, input: &str) -> String 
     {
         //We know it will be at LEAST as big, and that strings usually double in size
@@ -336,7 +369,7 @@ impl BBCode {
                 }
             };
 
-            let mut matched_do : Option<&TagDo> = None;
+            let mut matched_do : Option<&MatchInfo> = None;
 
             //figure out which next element matches (if any). This is the terrible optimization part, but
             //these are such small state machines with nothing too crazy that I think it's fine.... maybe.
@@ -417,12 +450,6 @@ impl BBCode {
                     break;
                 }
             }
-
-            //each regex until one matches. skip regexes that aren't direct replacement if 
-            //current scope is "verbatim". if direct replace, just dump direct replacement to
-            //result. if open tag, dump it to stream too, add to scope. if closing tag, scan backwards
-            //until a matching scope is found, pop all scopes and write them in pop order to the result,
-            //and finally the last scope too. if none are found, fully ignore close and continue.
         }
 
         //At the end, we should close any unclosed scopes
@@ -443,16 +470,6 @@ impl BBCode {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    //macro_rules! bbtest {
-    //    ($name:ident, $input:literal, $output:literal) => {
-    //        #[test]
-    //        fn $name() {
-    //            let bbcode = BBCode::build(BBCode::basics()).unwrap();
-    //            assert_eq!($input, bbcode.parse($output));
-    //        }
-    //    };
-    //}
 
     macro_rules! bbtest_basics {
         ($($name:ident: $value:expr;)*) => {
@@ -516,5 +533,8 @@ mod tests {
         //This also tests auto-closed tags, albeit a simple form
         list_basic:  ("[list]\n[*]item 1\n[*]item 2\n[*]list\n[/list]", "<ul>\n<li>item 1\n</li><li>item 2\n</li><li>list\n</li></ul>");
         unclosed_basic: ("[b] this is bold [i]also italic[/b] oops close all[/i]", "<b> this is bold <i>also italic</i></b> oops close all");
+        verbatim_url: ("[url]this[b]is[/b]a no-no[i][/url]", r#"<a target="_blank" href="this[b]is[/b]a no-no[i]">this[b]is[/b]a no-no[i]</a>"#);
+        inner_hack: ("[[b][/b]b]love[/[b][/b]b]", "[<b></b>b]love[/<b></b>b]");
+        random_brackets: ("[][[][6][a[ab]c[i]italic[but][][* not] 8[]]][", "[][[][6][a[ab]c<i>italic[but][][* not] 8[]]][</i>");
     }
 }
