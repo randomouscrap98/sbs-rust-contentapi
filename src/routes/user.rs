@@ -6,6 +6,8 @@ use crate::config;
 use crate::api::*;
 use super::*;
 
+use std::collections::HashMap;
+use anyhow::anyhow;
 use rocket::http::{CookieJar, Cookie};
 use rocket::form::Form;
 use rocket::response::Redirect;
@@ -19,16 +21,18 @@ macro_rules! userhome_base {
             if let Some(ref user) = $context.current_user {
                 let mut request = FullRequest::new();
                 add_value!(request, "uid", user.id);
-
-                request.requests.push(build_request!(
+                let mut user_request = build_request!(
                     RequestType::content, 
                     String::from("*"), //ok do we really need it ALL?
                     String::from("!userpage(@uid)")
-                )); 
+                ); 
+                user_request.name = Some(String::from("userpage"));
+                request.requests.push(user_request);
 
                 let result = post_request(&$context, &request).await?;
-                let mut content_raw = conversion::cast_result_required::<Content>(&result, "content")?;
-                userpage = content_raw.pop(); //Doesn't matter if it's none
+
+                let mut userpage_raw = conversion::cast_result_safe::<Content>(&result, "userpage")?;
+                userpage = userpage_raw.pop(); //Doesn't matter if it's none
             }
 
             basic_template!("userhome", $context, {
@@ -39,7 +43,49 @@ macro_rules! userhome_base {
         }
     };
 }
+use serde_json::json;
 pub(crate) use userhome_base;
+
+pub async fn post_userbio(context: &Context, form: forms::UserBio<'_>) -> Result<Content, anyhow::Error>
+{
+    if let Some(ref user) = context.current_user {
+        let mut request = FullRequest::new();
+        add_value!(request, "type", "userpages"); //Need the parent
+
+        let mut parent_request = build_request!(
+            RequestType::content, 
+            String::from("id,parentId,literalType"), 
+            String::from("!userpage(@uid)")
+        ); 
+        parent_request.name = Some(String::from("parent"));
+        request.requests.push(parent_request);
+
+        let result = post_request(context, &request).await?;
+
+        let mut parents_raw = conversion::cast_result_required::<Content>(&result, "parent")?;
+
+        match parents_raw.pop() {
+            Some(parent) => {
+                let mut content = Content::default();
+                content.text = Some(String::from(form.text));
+                content.id = Some(form.id);
+                content.parentId = parent.id;
+                content.contentType = Some(ContentType::USERPAGE);
+                content.name = Some(format!("{}'s userpage", user.username));
+                content.values = Some(make_values! {
+                    "markup": "bbcode"
+                });
+                post_content(context, &content).await.map_err(|e| e.into())
+            }
+            None => {
+                Err(anyhow!("Couldn't find the userpage parent! This is a programming error!"))
+            }
+        }
+    }
+    else {
+        Err(anyhow!("Not logged in!"))
+    }
+}
 
 #[get("/login")]
 pub async fn login_get(context: Context) -> Result<Template, RouteError> {

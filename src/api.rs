@@ -216,12 +216,12 @@ pub async fn post_register<'a>(context: &Context, register: &forms::Register<'a>
     basic_post_request("/user/register", register, context).await
 }
 
-pub async fn post_email_confirm<'a>(context: &Context, email: &str) -> Result<bool, ApiError>
+pub async fn post_email_confirm(context: &Context, email: &str) -> Result<bool, ApiError>
 {
     basic_post_request("/user/sendregistrationcode", &email, context).await
 }
 
-pub async fn post_email_recover<'a>(context: &Context, email: &str) -> Result<bool, ApiError>
+pub async fn post_email_recover(context: &Context, email: &str) -> Result<bool, ApiError>
 {
     basic_post_request("/user/sendpasswordrecovery", &email, context).await
 }
@@ -231,14 +231,19 @@ pub async fn post_registerconfirm<'a>(context: &Context, confirm: &forms::Regist
     basic_post_request("/user/confirmregistration", confirm, context).await
 }
 
-pub async fn post_usersensitive<'a>(context: &Context, sensitive: &forms::UserSensitive<'_>) -> Result<String, ApiError>
+pub async fn post_usersensitive(context: &Context, sensitive: &forms::UserSensitive<'_>) -> Result<String, ApiError>
 {
     basic_post_request("/user/privatedata", sensitive, context).await
 }
 
-pub async fn post_userupdate<'a>(context: &Context, user: &User) -> Result<User, ApiError>
+pub async fn post_userupdate(context: &Context, user: &User) -> Result<User, ApiError>
 {
     basic_post_request("/write/user", user, context).await
+}
+
+pub async fn post_content(context: &Context, content: &Content) -> Result<Content, ApiError>
+{
+    basic_post_request("/write/content", content, context).await
 }
 
 pub async fn upload_file<'a>(context: &Context, form: &mut forms::FileUpload<'_>) -> Result<Content, ApiError>

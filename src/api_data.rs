@@ -129,6 +129,13 @@ pub struct Content //Remember, these are files, pages, threads etc. Lovely!
     pub lastRevisionId: Option<i64>
 }
 
+macro_rules! make_values {
+    ($($field_name:literal : $field_value:expr),*$(,)*) => {
+        vec![$((String::from($field_name), serde_json::to_value($field_value)?))*]
+            .into_iter().collect::<std::collections::HashMap<String, serde_json::Value>>()
+    };
+}
+pub(crate) use make_values;
 
 #[serde_with::skip_serializing_none] //MUST COME BEFORE
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]

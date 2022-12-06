@@ -124,9 +124,15 @@ label.inline {
     margin-bottom: 0.5em;
 }
 
-form input, form textbox {
+form input, form textarea {
     display: block;
     margin-bottom: 0.5em;
+}
+
+form textarea {
+    width: 100%;
+    max-width: 50em;
+    height: 10em;
 }
 
 

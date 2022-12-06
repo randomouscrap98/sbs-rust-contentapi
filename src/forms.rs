@@ -83,6 +83,13 @@ pub struct UserUpdate<'a>
 }
 
 #[derive(FromForm, Debug)]
+pub struct UserBio<'a>
+{
+    pub id: i64,
+    pub text: &'a str,
+}
+
+#[derive(FromForm, Debug)]
 pub struct BasicText<'a> //Use for anything that's just text
 {
     pub text: &'a str
