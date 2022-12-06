@@ -155,7 +155,7 @@ impl ForumCategory {
             stickies: stickies_raw.into_iter().map(|thread| ForumThread::from_content(thread, messages_raw, &category.stickies)).collect::<Result<Vec<_>,_>>()?,
             users: users_raw.into_iter().map(|u| (format!("{}", u.id), u)).collect(),
             threads_count: special_counts.get(0)
-                .ok_or(ApiError::Usage(format!("Didn't get specialCount for category {}", category.id)))?.specialCount
+                .ok_or(ApiError::Usage(format!("Didn't get specialCount for category {}", category.id), format!("{:?}", thread_result)))?.specialCount
         })
     }
 
@@ -443,7 +443,8 @@ async fn render_threads(context: &Context, category_request: FullRequest, page: 
         page * context.config.default_display_threads
     ).await?;
 
-    let category = categories.get(0).ok_or(RouteError(Status::NotFound, String::from("Couldn't find that category")))?;
+    //TODO: Might want to add data to these RouteErrors?
+    let category = categories.get(0).ok_or(RouteError(Status::NotFound, String::from("Couldn't find that category"), None))?;
     let pagelist = get_pagelist(category.threads_count, context.config.default_display_threads, page);
 
     //println!("Please: {:?}", category);
@@ -478,8 +479,8 @@ async fn render_thread(context: &Context, pre_request: FullRequest, page: Option
     }
 
     //There must be one category, and one thread, otherwise return 404
-    let thread = threads_raw.pop().ok_or(RouteError(Status::NotFound, String::from("Could not find thread!")))?;
-    let category = categories_cleaned.pop().ok_or(RouteError(Status::NotFound, String::from("Could not find category!")))?;
+    let thread = threads_raw.pop().ok_or(RouteError(Status::NotFound, String::from("Could not find thread!"), None))?;
+    let category = categories_cleaned.pop().ok_or(RouteError(Status::NotFound, String::from("Could not find category!"), None))?;
 
     //Also I need some fields to exist.
     let thread_id = thread.id.ok_or(anyhow!("Thread result did not have id field?!"))?;

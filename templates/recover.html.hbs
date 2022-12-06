@@ -1,0 +1,26 @@
+{{#*inline "page"}}
+<section>
+    <h1>Recover account</h1>
+    <p>Submitting this form will update the password for the account associated with the given email,
+        and log you in.
+    </p>
+    <form method="POST", action="{{http_root}}/recover">
+        {{> partials/errorlist }}
+        <label for="recover_email">Email:</label>
+        <input id="recover_email" type="email" required="" name="currentEmail" value="{{emailresult}}">
+        <label for="recover_code">Recovery Code:</label>
+        <input id="recover_code" type="text" required="" name="currentPassword">
+        <label for="recover_password">New password:</label>
+        <input id="recover_password" type="password" required="" name="password">
+        <input type="submit" value="Recover account">
+    </form>
+    {{#if emailresult}}
+    <!-- Not sure what to put here -->
+    {{else}}
+    <p class="aside">Did you get here by mistake? This page is meant to be used after sending a recovery email to your account.
+        It's still usable though, just make sure you fill it out!
+    </p>
+    {{/if}}
+</section>
+{{/inline}}
+{{>layout}}

@@ -281,13 +281,13 @@ impl BBCode
         Ok(matches)
     }
 
-    //Some fancy extra bbcode. You have to append it yourself to basic!
+    //Some fancy extra bbcode. You have to append it yourself to basic! These are nonstandard, you don't have to use them!
     pub fn extras() -> Result<Vec<MatchInfo>, anyhow::Error> {
         BBCode::tags_to_matches(vec![
             TagInfo { tag: "quote", outtag: "blockquote", tag_type : TagType::DefinedArg("cite"), rawextra : None, valparse: TagValueParse::Normal },
             TagInfo { tag: "anchor", outtag: "a", tag_type : TagType::DefinedArg("name"), rawextra : None, valparse: TagValueParse::ForceVerbatim },
             TagInfo { tag: "icode", outtag: "span", tag_type : TagType::Simple, rawextra : Some(r#"class="icode""#), valparse: TagValueParse::ForceVerbatim },
-            TagInfo { tag: "code", outtag: "pre", tag_type : TagType::Simple, rawextra : Some(r#"class="code" data-code"#), valparse: TagValueParse::ForceVerbatim },
+            TagInfo { tag: "code", outtag: "pre", tag_type : TagType::DefinedArg("data-code"), rawextra : Some(r#"class="code""#), valparse: TagValueParse::ForceVerbatim },
             TagInfo { tag: "youtube", outtag: "a", tag_type : TagType::DefaultArg("href"), rawextra : Some(r#"class="youtube" data-youtube"#), valparse: TagValueParse::ForceVerbatim },
             TagInfo { tag: "spoiler", outtag: "details", tag_type : TagType::DefinedTag("summary", Some("Spoiler")), rawextra : Some(r#"class="spoiler""#), valparse: TagValueParse::Normal },
             TagInfo::simple("h1"),

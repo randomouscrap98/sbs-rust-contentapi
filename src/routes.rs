@@ -18,29 +18,43 @@ pub enum MultiResponse {
 
 //The over-arching error that I expect routes to emit
 #[derive(Debug)]
-pub struct RouteError(Status, String);
+pub struct RouteError(Status, String, Option<String>);
 
 impl From<ApiError> for RouteError { 
     fn from(error: ApiError) -> Self {
         let status = match error {
             ApiError::Network(_) => Status::ServiceUnavailable,
-            ApiError::User(_,_) => Status::BadRequest,
+            ApiError::User(_,_,_) => Status::BadRequest,
             _ => Status::InternalServerError
         };
 
-        RouteError(status, error.to_string())
+        let error_str = error.to_string();
+        if let ApiError::User(_,message,data) = error {
+            RouteError(status, message, Some(data))
+        }
+        else if let ApiError::Usage(message,data) = error {
+            RouteError(status, message, Some(data))
+        }
+        else {
+            RouteError(status, error_str, None)
+        }
     }
 }
 
 impl From<anyhow::Error> for RouteError { 
     fn from(error: anyhow::Error) -> Self {
-        RouteError(Status::InternalServerError, error.to_string())
+        RouteError(Status::InternalServerError, error.to_string(), None)
     }
 }
 
 impl<'r, 'o: 'r> rocket::response::Responder<'r, 'o> for RouteError {
     fn respond_to(self, req: &'r rocket::Request<'_>) -> response::Result<'o> {
-        println!("[RETURNING:{}]: {}", &self.0, &self.1);
+        //Take 2 out, whatever
+        let out_data = match &self.2 {
+            Some(data) => data,
+            None => "NONE"
+        };
+        println!("[RETURNING:{}]: {}\nREQUEST DATA (CAREFUL!!):\n{}", &self.0, &self.1, out_data);
         let custom = rocket::response::status::Custom(self.0, self.1);
         custom.respond_to(req)
     }

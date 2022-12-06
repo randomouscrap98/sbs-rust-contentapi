@@ -17,9 +17,9 @@ pub enum ApiError
     #[error("Network Error: {0}")]
     Network(String),    //Is the API reachable?
     #[error("API Usage Error: {0}")]
-    Usage(String),      //Did I (the programmer) use it correctly?
-    #[error("Request Error[APISTATUS:{0}]: {1}")]
-    User(RequestStatus, String) //Did the user submit proper data?
+    Usage(String, String),      //Did I (the programmer) use it correctly? Also pass the data, DON'T display that!
+    #[error("Request Error[{0}]: {1}")]
+    User(RequestStatus, String, String) //Did the user submit proper data? Also pass data (last param), again DON'T DISPLAY
 }
 
 #[derive(Debug)]
@@ -65,7 +65,8 @@ macro_rules! network_error {
 //error with additional info.
 macro_rules! parse_error {
     ($endpoint:expr, $status:expr, $data:expr) => {
-       |err| ApiError::Usage(String::from(format!("Could not parse RESPONSE body from {}[{}], serde error: {}\nREQUEST DATA:\n{:?}", $endpoint, $status, err, $data)))
+       |err| ApiError::Usage(String::from(format!("Could not parse RESPONSE body from {}[{}], serde error: {}", $endpoint, $status, err)), format!("{:?}", $data))
+       //|err| ApiError::Usage(String::from(format!("Could not parse RESPONSE body from {}[{}], serde error: {}\nREQUEST DATA:\n{:?}", $endpoint, $status, err, $data)))
     };
 }
 
@@ -87,7 +88,8 @@ macro_rules! handle_response {
                 Err(response_error) => {
                     //Note: we map the error preemptively to let us use the macro
                     match $response.text().await.map_err(parse_error!($endpoint, status, $data)) {
-                        Ok(api_text_error) => Err(ApiError::User(response_error.status().into(), format!("At endpoint '{}': {}\nREQUEST DATA:\n{:?}", $endpoint, api_text_error, $data))),
+                        Ok(api_text_error) => Err(ApiError::User(response_error.status().into(), format!("At endpoint '{}': {}", $endpoint, api_text_error), format!("{:?}", $data))),
+                        //Ok(api_text_error) => Err(ApiError::User(response_error.status().into(), format!("At endpoint '{}': {}\nREQUEST DATA:\n{:?}", $endpoint, api_text_error, $data))),
                         Err(p_error) => Err(p_error)
                     }
                 }
@@ -229,7 +231,7 @@ pub async fn post_registerconfirm<'a>(context: &Context, confirm: &forms::Regist
     basic_post_request("/user/confirmregistration", confirm, context).await
 }
 
-pub async fn post_usersensitive<'a>(context: &Context, sensitive: &forms::UserSensitive<'_>) -> Result<bool, ApiError>
+pub async fn post_usersensitive<'a>(context: &Context, sensitive: &forms::UserSensitive<'_>) -> Result<String, ApiError>
 {
     basic_post_request("/user/privatedata", sensitive, context).await
 }

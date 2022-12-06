@@ -76,6 +76,7 @@
         <input id="sensitive_email" type="email" autocomplete="new-password" name="email" value="">
         <label for="sensitive_currentpassword"><b>Current Password:</b> <span class="error">*</span></label>
         <input id="sensitive_currentpassword" type="password" required="" name="currentPassword">
+        <input type="hidden" required="" name="currentEmail" value="{{userprivate.email}}">
         <input type="submit" value="Update">
     </form>
     <p><b>Note:</b> if you logged in using a temporary recovery password or otherwise don't know your 

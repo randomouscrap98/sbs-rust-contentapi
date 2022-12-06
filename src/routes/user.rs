@@ -46,23 +46,56 @@ pub async fn login_post(context: Context, login: Form<forms::Login<'_>>, jar: &C
     }
 }
 
+//Alternate post endpoint for sending the recovery endpoint. On success, go to the /recover page, which
+//will let you finalize setting a new password
 #[post("/login?recover", data = "<recover>")]
 pub async fn loginrecover_post(context: Context, recover: Form<forms::LoginRecover<'_>>) -> Result<MultiResponse, RouteError> {
     let mut errors = Vec::new();
     handle_email!(post_email_recover(&context, recover.email).await, errors);
-    Ok(MultiResponse::Template(basic_template!("login", context, {
-        emailresult : String::from(recover.email), 
-        recoversuccess : errors.len() == 0, 
+    let recoversuccess = errors.len() == 0;
+    let template = if recoversuccess { "recover" } else { "login" };
+    //Error goes back to login template, but success goes to special reset page
+    Ok(MultiResponse::Template(basic_template!(template, context, {
+        emailresult : String::from(recover.email),  //This is 'email' because it's just SENDING the recovery email, not the recover form
+        recoversuccess : recoversuccess,
         recovererrors: errors
     })))
 }
 
+#[get("/recover")] //A plain page render, if you accidentally get here. THe page will still work, but you have to add crap
+pub async fn recover_get(context: Context) -> Result<Template, RouteError> {
+    Ok(basic_template!("recover", context, { }))
+}
+
+//Dedicated recover submit page. On succcess, login and go to userhome. On failure, show recover page again
+#[post("/recover", data = "<sensitive>")]
+pub async fn recover_usersensitive_post(context: Context, sensitive: Form<forms::UserSensitive<'_>>, jar: &CookieJar<'_>) -> Result<MultiResponse, RouteError> {
+    match post_usersensitive(&context, &sensitive).await {
+        Ok(token) => {
+            login!(jar, context, token);
+            Ok(MultiResponse::Redirect(my_redirect!(context.config, "/userhome")))
+        },
+        Err(error) => {
+            //This NEEDS to be the same as the post render from /login?recover!
+            Ok(MultiResponse::Template(basic_template!("/recover", context, {
+                emailresult: String::from(sensitive.currentEmail),
+                sensitiveerrors: vec![error.to_string()]
+            })))
+        }
+    }
+}
+
+//The userhome version of updating the sensitive info. This one actually has the ability to change your email
 #[post("/userhome?sensitive", data = "<sensitive>")]
 pub async fn usersensitive_post(context: Context, sensitive: Form<forms::UserSensitive<'_>>) -> Result<MultiResponse, RouteError> {
     let mut errors = Vec::new();
-    handle_error!(post_usersensitive(&context, &sensitive).await, errors);
+    match post_usersensitive(&context, &sensitive).await {
+        Ok(_token) => {} //Don't need the token
+        Err(error) => { errors.push(error.to_string()) }
+    };
     Ok(MultiResponse::Template(userhome_base!(context, {sensitiveerrors:errors})))
 }
+
 
 #[post("/userhome", data= "<update>")]
 pub async fn userhome_update_post(mut context: Context, update: Form<forms::UserUpdate<'_>>) -> Result<Template, RouteError>
