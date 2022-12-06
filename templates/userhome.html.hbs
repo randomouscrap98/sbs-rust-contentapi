@@ -56,11 +56,11 @@
     </div>
     <hr>
     <h3 id="update-userbio">Update bio:</h3>
-    <form {{selfpost "?bio#update-userbio"}}>
+    <form {{selfpost "bio#update-userbio"}}>
         {{> partials/errorlist errors=bioerrors}}
         <input type="hidden" name="id" value="{{#if userbio.id}}{{userbio.id}}{{else}}0{{/if}}">
         <!--<input type="hidden" name="parentId" value="{{userpages.id}}">-->
-        <textarea id="update_userbio" type="text" name="text" value="{{userbio.text}}"></textarea>
+        <textarea id="update_userbio" type="text" name="text">{{userbio.text}}</textarea>
         <input type="submit" value="Update">
     </form>
     <hr>

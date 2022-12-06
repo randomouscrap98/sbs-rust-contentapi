@@ -36,7 +36,7 @@ macro_rules! userhome_base {
 
             basic_template!("userhome", $context, {
                 userprivate : crate::api::get_user_private_safe(&$context).await,
-                userpage : userpage,
+                userbio : userpage,
                 $($uf: $uv,)*
             })
         }
@@ -149,7 +149,7 @@ pub async fn recover_usersensitive_post(context: Context, sensitive: Form<forms:
 }
 
 //The userhome version of updating the sensitive info. This one actually has the ability to change your email
-#[post("/userhome?sensitive", data = "<sensitive>")]
+#[post("/userhome?sensitive", data = "<sensitive>", rank=2)]
 pub async fn usersensitive_post(context: Context, sensitive: Form<forms::UserSensitive<'_>>) -> Result<Template, RouteError> {
     let mut errors = Vec::new();
     match post_usersensitive(&context, &sensitive).await {
@@ -159,7 +159,7 @@ pub async fn usersensitive_post(context: Context, sensitive: Form<forms::UserSen
     Ok(userhome_base!(context, {sensitiveerrors:errors}))
 }
 
-#[post("/userhome?bio", data = "<bio>")]
+#[post("/userhome?bio", data = "<bio>", rank=1)]
 pub async fn userbio_post(context: Context, bio: Form<forms::UserBio<'_>>) -> Result<Template, RouteError> 
 {
     //Both go to the same place, AND the userhome renderer reads the data after this write anyway,
@@ -173,7 +173,7 @@ pub async fn userbio_post(context: Context, bio: Form<forms::UserBio<'_>>) -> Re
 }
 
 
-#[post("/userhome", data= "<update>")]
+#[post("/userhome", data= "<update>", rank = 4)] //this comes much later
 pub async fn userhome_update_post(mut context: Context, update: Form<forms::UserUpdate<'_>>) -> Result<Template, RouteError>
 {
     let mut errors = Vec::new();

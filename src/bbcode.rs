@@ -19,18 +19,19 @@ pub struct TagInfo {
     pub tag_type: TagType,
     pub rawextra: Option<&'static str>, //Just dump this directly into the tag at the end. No checks performed
     pub valparse: TagValueParse,
+    pub blankconsume : BlankConsume
 }
 
 impl TagInfo {
     //Constructors for basic tags. Anything else, you're better off just constructing it normally
     pub fn simple(tag: &'static str) -> TagInfo {
-        TagInfo { tag, outtag: tag, tag_type: TagType::Simple, rawextra: None, valparse: TagValueParse::Normal }
+        TagInfo { tag, outtag: tag, tag_type: TagType::Simple, rawextra: None, valparse: TagValueParse::Normal, blankconsume: BlankConsume::None }
     }
     /*pub fn normal(tag: &'static str, outtag: &'static str, tag_type: TagType, rawextra: Option<&'static str>) -> TagInfo {
         TagInfo { tag, outtag, tag_type, rawextra, valparse
     }*/
     fn start() -> TagInfo {
-        TagInfo { tag: "", outtag: "", tag_type: TagType::Start, rawextra: None, valparse: TagValueParse::Normal }
+        TagInfo { tag: "", outtag: "", tag_type: TagType::Start, rawextra: None, valparse: TagValueParse::Normal, blankconsume: BlankConsume::None }
     }
 
     pub fn is_verbatim(&self) -> bool {
@@ -68,6 +69,13 @@ pub enum TagType {
     DefinedTag(&'static str, Option<&'static str>),   //Some arguments turn into tags! Crazy...
     SelfClosing(&'static str),  //No closing tag, value is 
     DefaultArg(&'static str),   //The tag enclosed value provides a default for the given attribute, or not if defined
+}
+
+#[derive(Debug, Clone)]
+pub enum BlankConsume {
+    None,
+    Start(i32),
+    End(i32)
 }
 
 //While "TagType" determines how the tag functions at a lower level (such as how it handles arguments), 
@@ -202,7 +210,8 @@ impl BBCode
             (">", "&gt;"),
             ("&", "&amp;"),
             ("\"", "&quot;"),
-            ("'", "&#39;")
+            ("'", "&#39;"),
+            ("\r", "") //why are these even here??
         ]
     }
 
@@ -216,10 +225,10 @@ impl BBCode
             TagInfo::simple("u"),
             TagInfo::simple("s"),
             //There's a [list=1] thing, wonder how to do that. It's nonstandard, our list format is entirely nonstandard
-            TagInfo { tag: "list", outtag: "ul", tag_type: TagType::Simple, rawextra: None, valparse: TagValueParse::Normal },
-            TagInfo { tag: r"\*", outtag: "li", tag_type: TagType::Simple, rawextra: None, valparse: TagValueParse::DoubleCloses },
-            TagInfo { tag: "url", outtag: "a", tag_type: TagType::DefaultArg("href"), rawextra: Some(r#"target="_blank""#), valparse: TagValueParse::ForceVerbatim },
-            TagInfo { tag: "img", outtag: "img", tag_type: TagType::SelfClosing("src"), rawextra: None, valparse: TagValueParse::ForceVerbatim } //Not required to be forced
+            TagInfo { tag: "list", outtag: "ul", tag_type: TagType::Simple, rawextra: None, valparse: TagValueParse::Normal, blankconsume: BlankConsume::End(1)},
+            TagInfo { tag: r"\*", outtag: "li", tag_type: TagType::Simple, rawextra: None, valparse: TagValueParse::DoubleCloses, blankconsume: BlankConsume::Start(1)},
+            TagInfo { tag: "url", outtag: "a", tag_type: TagType::DefaultArg("href"), rawextra: Some(r#"target="_blank""#), valparse: TagValueParse::ForceVerbatim, blankconsume: BlankConsume::None },
+            TagInfo { tag: "img", outtag: "img", tag_type: TagType::SelfClosing("src"), rawextra: None, valparse: TagValueParse::ForceVerbatim, blankconsume: BlankConsume::None } //Not required to be forced
         ]
     }
     
@@ -229,14 +238,21 @@ impl BBCode
         let mut matches = Vec::new();
         //Next, convert the taginfos to even more "do".
         for tag in taginfos.iter() {
+            let mut openchomp = String::from("");
+            let mut closechomp = String::from("");
+            match tag.blankconsume {
+                BlankConsume::None => {}, //do nothing
+                BlankConsume::Start(amount) => { openchomp = format!("(\r?\n){{0,{}}}", amount); }
+                BlankConsume::End(amount) => { closechomp = format!("(\r?\n){{0,{}}}", amount); }
+            }
             //The existing system on SBS doesn't allow spaces in tags at ALL. I don't know if this 
             //much leniency on the = value is present in the old system though...
-            let open_tag = format!(r#"^(?i)\[{}(=[^\]]*)?\]"#, tag.tag);
+            let open_tag = format!(r#"^(?i){}\[{}(=[^\]]*)?\]{}"#, openchomp, tag.tag, closechomp);
             matches.push(MatchInfo {
                 regex: Regex::new(&open_tag)?,
                 match_type : MatchType::Open(tag.clone())
             });
-            let close_tag = format!(r#"^(?i)\[/{}\]"#, tag.tag);
+            let close_tag = format!(r#"^(?i){}\[/{}\]{}"#, openchomp, tag.tag, closechomp);
             matches.push(MatchInfo {
                 regex: Regex::new(&close_tag)?,
                 match_type : MatchType::Close(tag.clone())
@@ -264,7 +280,7 @@ impl BBCode
         matches.insert(0, MatchInfo {
             //We use h to catch ourselves on https. this unfortunately breaks up large sections of text into much
             //smaller ones, but it should be ok... I don't know. My parser is stupid lol
-            regex: Regex::new(r#"^[^\[\]<>'"&/h]+"#)?, 
+            regex: Regex::new(r#"^[^\[\]<>'"&\r\n/h]+"#)?, 
             match_type : MatchType::Passthrough
         });
 
@@ -284,12 +300,12 @@ impl BBCode
     //Some fancy extra bbcode. You have to append it yourself to basic! These are nonstandard, you don't have to use them!
     pub fn extras() -> Result<Vec<MatchInfo>, anyhow::Error> {
         BBCode::tags_to_matches(vec![
-            TagInfo { tag: "quote", outtag: "blockquote", tag_type : TagType::DefinedArg("cite"), rawextra : None, valparse: TagValueParse::Normal },
-            TagInfo { tag: "anchor", outtag: "a", tag_type : TagType::DefinedArg("name"), rawextra : None, valparse: TagValueParse::ForceVerbatim },
-            TagInfo { tag: "icode", outtag: "span", tag_type : TagType::Simple, rawextra : Some(r#"class="icode""#), valparse: TagValueParse::ForceVerbatim },
-            TagInfo { tag: "code", outtag: "pre", tag_type : TagType::DefinedArg("data-code"), rawextra : Some(r#"class="code""#), valparse: TagValueParse::ForceVerbatim },
-            TagInfo { tag: "youtube", outtag: "a", tag_type : TagType::DefaultArg("href"), rawextra : Some(r#"class="youtube" data-youtube"#), valparse: TagValueParse::ForceVerbatim },
-            TagInfo { tag: "spoiler", outtag: "details", tag_type : TagType::DefinedTag("summary", Some("Spoiler")), rawextra : Some(r#"class="spoiler""#), valparse: TagValueParse::Normal },
+            TagInfo { tag: "quote", outtag: "blockquote", tag_type : TagType::DefinedArg("cite"), rawextra : None, valparse: TagValueParse::Normal, blankconsume: BlankConsume::End(1) },
+            TagInfo { tag: "anchor", outtag: "a", tag_type : TagType::DefinedArg("name"), rawextra : None, valparse: TagValueParse::ForceVerbatim, blankconsume: BlankConsume::None },
+            TagInfo { tag: "icode", outtag: "span", tag_type : TagType::Simple, rawextra : Some(r#"class="icode""#), valparse: TagValueParse::ForceVerbatim, blankconsume: BlankConsume::None },
+            TagInfo { tag: "code", outtag: "pre", tag_type : TagType::DefinedArg("data-code"), rawextra : Some(r#"class="code""#), valparse: TagValueParse::ForceVerbatim, blankconsume: BlankConsume::End(1) },
+            TagInfo { tag: "youtube", outtag: "a", tag_type : TagType::DefaultArg("href"), rawextra : Some(r#"class="youtube" data-youtube"#), valparse: TagValueParse::ForceVerbatim, blankconsume: BlankConsume::End(1) },
+            TagInfo { tag: "spoiler", outtag: "details", tag_type : TagType::DefinedTag("summary", Some("Spoiler")), rawextra : Some(r#"class="spoiler""#), valparse: TagValueParse::Normal, blankconsume: BlankConsume::None },
             TagInfo::simple("h1"),
             TagInfo::simple("h2"),
             TagInfo::simple("h3"),
@@ -614,6 +630,10 @@ mod tests {
         amp_single: ("h&ello", "h&amp;ello");
         quote_single: ("h'ello", "h&#39;ello");
         doublequote_single: ("h\"ello", "h&quot;ello");
+        return_byebye: ("h\rello", "hello");
+        //Because inserting tags without knowing the scope is bad (in our system for now), don't generate
+        //<br>, just figure the whitespace is pre-wrap or something
+        newline_br: ("h\nello", "h\nello");
         complex_escape: (
             "it's a %CRAZY% <world> 💙=\"yeah\" 👨‍👨‍👧‍👦>>done", 
             "it&#39;s a %CRAZY% &lt;world&gt; 💙=&quot;yeah&quot; 👨‍👨‍👧‍👦&gt;&gt;done"
@@ -638,12 +658,23 @@ mod tests {
         //NOTE: this one, it's just how I want it to work. IDK how the real bbcode handles this weirdness
         simple_img_nonstd_inner: ("[img=https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png]abc 123[/img]", r#"<img src="https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png">abc 123"#);
         //This also tests auto-closed tags, albeit a simple form
-        list_basic:  ("[list]\n[*]item 1\n[*]item 2\n[*]list\n[/list]", "<ul>\n<li>item 1\n</li><li>item 2\n</li><li>list\n</li></ul>");
+        list_basic:  ("[list][*]item 1[/*][*]item 2[/*][*]list[/*][/list]", "<ul><li>item 1</li><li>item 2</li><li>list</li></ul>");
         unclosed_basic: ("[b] this is bold [i]also italic[/b] oops close all[/i]", "<b> this is bold <i>also italic</i></b> oops close all");
         verbatim_url: ("[url]this[b]is[/b]a no-no[i][/url]", r#"<a target="_blank" href="this[b]is[/b]a no-no[i]">this[b]is[/b]a no-no[i]</a>"#);
         inner_hack: ("[[b][/b]b]love[/[b][/b]b]", "[<b></b>b]love[/<b></b>b]");
         random_brackets: ("[][[][6][a[ab]c[i]italic[but][][* not] 8[]]][", "[][[][6][a[ab]c<i>italic[but][][* not] 8[]]][</i>");
         autolink_basic: ("this is https://google.com ok?", r#"this is <a target="_blank" href="https://google.com">https://google.com</a> ok?"#);
+
+        newline_list1: ("[list]\n[*]item", "<ul><li>item</li></ul>");
+        newline_list2: ("[list]\r\n[*]item", "<ul><li>item</li></ul>");
+        newline_listmega: ("\n[list]\r\n[*]item\r\n[*]item2 yeah[\r\n\r\n[*]three", "\n<ul><li>item</li><li>item2 yeah[\n</li><li>three</li></ul>");
+        //Bold, italic, etc should not remove newlines anywhere
+        newline_bold: ("\n[b]\nhellow\n[/b]\n", "\n<b>\nhellow\n</b>\n");
+        newline_italic: ("\n[i]\nhellow\n[/i]\n", "\n<i>\nhellow\n</i>\n");
+        newline_underline: ("\n[u]\nhellow\n[/u]\n", "\n<u>\nhellow\n</u>\n");
+        newline_strikethrough: ("\n[s]\nhellow\n[/s]\n", "\n<s>\nhellow\n</s>\n");
+        newline_sup: ("\n[sup]\nhellow\n[/sup]\n", "\n<sup>\nhellow\n</sup>\n");
+        newline_sub: ("\n[sub]\nhellow\n[/sub]\n", "\n<sub>\nhellow\n</sub>\n");
 
         //Nicole's bbcode edge cases
         e_dangling: ("[b]foo", "<b>foo</b>");
