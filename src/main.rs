@@ -51,6 +51,7 @@ fn rocket() -> _ {
             routes::user::logout_get, 
             routes::user::recover_get,
             routes::user::recover_usersensitive_post,
+            routes::user::user_get,
             routes::register::register_get,
             routes::register::register_post,
             routes::register::registerconfirm_get,

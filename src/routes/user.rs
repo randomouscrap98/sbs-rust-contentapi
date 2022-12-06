@@ -1,8 +1,8 @@
+use crate::api_data::*;
 use crate::context::*;
 use crate::forms;
 use crate::conversion;
 use crate::config;
-//use crate::api_data::*;
 use crate::api::*;
 use super::*;
 
@@ -13,10 +13,30 @@ use rocket_dyn_templates::Template;
 
 macro_rules! userhome_base {
     ($context:ident, { $($uf:ident : $uv:expr),*$(,)* }) => {
-        basic_template!("userhome", $context, {
-            userprivate : crate::api::get_user_private_safe(&$context).await,
-            $($uf: $uv,)*
-        })
+        {
+            let mut userpage : Option<Content> = None;
+
+            if let Some(ref user) = $context.current_user {
+                let mut request = FullRequest::new();
+                add_value!(request, "uid", user.id);
+
+                request.requests.push(build_request!(
+                    RequestType::content, 
+                    String::from("*"), //ok do we really need it ALL?
+                    String::from("!userpage(@uid)")
+                )); 
+
+                let result = post_request(&$context, &request).await?;
+                let mut content_raw = conversion::cast_result_required::<Content>(&result, "content")?;
+                userpage = content_raw.pop(); //Doesn't matter if it's none
+            }
+
+            basic_template!("userhome", $context, {
+                userprivate : crate::api::get_user_private_safe(&$context).await,
+                userpage : userpage,
+                $($uf: $uv,)*
+            })
+        }
     };
 }
 pub(crate) use userhome_base;
@@ -121,4 +141,35 @@ pub async fn userhome_update_post(mut context: Context, update: Form<forms::User
 pub fn logout_get(config: &rocket::State<config::Config>, jar: &CookieJar<'_>) -> Redirect {
     jar.remove(Cookie::named(config.token_cookie_key.clone()));
     my_redirect!(config, "/")
+}
+
+#[get("/user/<username>")]
+pub async fn user_get(context: Context, username: String) -> Result<Template, RouteError>
+{
+    //Go get the user and their userpage
+    let mut request = FullRequest::new();
+    add_value!(request, "username", username);
+
+    request.requests.push(build_request!(
+        RequestType::user, 
+        String::from("*"), 
+        String::from("username = @username")
+    )); 
+
+    request.requests.push(build_request!(
+        RequestType::content, 
+        String::from("*"), //ok do we really need it ALL?
+        String::from("!userpage(@user.id)")
+    )); 
+
+    let result = post_request(&context, &request).await?;
+
+    //Now try to parse two things out of it
+    let users_raw = conversion::cast_result_required::<User>(&result, "user")?;
+    let content_raw = conversion::cast_result_required::<Content>(&result, "content")?;
+
+    Ok(basic_template!("user", context, {
+        pageuser: users_raw.get(0),
+        pageuserbio: content_raw.get(0)
+    }))
 }

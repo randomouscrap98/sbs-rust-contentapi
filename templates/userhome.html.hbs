@@ -10,10 +10,13 @@
 #userhomeinfo > #infoblock {
     margin-right: 1em;
 }
-#logoutlink {
+#userlinks {
     display: block;
     margin-left: 0.2em;
     margin-top: 0.4em;
+}
+#userlinks > * {
+    margin-right: 0.15em;
 }
 #userhomeinfo > img {
     margin-right: 1em;
@@ -44,9 +47,21 @@
                 <tr><td><b>Admin:</b></td><td>{{#if user.admin}}true{{else}}false{{/if}}</td></tr>
             </table>
             <!-- Might turn this into a "coolbutton" -->
-            <a id="logoutlink" href="{{http_root}}/logout" class="flatlink">Logout</a>
+            <div id="userlinks" class="smallseparate">
+                <a id="publiclink" class="flatlink" href="{{http_root}}/user/{{user.username}}">User page</a> 
+                <span>/</span>
+                <a id="logoutlink" href="{{http_root}}/logout" class="flatlink">Logout</a>
+            </div>
         </div>
     </div>
+    <hr>
+    <h3 id="update-userbio">Update bio:</h3>
+    <form {{selfpost "?bio#update-userbio"}}>
+        {{> partials/errorlist errors=bioerrors}}
+        <input type="hidden" name="id" value="{{userbio.id}}">
+        <textarea id="update_userbio" type="text" name="text" value="{{userbio.text}}">
+        <input type="submit" value="Update">
+    </form>
     <hr>
     <h3 id="update-user">Update info:</h3>
     <form {{selfpost "#update-user"}}>

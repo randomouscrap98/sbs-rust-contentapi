@@ -1,0 +1,65 @@
+{{#*inline "page"}}
+<!-- Is anyone going to mind styles in the body? I sure hope not... -->
+<style>
+#pageuser {
+    display: flex;
+    align-items: flex-start;
+    padding: 0.5em 0.2em;
+}
+#pageuser > #infoblock {
+    display: flex;
+    flex-direction: column;
+}
+#pageuser h1 {
+    margin-top: 0;
+}
+#userinfo {
+    display: flex;
+}
+#pageuser > img {
+    margin-right: 1.2em;
+    width: 8.5em;
+    border-radius: 0.9em;
+}
+#pageuser #userbio {
+    margin: 1em 0;
+}
+/* This isn't ULTRA MINIMAL size (that's 30em), but enough to not have everything on one line */
+@media screen and (max-width: 40em)
+{
+    #pageuser {
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 0;
+    }
+    #pageuser > #infoblock {
+        align-items: center;
+    }
+    #pageuser > img {
+        margin: 0;
+        margin-bottom: 1em;
+    }
+}
+</style>
+<section>
+    {{#if pageuser}}
+    <div id="pageuser">
+        <img src="{{imagelink pageuser.avatar 300 true}}">
+        <div id="infoblock">
+            <h1>{{pageuser.username}}</h1>
+            <div id="userinfo" class="aside mediumseparate">
+                <!--Some info about the user -->
+                <div>Member since: <time>{{pageuser.createDate}}</time></div>
+                <div>ID: {{pageuser.id}}</div>
+            </div>
+            <!-- If the user has no bio, that's ok! -->
+            <div id="userbio" class="content">{{pageuserbio.text}}</div>
+        </div>
+    </div>
+    {{else}}
+    <!-- We're probably going to do a 404 maybe -->
+    <p class="error">Couldn't find that user!</p>
+    {{/if}}
+</section>
+{{/inline}}
+{{>layout}}
