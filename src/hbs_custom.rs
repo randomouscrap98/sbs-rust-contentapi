@@ -3,7 +3,7 @@ use rocket_dyn_templates::handlebars::{self, Handlebars};
 use serde::Serialize;
 use lazy_static::lazy_static;
 use crate::api_data;
-use crate::bbcode::BBCode;
+use crate::bbcode::{BBCode, TagInfo, TagType};
 use serde_qs;
 
 //I think I'm doing something wrong? I don't like that I need all these
@@ -17,7 +17,19 @@ static ROUTEKEY: &'static str = "route_path";
 //memory to store it (maybe a couple kb?) but it keeps us from hvaing to recompile regex.
 lazy_static! {
     static ref BBCODE : BBCode = {
-        let matchers = BBCode::basics().unwrap(); //this better not fail! It'll fail very early though
+        let mut matchers = BBCode::basics().unwrap(); //this better not fail! It'll fail very early though
+        let mut my_tags = BBCode::tags_to_matches(vec![
+            TagInfo { tag: "quote", outtag: "blockquote", tag_type : TagType::DefinedArg("cite"), rawextra : None, force_verbatim: false  },
+            TagInfo { tag: "anchor", outtag: "a", tag_type : TagType::DefinedArg("name"), rawextra : None, force_verbatim: true  },
+            TagInfo { tag: "icode", outtag: "span", tag_type : TagType::Simple, rawextra : Some(r#"class="icode""#), force_verbatim: true  },
+            TagInfo { tag: "code", outtag: "pre", tag_type : TagType::Simple, rawextra : Some(r#"class="code" data-code"#), force_verbatim: true  },
+            TagInfo { tag: "youtube", outtag: "a", tag_type : TagType::DefaultArg("href"), rawextra : Some(r#"class="youtube" data-youtube"#), force_verbatim: true  },
+            TagInfo { tag: "spoiler", outtag: "span", tag_type : TagType::DefinedArg("data-title"), rawextra : Some(r#"class="spoilertext" data-spoiler"#), force_verbatim: false },
+            TagInfo::simple("h1"),
+            TagInfo::simple("h2"),
+            TagInfo::simple("h3"),
+        ]).unwrap();
+        matchers.append(&mut my_tags);
         BBCode { matchers } 
     };
 }

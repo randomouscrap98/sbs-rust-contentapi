@@ -19,15 +19,31 @@ pub struct TagInfo {
     pub outtag: &'static str,
     pub tag_type: TagType,
     pub rawextra: Option<&'static str>, //Just dump this directly into the tag at the end. No checks performed
+    pub force_verbatim: bool    //Does this NEED to be verbatim? OK
 }
 
 impl TagInfo {
     //Constructors for basic tags. Anything else, you're better off just constructing it normally
-    fn simple(tag: &'static str) -> TagInfo {
-        TagInfo { tag, outtag: tag, tag_type: TagType::Simple, rawextra: None }
+    pub fn simple(tag: &'static str) -> TagInfo {
+        TagInfo { tag, outtag: tag, tag_type: TagType::Simple, rawextra: None, force_verbatim: false }
     }
     fn start() -> TagInfo {
-        TagInfo { tag: "", outtag: "", tag_type: TagType::Start, rawextra: None }
+        TagInfo { tag: "", outtag: "", tag_type: TagType::Start, rawextra: None, force_verbatim: false }
+    }
+
+    pub fn is_verbatim(&self) -> bool {
+        if self.force_verbatim {
+            true
+        }
+        else {
+            match self.tag_type {
+                TagType::Start => false,
+                TagType::Simple => false,
+                TagType::DefinedArg(_) => false,
+                TagType::SelfClosing(_) => true,
+                TagType::DefaultArg(_) => true
+            }
+        }
     }
 }
 
@@ -42,19 +58,19 @@ pub enum TagType {
     DefaultArg(&'static str),   //The tag enclosed value provides a default for the given attribute, or not if defined
 }
 
-impl TagType {
-    //Another bad thing: rather than defining what tags are allowed in or out of a tag, it's all or nothing.
-    //This works for most situations, and it's fairly easy to add some custom list of tags later
-    fn is_verbatim(&self) -> bool {
-        match self {
-            Self::Start => false,
-            Self::Simple => false,
-            Self::DefinedArg(_) => false,
-            Self::SelfClosing(_) => true,
-            Self::DefaultArg(_) => true
-        }
-    }
-}
+//impl TagType {
+//    //Another bad thing: rather than defining what tags are allowed in or out of a tag, it's all or nothing.
+//    //This works for most situations, and it's fairly easy to add some custom list of tags later
+//    fn is_verbatim(&self) -> bool {
+//        match self {
+//            Self::Start => false,
+//            Self::Simple => false,
+//            Self::DefinedArg(_) => false,
+//            Self::SelfClosing(_) => true,
+//            Self::DefaultArg(_) => true
+//        }
+//    }
+//}
 
 //While "TagType" determines how the tag functions at a lower level (such as how it handles arguments), 
 //this determines how the whole block functions on a greater level. They define how scopes and whole blocks
@@ -64,6 +80,8 @@ pub enum MatchType {
     Passthrough,    //Pass this junk right out as-is
     Open(TagInfo),  //this is so small, it's fine to dupe in open/close
     Close(TagInfo),
+    //Note: you can use BlockTransform to craft many kinds of generic matching, if it can use regex! It just won't
+    //be part of the scoping rules! IE it should be an entire block! Also, the match will ALWAYS be html escaped first!
     BlockTransform(&'static str),  //Take the full match and transform it into something entirely different
     DirectReplace(&'static str)
 }
@@ -166,8 +184,8 @@ impl<'a> BBScoper<'a>
 
 //The main bbcode system. You create this to parse bbcode!
 pub struct BBCode {
-    //These are SOMETIMES processed (based on context)
-    pub matchers: Vec<MatchInfo>
+    //Supply this!
+    pub matchers: Vec<MatchInfo> //These are SOMETIMES processed (based on context)
 }
 
 impl BBCode 
@@ -199,11 +217,10 @@ impl BBCode
             TagInfo::simple("u"),
             TagInfo::simple("s"),
             //There's a [list=1] thing, wonder how to do that. It's nonstandard, our list format is entirely nonstandard
-            TagInfo { tag: "list", outtag: "ul", tag_type: TagType::Simple, rawextra: None },
-            TagInfo { tag: r"\*", outtag: "li", tag_type: TagType::Simple, rawextra: None },
-            TagInfo { tag: "url", outtag: "a", tag_type: TagType::DefaultArg("href"), rawextra: Some(r#"target="_blank""#) },
-            TagInfo { tag: "img", outtag: "img", tag_type: TagType::SelfClosing("src"), rawextra: None },
-            //TagInfo { tag: "", outtag: "a", tag_type: TagType::BlockReplacement(""), rawextra: Some(r#"target="_blank""#)}
+            TagInfo { tag: "list", outtag: "ul", tag_type: TagType::Simple, rawextra: None, force_verbatim: false },
+            TagInfo { tag: r"\*", outtag: "li", tag_type: TagType::Simple, rawextra: None, force_verbatim: false },
+            TagInfo { tag: "url", outtag: "a", tag_type: TagType::DefaultArg("href"), rawextra: Some(r#"target="_blank""#), force_verbatim: false },
+            TagInfo { tag: "img", outtag: "img", tag_type: TagType::SelfClosing("src"), rawextra: None, force_verbatim: false },
         ]
     }
 
@@ -246,8 +263,17 @@ impl BBCode
         //This is an optimization: any large block of characters that has no meaning in bbcode can go straight through.
         //Put it FIRST because this is the common case
         matches.insert(0, MatchInfo {
-            regex: Regex::new(r#"^[^\[\]<>'"&/]+"#)?,
+            //We use h to catch ourselves on https. this unfortunately breaks up large sections of text into much
+            //smaller ones, but it should be ok... I don't know. My parser is stupid lol
+            regex: Regex::new(r#"^[^\[\]<>'"&/h]+"#)?, 
             match_type : MatchType::Passthrough
+        });
+
+        //Don't forget about autolinking! This is a crappy autolinker and it doesn't matter too much!
+        matches.push(MatchInfo { 
+            //characters taken from google's page https://developers.google.com/maps/url-encoding
+            regex: Regex::new(r#"^(https?://[a-zA-Z0-9\-_.~!*()';:@&=+$,/?%#\[\]]+)"#)?, 
+            match_type: MatchType::BlockTransform(r#"<a target="_blank" href="$0">$0</a>"#) 
         });
 
         let mut tag_matches = Self::tags_to_matches(Self::basic_tags())?;
@@ -390,7 +416,7 @@ impl BBCode
             //these are such small state machines with nothing too crazy that I think it's fine.... maybe.
             //Especially since they all start at the start of the string
             for matchinfo in &self.matchers {
-                if current_scope.info.tag_type.is_verbatim() {
+                if current_scope.info.is_verbatim() {
                     match &matchinfo.match_type {
                         //If the thing to match is open or close and we're inside a verbatim string, skip the matching if
                         //it's not the same tag as the current scope. So, [url]what[url] is fine, [url] will be found
@@ -425,8 +451,10 @@ impl BBCode
                             result.push_str(new_text);
                         },
                         MatchType::BlockTransform(replacement) => {
-                            //need to take the captures and transform it to whatever you wanted
-                            result.push_str(&tagdo.regex.replace(&captures[0], *replacement));
+                            //need to take the captures and transform it to whatever you wanted. But always be safe! If you don't
+                            //want this, hmmmm gotta think about that
+                            //result.push_str(&html_escape::encode_quoted_attribute(&argval[1..]));
+                            result.push_str(&tagdo.regex.replace(&html_escape::encode_quoted_attribute(&captures[0]), *replacement));
                         },
                         MatchType::Open(info) => {
                             //Need to enter a scope. Remember where the beginning of this scope is just in case we need it
@@ -556,5 +584,6 @@ mod tests {
         verbatim_url: ("[url]this[b]is[/b]a no-no[i][/url]", r#"<a target="_blank" href="this[b]is[/b]a no-no[i]">this[b]is[/b]a no-no[i]</a>"#);
         inner_hack: ("[[b][/b]b]love[/[b][/b]b]", "[<b></b>b]love[/<b></b>b]");
         random_brackets: ("[][[][6][a[ab]c[i]italic[but][][* not] 8[]]][", "[][[][6][a[ab]c<i>italic[but][][* not] 8[]]][</i>");
+        autolink_basic: ("this is https://google.com ok?", r#"this is <a target="_blank" href="https://google.com">https://google.com</a> ok?"#);
     }
 }

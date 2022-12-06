@@ -522,7 +522,7 @@ async fn render_thread(context: &Context, pre_request: FullRequest, page: Option
 // *       ROUTES       *
 // ----------------------
 
-#[get("/forum")]
+#[get("/forum", rank=10)]
 pub async fn forum_get(context: Context) -> Result<Template, RouteError> 
 {
     //First request: just get categories
@@ -557,7 +557,8 @@ pub async fn forum_categoryhash_get(context: Context, hash: String, page: Option
     render_threads(&context, get_category_request(Some(hash), None), page).await
 }
 
-#[get("/forum?<fcid>&<page>", rank=2)]
+//Almost nobody will be visiting by fcid, so rank this poorly
+#[get("/forum?<fcid>&<page>", rank=9)] //, rank=2)]
 pub async fn forum_categoryfcid_get(context: Context, fcid: i64, page: Option<i32>) -> Result<Template, RouteError> 
 {
     render_threads(&context, get_category_request(None, Some(fcid)), page).await
@@ -577,13 +578,14 @@ pub async fn forum_threadhash_postid_get(context: Context, hash: String, post_id
     render_thread(&context, get_prepost_request(None, Some(post_id), None, Some(hash)), None).await
 }
 
-#[get("/forum?<ftid>&<page>", rank=3)]
+#[get("/forum?<ftid>&<page>", rank=5)] //, rank=3)]
 pub async fn forum_thread_ftid_get(context: Context, ftid: i64, page: Option<i32>) -> Result<Template, RouteError> 
 {
     render_thread(&context, get_prepost_request(None, None, Some(ftid), None), page).await
 }
 
-#[get("/forum?<fpid>", rank=4)]
+//Most old links may be to posts directly? idk
+#[get("/forum?<fpid>", rank=3)] //, rank=4)]
 pub async fn forum_thread_fpid_get(context: Context, fpid: i64) -> Result<Template, RouteError> 
 {
     render_thread(&context, get_prepost_request(Some(fpid), None, None, None), None).await

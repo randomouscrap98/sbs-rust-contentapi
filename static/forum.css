@@ -89,6 +89,11 @@
     margin: 0.5em 0.1em;
 }
 
+.content blockquote:first-child {
+    margin-top: 0.65em; /* special */
+}
+
+
 
 /*  -------------------
  *       GENERAL      *
