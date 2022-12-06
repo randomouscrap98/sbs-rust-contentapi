@@ -79,9 +79,6 @@
         <input type="hidden" required="" name="currentEmail" value="{{userprivate.email}}">
         <input type="submit" value="Update">
     </form>
-    <p><b>Note:</b> if you logged in using a temporary recovery password or otherwise don't know your 
-        password, you will need to obtain another temporary recovery password through email to fill out the 
-        'current password' field above. You can do so <a href="{{http_root}}/login" target="_blank">here</a>.</p>
     {{else}}
     <p class="error">You must be logged in to see userhome!</p>
     {{/if}}

@@ -12,16 +12,14 @@
     </form>
     <hr>
     <h2>Password expired / forgotten?</h2>
+    <p class="">Send an email with a temporary recovery code, which you can use to reset your password</p>
     <form {{selfpost "recover"}}> 
         {{> partials/errorlist errors=recovererrors}}
-        {{#if recoversuccess}}
-        <p class="success">Email sent!</p>
-        {{/if}}
         <label for="recover_email">Email:</label>
         <input id="recover_email" type="text" name="email" required="" value="{{emailresult}}">
-        <p class="aside">Sends an email with a temporary password to login with, use above</p>
         <input type="submit" value="Send recovery email">
     </form>
+    <p class="aside">Already have the recovery code? Go to the <a href="{{http_root}}/recover">recovery page</a>.</p>
     <hr>
     <h2>New to SmileBASIC Source?</h2>
     <p><a href="{{http_root}}/register">Click here</a> to register</p>

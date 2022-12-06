@@ -52,12 +52,10 @@ pub async fn login_post(context: Context, login: Form<forms::Login<'_>>, jar: &C
 pub async fn loginrecover_post(context: Context, recover: Form<forms::LoginRecover<'_>>) -> Result<MultiResponse, RouteError> {
     let mut errors = Vec::new();
     handle_email!(post_email_recover(&context, recover.email).await, errors);
-    let recoversuccess = errors.len() == 0;
-    let template = if recoversuccess { "recover" } else { "login" };
+    let template = if errors.len() == 0 { "recover" } else { "login" };
     //Error goes back to login template, but success goes to special reset page
     Ok(MultiResponse::Template(basic_template!(template, context, {
         emailresult : String::from(recover.email),  //This is 'email' because it's just SENDING the recovery email, not the recover form
-        recoversuccess : recoversuccess,
         recovererrors: errors
     })))
 }
@@ -77,9 +75,9 @@ pub async fn recover_usersensitive_post(context: Context, sensitive: Form<forms:
         },
         Err(error) => {
             //This NEEDS to be the same as the post render from /login?recover!
-            Ok(MultiResponse::Template(basic_template!("/recover", context, {
+            Ok(MultiResponse::Template(basic_template!("recover", context, {
                 emailresult: String::from(sensitive.currentEmail),
-                sensitiveerrors: vec![error.to_string()]
+                recovererrors: vec![error.to_string()]
             })))
         }
     }
