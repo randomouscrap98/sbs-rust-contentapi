@@ -4,6 +4,7 @@
 window.onload = function(wole) {
     upgrade_forms();
     upgrade_times();
+    upgrade_code();
 };
 
 function upgrade_forms()
@@ -12,6 +13,22 @@ function upgrade_forms()
     for(var i = 0; i < forms.length; i++)
     {
         forms[i].addEventListener("submit", stdform_onsubmit);
+    }
+}
+
+function upgrade_code()
+{
+    var codes = document.querySelectorAll(".content .code");
+    for(var i = 0; i < codes.length; i++)
+    {
+        try
+        {
+            applySyntaxHighlighting(codes[i]);
+        }
+        catch(ex)
+        {
+            console.error("Couldn't highlight:", ex);
+        }
     }
 }
 

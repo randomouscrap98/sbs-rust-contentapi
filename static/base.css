@@ -17,6 +17,17 @@
     --tc_link: rgb(55, 91, 189);
     --font: sans-serif;
     --simple_hover: brightness(1.2);
+
+    /* Syntax highlighting in code sections! You don't have to change these if you don't 
+       want, they're not used anywhere */
+    --code_keyword: #07bac6;
+    --code_number: #f442ad;
+    --code_comment: #39c655;
+    --code_string: #967de0;
+    --code_label: #fff496;
+    --code_function: #63b3ff;
+    --code_fg: #DDD;
+    --code_bg: #222;
 }
 
 /* ----------------------------- *
@@ -222,3 +233,23 @@ hr.smaller {
     /* A hack for now */
     max-width: 75vw; 
 }
+
+/* Syntax highlighting for code! */
+.content .code .keyword { color: var(--code_keyword); }
+.content .code .number { color: var(--code_number); }
+.content .code .comment { color: var(--code_comment); }
+.content .code .string { color: var(--code_string); }
+.content .code .label { color: var(--code_label); }
+.content .code .function { color: var(--code_function); } 
+.content .code { color: var(--code_fg); background-color: var(--code_bg); }
+
+/* .content .code .keyword, .content inline-code .keyword { color: #07bac6; }
+.content .code .number, .content inline-code .number { color: #f442ad; }
+.content .code .comment, .content inline-code .comment { color: #39c655; }
+.content .code .string, .content inline-code .string { color: #967de0; }
+.content .code .label, .content inline-code .label { color: #fff496; }
+.content .code .function, .content inline-code .function { color: #63b3ff; } 
+.content .code .operator, .content inline-code .operator { color: ; } 
+.content .code .variable, .content inline-code .variable { color: ; } 
+.content .code .separator, .content inline-code .separator{ color: ; } 
+*/
