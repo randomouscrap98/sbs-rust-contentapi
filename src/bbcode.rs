@@ -34,7 +34,6 @@ impl TagInfo {
 //This is the 'silly' part of the parser. Rather than making some actually generic system, I identified some
 //standard ways tags are used and just made code around those ways. Probably bad but oh well.
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub enum TagType {
     Start,          //Should ONLY have one of these! It's like S in a grammar!
     Simple,         //Stuff like [b][/b], no args, normal translation (can change tag name still)
@@ -65,6 +64,7 @@ pub enum MatchType {
     Passthrough,    //Pass this junk right out as-is
     Open(TagInfo),  //this is so small, it's fine to dupe in open/close
     Close(TagInfo),
+    BlockTransform(&'static str),  //Take the full match and transform it into something entirely different
     DirectReplace(&'static str)
 }
 
@@ -167,53 +167,18 @@ impl<'a> BBScoper<'a>
 //The main bbcode system. You create this to parse bbcode!
 pub struct BBCode {
     //These are SOMETIMES processed (based on context)
-    pub tags : Vec<MatchInfo>
+    pub matchers: Vec<MatchInfo>
 }
 
-impl BBCode {
-    //Maybe get rid of anyhow if you want to separate this, kind of a big thing to include.
-    //Anyway, this build function precompiles all the regex for you. Try to reuse this item
-    //as much as possible if you don't want to incur the compile times. Also, you need to pass
-    //ALL the tags you want to handle. Use BBCode::basics() to get the list of default bbcode
-    //tags. This might be enough for your needs!
-    pub fn build(taginfos: Vec<TagInfo>) -> Result<Self, anyhow::Error> {
-        //First, get the default direct replacements
-        let mut tags = Self::html_escapes().iter().map(|e| {
-            //Unfortunately, have to allocate string
-            let regstring = format!(r"^{}", e.0);
-            Ok(MatchInfo { 
-                regex: Regex::new(&regstring)?,
-                match_type : MatchType::DirectReplace(e.1)
-            })
-        }).collect::<Result<Vec<MatchInfo>,anyhow::Error>>()?;
-
-        //This is an optimization: any large block of characters that has no meaning in bbcode can go straight through.
-        //Put it FIRST because this is the common case
-        tags.insert(0, MatchInfo {
-            regex: Regex::new(r#"^[^\[\]<>'"&/]+"#)?,
-            match_type : MatchType::Passthrough
-        });
-
-        //Next, convert the taginfos to even more "do".
-        for tag in taginfos.iter() {
-            //The existing system on SBS doesn't allow spaces in tags at ALL. I don't know if this 
-            //much leniency on the = value is present in the old system though...
-            let open_tag = format!(r#"^\[{}(=[^\]]*)?\]"#, tag.tag);
-            tags.push(MatchInfo {
-                regex: Regex::new(&open_tag)?,
-                match_type : MatchType::Open(tag.clone())
-            });
-            let close_tag = format!(r#"^\[/{}\]"#, tag.tag);
-            tags.push(MatchInfo {
-                regex: Regex::new(&close_tag)?,
-                match_type : MatchType::Close(tag.clone())
-            });
-        }
-
-        Ok(BBCode { tags })
+impl BBCode 
+{
+    //Get a default bbcode parser. Should hopefully have reasonable defaults!
+    #[allow(dead_code)]
+    pub fn default() -> Result<Self, anyhow::Error> {
+        Ok(Self { matchers: Self::basics()? })
     }
 
-    //The basic direct replacement escapes for HTML
+    //The basic direct replacement escapes for HTML. You don't need these if you're using 'basics()'
     pub fn html_escapes() -> Vec<(&'static str, &'static str)> {
         vec![
             ("<", "&lt;"),
@@ -224,8 +189,8 @@ impl BBCode {
         ]
     }
 
-    //Get a vector of the basic taginfos of bbcode
-    pub fn basics() -> Vec<TagInfo> {
+    //Get a vector of the basic taginfos of bbcode. You don't need this if you're using 'basics()'
+    pub fn basic_tags() -> Vec<TagInfo> {
         vec![
             TagInfo::simple("b"),
             TagInfo::simple("i"),
@@ -238,7 +203,57 @@ impl BBCode {
             TagInfo { tag: r"\*", outtag: "li", tag_type: TagType::Simple, rawextra: None },
             TagInfo { tag: "url", outtag: "a", tag_type: TagType::DefaultArg("href"), rawextra: Some(r#"target="_blank""#) },
             TagInfo { tag: "img", outtag: "img", tag_type: TagType::SelfClosing("src"), rawextra: None },
+            //TagInfo { tag: "", outtag: "a", tag_type: TagType::BlockReplacement(""), rawextra: Some(r#"target="_blank""#)}
         ]
+    }
+
+    //If you have extra tags you want to add, use this function to turn the basic definitions into
+    //a vector of real MatchInfo for use in the bbcode system
+    pub fn tags_to_matches(taginfos: Vec<TagInfo>) -> Result<Vec<MatchInfo>, anyhow::Error> {
+        let mut matches = Vec::new();
+        //Next, convert the taginfos to even more "do".
+        for tag in taginfos.iter() {
+            //The existing system on SBS doesn't allow spaces in tags at ALL. I don't know if this 
+            //much leniency on the = value is present in the old system though...
+            let open_tag = format!(r#"^\[{}(=[^\]]*)?\]"#, tag.tag);
+            matches.push(MatchInfo {
+                regex: Regex::new(&open_tag)?,
+                match_type : MatchType::Open(tag.clone())
+            });
+            let close_tag = format!(r#"^\[/{}\]"#, tag.tag);
+            matches.push(MatchInfo {
+                regex: Regex::new(&close_tag)?,
+                match_type : MatchType::Close(tag.clone())
+            });
+        }
+        Ok(matches)
+    }
+
+
+    //Get a vector of ALL basic matchers! This is the function you want to call to get a vector for the bbcode
+    //generator!
+    pub fn basics() -> Result<Vec<MatchInfo>, anyhow::Error> {
+        //First, get the default direct replacements
+        let mut matches = Self::html_escapes().iter().map(|e| {
+            //Unfortunately, have to allocate string
+            let regstring = format!(r"^{}", e.0);
+            Ok(MatchInfo { 
+                regex: Regex::new(&regstring)?,
+                match_type : MatchType::DirectReplace(e.1)
+            })
+        }).collect::<Result<Vec<MatchInfo>,anyhow::Error>>()?;
+
+        //This is an optimization: any large block of characters that has no meaning in bbcode can go straight through.
+        //Put it FIRST because this is the common case
+        matches.insert(0, MatchInfo {
+            regex: Regex::new(r#"^[^\[\]<>'"&/]+"#)?,
+            match_type : MatchType::Passthrough
+        });
+
+        let mut tag_matches = Self::tags_to_matches(Self::basic_tags())?;
+        matches.append(&mut tag_matches);
+
+        Ok(matches)
     }
 
     //Push an argument="value" part onto the result. Will omit the last " if argval is None
@@ -374,18 +389,19 @@ impl BBCode {
             //figure out which next element matches (if any). This is the terrible optimization part, but
             //these are such small state machines with nothing too crazy that I think it's fine.... maybe.
             //Especially since they all start at the start of the string
-            for tagdo in &self.tags {
+            for matchinfo in &self.matchers {
                 if current_scope.info.tag_type.is_verbatim() {
-                    match &tagdo.match_type {
+                    match &matchinfo.match_type {
                         //If the thing to match is open or close and we're inside a verbatim string, skip the matching if
                         //it's not the same tag as the current scope. So, [url]what[url] is fine, [url] will be found
                         MatchType::Open(doinfo) | MatchType::Close(doinfo) => { if doinfo.tag != current_scope.info.tag { continue; } }
+                        MatchType::BlockTransform(_) => continue, //No block transforms inside verbatim no matter what!
                         //MatchType::Close(doinfo) => { if doinfo.tag != current_scope.info.tag { continue; } }
                         _ => {} //Do nothing
                     }
                 }
-                if tagdo.regex.is_match(slice) {
-                    matched_do = Some(tagdo);
+                if matchinfo.regex.is_match(slice) {
+                    matched_do = Some(matchinfo);
                     break;
                 }
             }
@@ -407,6 +423,10 @@ impl BBCode {
                         MatchType::DirectReplace(new_text) => {
                             //The matched chunk has a simple replacement with no rules
                             result.push_str(new_text);
+                        },
+                        MatchType::BlockTransform(replacement) => {
+                            //need to take the captures and transform it to whatever you wanted
+                            result.push_str(&tagdo.regex.replace(&captures[0], *replacement));
                         },
                         MatchType::Open(info) => {
                             //Need to enter a scope. Remember where the beginning of this scope is just in case we need it
@@ -476,7 +496,7 @@ mod tests {
         $(
             #[test]
             fn $name() {
-                let bbcode = BBCode::build(BBCode::basics()).unwrap();
+                let bbcode = BBCode { matchers: BBCode::basics().unwrap() };
                 let (input, expected) = $value;
                 assert_eq!(bbcode.parse(input), expected);
             }
@@ -487,14 +507,14 @@ mod tests {
     #[test]
     fn build_init() {
         //This shouldn't fail?
-        let _bbcode = BBCode::build(BBCode::basics()).unwrap();
+        let _bbcode = BBCode { matchers: BBCode::basics().unwrap() };
     }
 
     #[test]
     fn build_add_lt() {
         //This shouldn't fail?
-        let bbcode = BBCode::build(BBCode::basics()).unwrap();
-        let found = bbcode.tags.iter().find(|x| matches!(x.match_type, MatchType::DirectReplace(_))).unwrap();
+        let bbcode = BBCode { matchers: BBCode::basics().unwrap() };
+        let found = bbcode.matchers.iter().find(|x| matches!(x.match_type, MatchType::DirectReplace(_))).unwrap();
         assert_eq!(found.regex.as_str(), "^<");
         if let MatchType::DirectReplace(repl) = found.match_type {
             assert_eq!(repl, "&lt;")

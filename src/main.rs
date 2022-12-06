@@ -1,6 +1,6 @@
 #[macro_use] extern crate rocket;
 
-use bbcode::BBCode;
+//use bbcode::BBCode;
 use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
 use rocket_dyn_templates::Template;
@@ -36,8 +36,8 @@ async fn search_get(context: context::Context) -> Result<Template, RouteError> {
 #[launch]
 fn rocket() -> _ {
     //Yeah, let this immediately panic
-    let tags = BBCode::basics();
-    let bbcode = BBCode::build(tags).unwrap();
+    //let tags = BBCode::basic_tags();
+    //let bbcode = BBCode::build(tags).unwrap();
     rocket::build()
         .mount("/", routes![
             routes::basic::index_get, 
@@ -72,7 +72,7 @@ fn rocket() -> _ {
         .manage(context::InitData {
             boot_time : chrono::offset::Utc::now()
         })
-        .manage(bbcode)
+        //.manage(bbcode)
         .attach(AdHoc::config::<config::Config>())
         .attach(Template::custom(|engines| {
             hbs_custom::customize(&mut engines.handlebars);

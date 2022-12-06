@@ -33,7 +33,7 @@
                 <a class="sequence" href="{{@root.http_root}}/forum/thread/{{@root.thread.thread.hash}}/{{../id}}#post_{{../id}}">#{{lookup @root.sequence (string ../id)}}</a>
             </div>
             <!-- Need a bbcode render helper -->
-<div class="content">{{../text}}</div>
+<div class="content bbcode">{{{bbcode ../text}}}</div>
             <div class="postfooter">
                 <div class="history">
                     <time class="aside" datetime="{{../createDate}}">{{timeago ../createDate}}</time>

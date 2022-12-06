@@ -1613,6 +1613,7 @@ dependencies = [
  "base64-stream",
  "chrono",
  "html-escape",
+ "lazy_static",
  "regex",
  "reqwest",
  "rocket",

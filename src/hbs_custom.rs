@@ -1,7 +1,9 @@
 use chrono::{DateTime, Utc};
 use rocket_dyn_templates::handlebars::{self, Handlebars};
 use serde::Serialize;
+use lazy_static::lazy_static;
 use crate::api_data;
+use crate::bbcode::BBCode;
 use serde_qs;
 
 //I think I'm doing something wrong? I don't like that I need all these
@@ -10,6 +12,15 @@ static HTTPROOTKEY: &'static str = "http_root";
 static HTTPSTATICKEY: &'static str = "http_static";
 static BOOTTIMEKEY: &'static str = "boot_time";
 static ROUTEKEY: &'static str = "route_path";
+
+//This is the one place we have our bbcode rendering context. It'll take up a little
+//memory to store it (maybe a couple kb?) but it keeps us from hvaing to recompile regex.
+lazy_static! {
+    static ref BBCODE : BBCode = {
+        let matchers = BBCode::basics().unwrap(); //this better not fail! It'll fail very early though
+        BBCode { matchers } 
+    };
+}
 
 //The helper signature is just TOO DAMN COMPLICATED (I know you need those
 //params sometimes) so I'm just... simplifying it
@@ -139,6 +150,12 @@ generate_helper!{string_helper, h, out, _ctx, {
     }
 }}
 
+generate_helper!{bbcode_helper, h, out, _ctx, {
+    if let Some(text) = get_param!(h, 0, as_str) {
+        out.write(&BBCODE.parse(text))?;
+    }
+}}
+
 generate_helper!{timeago_helper, h, out, _ctx, {
     if let Some(time) = get_param!(h, 0, as_str) {
         match DateTime::parse_from_rfc3339(time) {
@@ -191,4 +208,5 @@ pub fn customize(hbs: &mut Handlebars) {
     hbs.register_helper("script", Box::new(script_helper));
     hbs.register_helper("timeago", Box::new(timeago_helper));
     hbs.register_helper("string", Box::new(string_helper));
+    hbs.register_helper("bbcode", Box::new(bbcode_helper));
 }
