@@ -201,6 +201,9 @@ impl BBCode {
             TagInfo::simple("sub"),
             TagInfo::simple("u"),
             TagInfo::simple("s"),
+            //There's a [list=1] thing, wonder how to do that. It's nonstandard, our list format is entirely nonstandard
+            TagInfo { tag: "list", outtag: "ul", tag_type: TagType::Simple, rawextra: None },
+            TagInfo { tag: r"\*", outtag: "li", tag_type: TagType::Simple, rawextra: None },
             TagInfo { tag: "url", outtag: "a", tag_type: TagType::DefaultArg("href"), rawextra: Some(r#"target="_blank""#) },
             TagInfo { tag: "img", outtag: "img", tag_type: TagType::SelfClosing("src"), rawextra: None },
         ]
@@ -213,7 +216,8 @@ impl BBCode {
         result.push_str("=\"");
         //Now we need an html escaper
         if let Some(argval) = argval {
-            result.push_str(&html_escape::encode_quoted_attribute(argval));
+            //NOTE: our matcher grabs the = (for now), that's why the 1
+            result.push_str(&html_escape::encode_quoted_attribute(&argval[1..]));
             result.push_str("\"");
         }
         result
@@ -238,7 +242,10 @@ impl BBCode {
                 }
                 result.push_str(">"); //THEN close it!
             },
-            TagType::DefaultArg(argname) => {
+            //For the opening tag, 'DefaultArg' and 'SelfClosing' act the same. They could either have the value
+            //in the arg, or in the body. Difference is on completion, where self closing just closes (or quits),
+            //but DefaultArg may have to copy the value into the body, since we only scanned the arg
+            TagType::SelfClosing(argname) | TagType::DefaultArg(argname) => {
                 if let Some(capture) = captures.get(1) { //If an argument exists, push it
                     result = Self::push_tagarg(result, argname, Some(capture.as_str()));
                     result.push_str(">"); //THEN close it!
@@ -250,10 +257,10 @@ impl BBCode {
                     result = Self::push_tagarg(result, argname, None);
                 }
             },
-            TagType::SelfClosing(argname) => {
-                //Self closing is basic: we assume the value within the tag is just the argument.
-                result = Self::push_tagarg(result, argname, None);
-            }
+            //TagType::SelfClosing(argname) => {
+            //    //Self closing is basic: we assume the value within the tag is just the argument.
+            //    result = Self::push_tagarg(result, argname, None);
+            //}
         }
 
         result
@@ -269,8 +276,11 @@ impl BBCode {
     fn push_close_tag(mut result: String, scope: &BBScope, input: &str, end: usize) -> String {
         match scope.info.tag_type {
             TagType::SelfClosing(_) => {
-                //Need to finish closing the attribute, self closing tags have no... well, closing tag
-                result.push_str(r#"">"#);
+                if !scope.has_arg { 
+                    //If this was the standard style of selfclosing, need output the end of the tag.
+                    //If it was in the arguments (nonstandard), we already closed it
+                    result.push_str(r#"">"#);
+                }
             },
             TagType::DefaultArg(_) => {
                 //This one is complicated. If there were arguments, we simply output the closing 
@@ -336,8 +346,8 @@ impl BBCode {
                     match &tagdo.match_type {
                         //If the thing to match is open or close and we're inside a verbatim string, skip the matching if
                         //it's not the same tag as the current scope. So, [url]what[url] is fine, [url] will be found
-                        MatchType::Open(doinfo) => { if doinfo.tag != current_scope.info.tag { continue; } }
-                        MatchType::Close(doinfo) => { if doinfo.tag != current_scope.info.tag { continue; } }
+                        MatchType::Open(doinfo) | MatchType::Close(doinfo) => { if doinfo.tag != current_scope.info.tag { continue; } }
+                        //MatchType::Close(doinfo) => { if doinfo.tag != current_scope.info.tag { continue; } }
                         _ => {} //Do nothing
                     }
                 }
@@ -488,6 +498,7 @@ mod tests {
             "it's a %CRAZY% <world> 💙=\"yeah\" 👨‍👨‍👧‍👦>>done", 
             "it&#39;s a %CRAZY% &lt;world&gt; 💙=&quot;yeah&quot; 👨‍👨‍👧‍👦&gt;&gt;done"
         );
+        //"Simple" means there are no complicated tag structures, or only a single tag (most common)
         simple_bold: ("[b]hello[/b]", "<b>hello</b>");
         simple_sup: ("[sup]hello[/sup]", "<sup>hello</sup>");
         simple_sub: ("[sub]hello[/sub]", "<sub>hello</sub>");
@@ -497,5 +508,13 @@ mod tests {
         simple_nospaces: ("[b ]hello[/ b]", "[b ]hello[/ b]");
         simple_bolditalic: ("[b][i]hello[/i][/b]", "<b><i>hello</i></b>");
         simple_url_default: ("[url]https://google.com[/url]", r#"<a target="_blank" href="https://google.com">https://google.com</a>"#);
+        simple_url_witharg: ("[url=http://haloopdy.com]furries lol[/url]", r#"<a target="_blank" href="http://haloopdy.com">furries lol</a>"#);
+        simple_img: ("[img]https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png[/img]", r#"<img src="https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png">"#);
+        simple_img_nonstd: ("[img=https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png][/img]", r#"<img src="https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png">"#);
+        //NOTE: this one, it's just how I want it to work. IDK how the real bbcode handles this weirdness
+        simple_img_nonstd_inner: ("[img=https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png]abc 123[/img]", r#"<img src="https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png">abc 123"#);
+        //This also tests auto-closed tags, albeit a simple form
+        list_basic:  ("[list]\n[*]item 1\n[*]item 2\n[*]list\n[/list]", "<ul>\n<li>item 1\n</li><li>item 2\n</li><li>list\n</li></ul>");
+        unclosed_basic: ("[b] this is bold [i]also italic[/b] oops close all[/i]", "<b> this is bold <i>also italic</i></b> oops close all");
     }
 }
