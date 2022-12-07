@@ -2,7 +2,6 @@ set -e
 
 # Stuff you may want to change
 NAME="sbs-rust-contentapi"
-BUILDTYPE="debug"
 
 # Check required variables
 if [ -z "$INSTALLUSER" ]; then
@@ -19,19 +18,20 @@ elif [ -z "$INSTALLBASE" ]; then
    exit 1
 fi
 
+# This is ridiculous. cargo is... ugh (see the dual variables)
+if [ "$INSTALLCOMPILE" = "release" ]; then
+   BUILDTYPE="release"
+   BUILDPARAM="--release"
+else
+   BUILDTYPE="debug"
+   BUILDPARAM=""
+fi
 
 # Calculated stuff
 INSTALLDIR="${INSTALLBASE}/${NAME}"
 LOGIN="${INSTALLUSER}@${INSTALLHOST}"
 FULLENDPOINT="${LOGIN}:${INSTALLDIR}"
 
-# This is ridiculous. cargo is... ugh
-if [ "$BUILDTYPE" = "release" ]
-then
-   BUILDPARAM="--release"
-else
-   BUILDPARAM=""
-fi
 
 # RSYNC options:
 # h : human readable (always need)

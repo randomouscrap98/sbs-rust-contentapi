@@ -623,6 +623,33 @@ mod tests {
         }
     }
 
+    //#[test] //Not really a unit test but whatever
+    //fn benchmark_10000() {
+    //    let mut matchers = BBCode::basics().unwrap();
+    //    let mut extras = BBCode::extras().unwrap();
+    //    matchers.append(&mut extras);
+    //    let bbcode = BBCode { matchers };
+    //    let parselem = vec![
+    //        ("it's a %CRAZY% <world> 💙=\"yeah\" 👨‍👨‍👧‍👦>>done", 
+    //         "it&#39;s a %CRAZY% &lt;world&gt; 💙=&quot;yeah&quot; 👨‍👨‍👧‍👦&gt;&gt;done"),
+    //        ("[][[][6][a[ab]c[i]italic[but][][* not] 8[]]][", "[][[][6][a[ab]c<i>italic[but][][* not] 8[]]][</i>"),
+    //        ("[url]this[b]is[/b]a no-no[i][/url]", r#"<a target="_blank" href="this[b]is[/b]a no-no[i]">this[b]is[/b]a no-no[i]</a>"#),
+    //        ("[img=https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png]abc 123[/img]", r#"<img src="https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png">abc 123"#),
+    //        ("[spoiler]this[b]is empty[/spoiler]", r#"<details class="spoiler"><summary>Spoiler</summary>this<b>is empty</b></details>"#)
+    //    ];
+
+    //    for i in 0..10000 {
+    //        if let Some((input, output)) = parselem.get(i % parselem.len()) {
+    //            if bbcode.parse(*input) != *output {
+    //                panic!("Hang on, bbcode isn't working!");
+    //            }
+    //        }
+    //        else {
+    //            panic!("WHAT? INDEX OUT OF BOUNDS??");
+    //        }
+    //    }
+    //}
+
     bbtest_basics! {
         no_alter: ("hello", "hello");
         lt_single: ("h<ello", "h&lt;ello");

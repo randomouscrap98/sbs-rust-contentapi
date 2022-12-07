@@ -16,7 +16,7 @@ api_fileraw = "https://oboy.smilebasicsource.com/sbs/contentapi/images"
 token_cookie_key = "sbs_contentapi_token"
 default_cookie_expire = 1209600 #14 days in seconds
 long_cookie_expire = 31536000 # 365 days in seconds
-port = 5010
+port = 5011
 default_imagebrowser_count = 100
 default_category_threads = 1  # threads to show in category view
 default_display_threads = 50  # threads to show per page 
@@ -30,8 +30,15 @@ forum_category_order = ["Programming", "FAQ", "General", "Talk", "SmileBASIC Bug
 # file limit is 10 MB, but server will resize as necessary
 limits = { file = 10000000 }
 
-[oboy]
 
+# These are configurations to connect to the OBOY database rather than
+# sbs, not necessarily "running" on oboy. This most likely isn't necessary anymore
+[oboycontentapi]
 api_endpoint = "http://localhost:5000/api"
 api_fileraw = "https://oboy.smilebasicsource.com/api/file/raw"
 token_cookie_key = "sbs_oboy_contentapi_token"
+
+[production]
+
+http_root = "https://smilebasicsource.com"
+api_fileraw = "https://smilebasicsource.com/contentapi/images"
