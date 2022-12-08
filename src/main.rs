@@ -5,15 +5,18 @@ use warp::Filter;
 mod bbcode;
 mod api;
 mod config;
+mod templates;
+mod conversion;
 //mod api_data;
 
-use crate::config::create_config;
+//use crate::config::create_config;
+//use crate::templates;
 
 static CONFIGNAME : &str = "settings";
 
 //The standard config we want here in this application. This macro is ugly but 
 //it produces a config object that can load from a chain of json files
-create_config!{
+config::create_config!{
     Config, OptConfig => {
         api_endpoint: String,
         http_root: String,
@@ -45,6 +48,8 @@ async fn main() {
     // GET /hello/warp => 200 OK with body "Hello, warp!"
     let hello = warp::path!("hello" / String)
         .map(|name| format!("Hello, {}!", name));
+
+    println!("{}", templates::index::html!().into_string());
     
     warp::serve(hello)
         .run(config.host_address.parse::<SocketAddr>().unwrap())
