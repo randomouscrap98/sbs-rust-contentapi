@@ -19,4 +19,4 @@ default_display_posts = 20  # posts to show per page (on threads)
 forum_category_order = ["Programming", "FAQ", "General", "Talk", "SmileBASIC Bug", "Site"]
 
 # file limit is 10 MB, but server will resize as necessary
-file_maxsize = 10000000
+body_maxsize = 10000000

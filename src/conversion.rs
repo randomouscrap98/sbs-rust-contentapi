@@ -1,5 +1,7 @@
 //use std::error::Error;
 
+use std::fmt::Display;
+
 use serde::Deserialize;
 
 //use crate::api::Context; //context::Context;
@@ -51,3 +53,39 @@ pub fn cast_result_required<T>(result: &api::RequestResult, name: &str) -> Resul
 {
     cast_result(result, name)?.ok_or(format!("Couldn't find key {}", name).into())
 }
+
+//This gets rid of our dependency on serde_qs
+//pub fn list_to_querystring(list: Vec<(String, Option<impl Display>)>) -> String {
+//    if list.len() == 0 {
+//        String::new()
+//    }
+//    else {
+//        format!("?{}", list.iter()
+//            .map(|(key,value)| urlencoding::encode(&i.to_string()).into_owned())
+//            .collect::<Vec<String>>()
+//            .join("&")
+//        )
+//    }
+//}
+//
+//#[cfg(test)]
+//mod tests {
+//    use super::*;
+//
+//    macro_rules! querystring_tests {
+//        ($($name:ident: $value:expr;)*) => {
+//        $(
+//            #[test]
+//            fn $name() {
+//                let (input, expected) = $value;
+//                assert_eq!(list_to_querystring(input), String::from(expected));
+//            }
+//        )*
+//        }
+//    }
+//
+//    querystring_tests! {
+//        empty: (Vec::<String>::new(), "");
+//        single: (vec![("wow", None)], "");
+//    }
+//}

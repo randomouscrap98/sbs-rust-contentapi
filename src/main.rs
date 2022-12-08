@@ -7,6 +7,7 @@ mod api;
 mod config;
 mod templates;
 mod conversion;
+mod routing;
 //mod api_data;
 
 //use crate::config::create_config;
@@ -29,7 +30,8 @@ config::create_config!{
         default_display_threads : i32,
         default_display_posts : i32,
         forum_category_order: Vec<String>,
-        file_maxsize: i32,
+        //file_maxsize: i32,
+        body_maxsize: i32, //this can be used for a lot of things, I don't really care
         host_address: String,
     }
 }
@@ -43,15 +45,15 @@ async fn main() {
 
     let config = Config::read_with_environment_toml(CONFIGNAME, environment);
 
-    println!("The config: {:?}", config);
+    println!("{:#?}", config);
 
     // GET /hello/warp => 200 OK with body "Hello, warp!"
-    let hello = warp::path!("hello" / String)
-        .map(|name| format!("Hello, {}!", name));
+    //let hello = warp::path!("hello" / String)
+    //    .map(|name| format!("Hello, {}!", name));
 
-    println!("{}", templates::index::html!().into_string());
+    //println!("{}", templates::index::html!().into_string());
     
-    warp::serve(hello)
+    warp::serve(routing::get_all_routes())
         .run(config.host_address.parse::<SocketAddr>().unwrap())
         .await;
 }
