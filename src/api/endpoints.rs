@@ -1,4 +1,5 @@
-use std::fmt;
+use std::fmt::{self, Display};
+use core::fmt::Debug;
 //use std::io::Read;
 
 use reqwest::Client;
@@ -21,119 +22,146 @@ pub trait Context {
     }
 }
 
-//These are the specific types of errors we'll care about from the api
+//These are the specific types of errors we'll care about from the api. In all instances, the String
+//is a minimal amount of data to show the users. The rest is for logging
 //#[derive(Error, Debug)]
 #[derive(Debug)]
 pub enum ApiError
 {
-    //#[error("Pre-API Preparation Error: {0}")]
-    Precondition(String),   //Something BEFORE the api failed (some kind of setup?)
-    //#[error("Network Error: {0}")]
-    Network(String),    //Is the API reachable?
-    //#[error("API Usage Error: {0}")]
-    Usage(String, String),      //Did I (the programmer) use it correctly? Also pass the data, DON'T display that!
-    //#[error("Request Error[{0}]: {1}")]
-    User(RequestStatus, String, String) //Did the user submit proper data? Also pass data (last param), again DON'T DISPLAY
+    NonRequest(AboutRequest, String),   //Something not pertaining to the actual request itself happened!
+    Parse(AboutRequest, String),        //Something didn't parse correctly! This is common enough to be its own error
+    Network(AboutRequest, String),      //Is the API reachable? Endpoint not necessary most likely; this indicates an error beyond 404
+    Request(AboutRequest, String, reqwest::StatusCode),      //Oh something went wrong with the request itself! Probably a 400 or 500 error
 }
 
-#[derive(Debug)]
-pub enum RequestStatus {
-    Reqwest(reqwest::StatusCode),
-    None
+#[derive(Debug, Clone)]
+pub struct AboutRequest {
+    //This is GET/POST/etc. I don't care for it to be an enum, since I'm just printing it
+    pub verb: String,
+    pub endpoint: String,
+    //Restricted data, which should probably not even be logged to the console! So what do
+    //we do with it? It's mostly just for debugging I think, there may be a flag to enable
+    //printing the restricted data
+    pub post_data: Option<String>
 }
 
+//Data about an error produced by the API. Specifically produced by the API, which means
+//there are common fields for all
+//#[derive(Debug, Clone)]
+//pub struct ApiErrorData {
+//    //The minimal amount of data to explain the error. This should be returned to the user
+//    pub minimal: String,
+//    //The status from the request (so these errors are for requests that actually started)
+//    pub request_status: Option<reqwest::StatusCode>
+//}
 
-impl fmt::Display for RequestStatus {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Reqwest(status) => write!(f, "{}", status),
-            Self::None => write!(f, "???")
-        }
-    }
-}
+//macro_rules! api_error {
+//    ($type:ident, $minimal:expr) => {
+//        api_error!($type, $minimal, None, None, None)
+//    };
+//    ($type:ident, $minimal:expr, $endpoint:expr) => {
+//        api_error!($type, $minimal, $endpoint, None, None)
+//    };
+//    ($type:ident, $minimal:expr, $endpoint:expr, $status:expr) => {
+//        api_error!($type, $minimal, $endpoint, $status, None)
+//    };
+//    ($type:ident, $minimal:expr, $endpoint:expr, $status:expr, $restricted:expr) => {
+//        ApiError::$type(ApiErrorData {
+//            minimal: $minimal,
+//            endpoint: $endpoint,
+//            request_status: $status,
+//            restricted: $restricted
+//        }) 
+//    };
+//}
 
-impl From<Option<reqwest::StatusCode>> for RequestStatus {
-    fn from(item: Option<reqwest::StatusCode>) -> Self {
-        match item {
-            Some(status) => RequestStatus::Reqwest(status),
-            None => RequestStatus::None
-        }
-    }
-}
+//#[derive(Debug)]
+//pub enum RequestStatus {
+//    Reqwest(reqwest::StatusCode),
+//    None
+//}
+//
+//
+//impl fmt::Display for RequestStatus {
+//    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//        match self {
+//            Self::Reqwest(status) => write!(f, "{}", status),
+//            Self::None => write!(f, "???")
+//        }
+//    }
+//}
+//
+//impl From<Option<reqwest::StatusCode>> for RequestStatus {
+//    fn from(item: Option<reqwest::StatusCode>) -> Self {
+//        match item {
+//            Some(status) => RequestStatus::Reqwest(status),
+//            None => RequestStatus::None
+//        }
+//    }
+//}
 
-macro_rules! precondition_error {
-    () => {
-       |err| ApiError::Precondition(err.to_string()) //String::from(format!("Pre-API preparation failed: {}", err)))
-    };
-}
+//macro_rules! precondition_error {
+//    () => {
+//       |err| ApiError::Precondition(err.to_string()) //String::from(format!("Pre-API preparation failed: {}", err)))
+//    };
+//}
 
 //Generate the simple closure for map_error for when the API is unreachable
-macro_rules! network_error {
-    () => {
-       |err| ApiError::Network(err.to_string()) //String::from(format!("Server unavailable: {}", err)))
-    };
-}
+//macro_rules! network_error {
+//    () => {
+//       |err| ApiError::Network(err.to_string()) //String::from(format!("Server unavailable: {}", err)))
+//    };
+//}
 
 //Generate the simple closure for map_error when reading the body of a response. These should not
 //actually happen and indicate an error with the API, so I'm fine just outputting a general
 //error with additional info.
-macro_rules! parse_error {
-    ($endpoint:expr, $status:expr, $data:expr) => {
-       |err| ApiError::Usage(String::from(format!("Could not parse RESPONSE body from {}[{}], serde error: {}", $endpoint, $status, err)), format!("{:?}", $data))
-       //|err| ApiError::Usage(String::from(format!("Could not parse RESPONSE body from {}[{}], serde error: {}\nREQUEST DATA:\n{:?}", $endpoint, $status, err, $data)))
-    };
-}
+//macro_rules! parse_error {
+//    ($endpoint:expr, $status:expr, $data:expr) => {
+//       |err| ApiError::Usage(String::from(format!("Could not parse RESPONSE body from {}[{}], serde error: {}", $endpoint, $status, err)), format!("{:?}", $data))
+//       //|err| ApiError::Usage(String::from(format!("Could not parse RESPONSE body from {}[{}], serde error: {}\nREQUEST DATA:\n{:?}", $endpoint, $status, err, $data)))
+//    };
+//}
 
 
 //Once a response comes back from the API, figure out the appropriate errors or data to parse and return
-macro_rules! handle_response {
-    ($response:ident, $endpoint:expr, $data:expr) => 
+async fn handle_response<T: DeserializeOwned>(response: reqwest::Response, about: AboutRequest) -> Result<T, ApiError> {
+    let status = response.status();
+    match response.error_for_status_ref()
     {
-        //Another block so we can copy some values out of the response
-        {
-            let status = $response.status();
-            match $response.error_for_status_ref()
-            {
-                //The result from the API was fine, try to parse it as json
-                Ok(_) => {
-                    $response.json::<T>().await.map_err(parse_error!($endpoint, status, $data))
-                },
-                //The result from the API was 400, 500, etc. Try to parse the body as the error
-                Err(response_error) => {
-                    //Note: we map the error preemptively to let us use the macro
-                    match $response.text().await.map_err(parse_error!($endpoint, status, $data)) {
-                        Ok(api_text_error) => Err(ApiError::User(response_error.status().into(), format!("At endpoint '{}': {}", $endpoint, api_text_error), format!("{:?}", $data))),
-                        //Ok(api_text_error) => Err(ApiError::User(response_error.status().into(), format!("At endpoint '{}': {}\nREQUEST DATA:\n{:?}", $endpoint, api_text_error, $data))),
-                        Err(p_error) => Err(p_error)
-                    }
-                }
-            }
-        }
-    };
+        //The result from the API was fine, try to parse it as json (which might fail)
+        Ok(_) => response.json::<T>().await.map_err(|e| ApiError::Parse(about, e.to_string())) ,
+        //The result from the API was 400, 500, etc. Try to parse the body as the error
+        Err(response_error) => Err(match response.text().await { //.map_err(parse_error!($endpoint, status, $data)) {
+                Ok(api_text_error) => ApiError::Request(about, api_text_error, status), //response_error.status().into(), format!("At endpoint '{}': {}", $endpoint, api_text_error), format!("{:?}", $data))),
+                //Ok(api_text_error) => Err(ApiError::User(response_error.status().into(), format!("At endpoint '{}': {}\nREQUEST DATA:\n{:?}", $endpoint, api_text_error, $data))),
+                Err(p_error) => ApiError::NonRequest(about, p_error.to_string())
+            })
+    }
 }
 
 
 //Construct a basic GET request to the given endpoint (including ?params) using the given
 //request context. Automatically add bearer headers and all that. Errors on the appropriate
 //status codes, message is assumed to be parsed from body
-pub async fn basic_get_request<T>(endpoint: &str, context: &impl Context) -> Result<T, ApiError>
-    where T: DeserializeOwned
+pub async fn basic_get_request<T: DeserializeOwned>(request: AboutRequest, context: &impl Context) -> Result<T, ApiError>
 {
-    let mut request = context.get_client().get(context.get_endpoint(endpoint));
+    let endpoint = context.get_endpoint(&request.endpoint);
+    let mut client = context.get_client().get(endpoint);
     
     if let Some(token) = &context.get_user_token() {
-        request = request.bearer_auth(token);
+        client = client.bearer_auth(token);
     }
 
     //Mapping the request error to a string is PERFECTLY ok in this library because these errors are
     //NOT from stuff like 400 or 500 statuses, they're JUST from network errors (it's localhost so
     //it should never happen, and I'm fine with funky output for the few times there are downtimes)
-    let response = request
+    let response = client
         .header("Accept", "application/json")
         .send().await
-        .map_err(network_error!())?;
+        .map_err(|e| ApiError::Network(request.clone(), e.to_string()))?;
     
-    handle_response!(response, endpoint, "GET REQUEST (empty)")
+    handle_response(response, request).await
 }
 
 // The basis for creating POST requests (since we have a couple types)
@@ -150,24 +178,19 @@ fn create_post_request(endpoint: &str, context: &impl Context) -> reqwest::Reque
 
 //Construct a basic POST request to the given endpoint (including ?params) using the given
 //request context. Automatically add bearer headers and all that
-pub async fn basic_post_request<U, T>(endpoint: &str, data: &U, context: &impl Context) -> Result<T, ApiError>
-    where U : Serialize+core::fmt::Debug, T: DeserializeOwned
+pub async fn basic_post_request<U: Serialize+Debug, T: DeserializeOwned>(mut request: AboutRequest, data: &U, context: &impl Context) -> Result<T, ApiError>
 {
-    let request = create_post_request(endpoint, context);
+    request.post_data = Some(format!("{:#?}", data));
+    let client = create_post_request(&request.endpoint, context);
 
     //See above for info on why mapping request errors to string is fine
-    let response = request
+    let response = client
         .header("Content-Type","application/json")
         .json(data)
         .send().await
-        .map_err(network_error!())?;
+        .map_err(|e| ApiError::Network(request.clone(), e.to_string()))?;
     
-    handle_response!(response, endpoint, data)
-}
-
-pub async fn get_about(context: &impl Context) -> Result<About, ApiError>
-{
-    basic_get_request("/status", context).await
+    handle_response(response, request).await
 }
 
 //pub async fn get_generic_safe<T: DeserializeOwned>(context: &impl Context, endpoint: &str endpoint) -> Option<T>
@@ -236,6 +259,11 @@ pub async fn get_user_private_safe(context: &impl Context) -> Option<UserPrivate
     }
 }
 
+
+pub async fn get_about(context: &impl Context) -> Result<About, ApiError>
+{
+    basic_get_request("/status", context).await
+}
 
 //Not a rocket version because we want the errors from the API
 pub async fn post_login<'a>(context: &impl Context, login: &forms::Login<'_>) -> Result<String, ApiError>
