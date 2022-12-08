@@ -1,11 +1,8 @@
-use std::fmt::{self, Display};
 use core::fmt::Debug;
-//use std::io::Read;
 
 use reqwest::Client;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
-//use thiserror::Error;
 
 use forms;
 use super::*;
@@ -44,85 +41,6 @@ pub struct AboutRequest {
     //printing the restricted data
     pub post_data: Option<String>
 }
-
-//Data about an error produced by the API. Specifically produced by the API, which means
-//there are common fields for all
-//#[derive(Debug, Clone)]
-//pub struct ApiErrorData {
-//    //The minimal amount of data to explain the error. This should be returned to the user
-//    pub minimal: String,
-//    //The status from the request (so these errors are for requests that actually started)
-//    pub request_status: Option<reqwest::StatusCode>
-//}
-
-//macro_rules! api_error {
-//    ($type:ident, $minimal:expr) => {
-//        api_error!($type, $minimal, None, None, None)
-//    };
-//    ($type:ident, $minimal:expr, $endpoint:expr) => {
-//        api_error!($type, $minimal, $endpoint, None, None)
-//    };
-//    ($type:ident, $minimal:expr, $endpoint:expr, $status:expr) => {
-//        api_error!($type, $minimal, $endpoint, $status, None)
-//    };
-//    ($type:ident, $minimal:expr, $endpoint:expr, $status:expr, $restricted:expr) => {
-//        ApiError::$type(ApiErrorData {
-//            minimal: $minimal,
-//            endpoint: $endpoint,
-//            request_status: $status,
-//            restricted: $restricted
-//        }) 
-//    };
-//}
-
-//#[derive(Debug)]
-//pub enum RequestStatus {
-//    Reqwest(reqwest::StatusCode),
-//    None
-//}
-//
-//
-//impl fmt::Display for RequestStatus {
-//    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//        match self {
-//            Self::Reqwest(status) => write!(f, "{}", status),
-//            Self::None => write!(f, "???")
-//        }
-//    }
-//}
-//
-//impl From<Option<reqwest::StatusCode>> for RequestStatus {
-//    fn from(item: Option<reqwest::StatusCode>) -> Self {
-//        match item {
-//            Some(status) => RequestStatus::Reqwest(status),
-//            None => RequestStatus::None
-//        }
-//    }
-//}
-
-//macro_rules! precondition_error {
-//    () => {
-//       |err| ApiError::Precondition(err.to_string()) //String::from(format!("Pre-API preparation failed: {}", err)))
-//    };
-//}
-
-//Generate the simple closure for map_error for when the API is unreachable
-//macro_rules! network_error {
-//    () => {
-//       |err| ApiError::Network(err.to_string()) //String::from(format!("Server unavailable: {}", err)))
-//    };
-//}
-
-//Generate the simple closure for map_error when reading the body of a response. These should not
-//actually happen and indicate an error with the API, so I'm fine just outputting a general
-//error with additional info.
-//macro_rules! parse_error {
-//    ($endpoint:expr, $status:expr, $data:expr) => {
-//       |err| ApiError::Usage(String::from(format!("Could not parse RESPONSE body from {}[{}], serde error: {}", $endpoint, $status, err)), format!("{:?}", $data))
-//       //|err| ApiError::Usage(String::from(format!("Could not parse RESPONSE body from {}[{}], serde error: {}\nREQUEST DATA:\n{:?}", $endpoint, $status, err, $data)))
-//    };
-//}
-
 
 //Once a response comes back from the API, figure out the appropriate errors or data to parse and return
 async fn handle_response<T: DeserializeOwned>(response: reqwest::Response, about: AboutRequest) -> Result<T, ApiError> {
@@ -178,9 +96,8 @@ fn create_post_request(endpoint: &str, context: &impl Context) -> reqwest::Reque
 
 //Construct a basic POST request to the given endpoint (including ?params) using the given
 //request context. Automatically add bearer headers and all that
-pub async fn basic_post_request<U: Serialize+Debug, T: DeserializeOwned>(mut request: AboutRequest, data: &U, context: &impl Context) -> Result<T, ApiError>
+pub async fn basic_post_request<U: Serialize+Debug, T: DeserializeOwned>(request: AboutRequest, data: &U, context: &impl Context) -> Result<T, ApiError>
 {
-    request.post_data = Some(format!("{:#?}", data));
     let client = create_post_request(&request.endpoint, context);
 
     //See above for info on why mapping request errors to string is fine
@@ -193,124 +110,78 @@ pub async fn basic_post_request<U: Serialize+Debug, T: DeserializeOwned>(mut req
     handle_response(response, request).await
 }
 
-//pub async fn get_generic_safe<T: DeserializeOwned>(context: &impl Context, endpoint: &str endpoint) -> Option<T>
-//{
-//    //Only run if there IS a token
-//    if let Some(_) = context.get_user_token()
-//    {
-//        //Once we have the token, try it against the api. If there's an error, just print it and move on
-//        //with apparently "no" user
-//        match basic_get_request::<User>("/user/me", context).await 
-//        {
-//            Ok(result) => Some(result),
-//            Err(error) => { 
-//                println!("User token error: {}", error); 
-//                None
-//            }
-//        }
-//    }
-//    else
-//    {
-//        None
-//    }
-//}
+
+macro_rules! make_get_endpoint {
+    ($name:ident<$type:ty>($endpoint:literal)) => {
+        pub async fn $name(context: &impl Context) -> Result<$type, ApiError> {
+            basic_get_request(AboutRequest{ 
+                endpoint: String::from($endpoint),
+                verb: String::from("GET"),
+                post_data: None
+            }, context).await
+        }
+    };
+}
+
+macro_rules! make_post_endpoint {
+    ($name:ident<$intype:ty,$type:ty>($endpoint:literal)) => {
+        pub async fn $name(context: &impl Context, data: &$intype) -> Result<$type, ApiError> {
+            basic_post_request(AboutRequest{ 
+                endpoint: String::from($endpoint),
+                verb: String::from("POST"),
+                post_data: Some(format!("{:#?}", data))
+            }, data, context).await
+        }
+    };
+}
+
+make_get_endpoint!{get_about<About>("/status")}
+make_get_endpoint!{get_me<User>("/user/me")}
+make_get_endpoint!{get_userprivate<UserPrivate>("/user/privatedata")}
+
+make_post_endpoint!{post_login<forms::Login<'_>,String>("/user/login")}
+make_post_endpoint!{post_register<forms::Register<'_>,User>("/user/register")}
+make_post_endpoint!{post_email_sendregistration<forms::EmailGeneric<'_>,bool>("/user/sendregistrationcode")}
+make_post_endpoint!{post_email_recover<forms::EmailGeneric<'_>,bool>("/user/sendpasswordrecovery")}
+make_post_endpoint!{post_register_confirm<forms::RegisterConfirm<'_>,String>("/user/confirmregistration")}
+make_post_endpoint!{post_usersensitive<forms::UserSensitive<'_>,String>("/user/privatedata")} //Returns token now
+make_post_endpoint!{post_request<FullRequest,RequestResult>("/request")}
+make_post_endpoint!{post_userupdate<User,User>("/write/user")}
+make_post_endpoint!{post_content<Content,Content>("/write/content")}
+
+//Some special wrappers
 
 //This consumes the error and returns "None", since it could just be that the token is stupid. In the future,
 //we may want to alert the user that their token is invalid somewhere, which would require propogating the
 //error result AND checking the status to determine if we need JSON or not...
-pub async fn get_user_safe(context: &impl Context) -> Option<User>
+pub async fn get_me_safe(context: &impl Context) -> Option<User>
 {
     //Only run if there IS a token
-    if let Some(_) = context.get_user_token()
-    {
+    match context.get_user_token() {
         //Once we have the token, try it against the api. If there's an error, just print it and move on
         //with apparently "no" user
-        match basic_get_request::<User>("/user/me", context).await 
+        Some(_) => match get_me(context).await
         {
             Ok(result) => Some(result),
-            Err(error) => { 
-                //println!("User token error: {}", error); 
-                None
-            }
+            Err(_error) => None //Probably need to log at some point!
         }
-    }
-    else
-    {
-        None
+        None => None
     }
 }
 
 pub async fn get_user_private_safe(context: &impl Context) -> Option<UserPrivate>
 {
     //Only run if there IS a token
-    if let Some(_) = context.get_user_token()
-    {
+    match context.get_user_token() {
         //Once we have the token, try it against the api. If there's an error, just print it and move on
         //with apparently "no" user
-        match basic_get_request::<UserPrivate>("/user/privatedata", context).await 
+        Some(_) => match get_userprivate(context).await
         {
             Ok(result) => Some(result),
-            Err(_error) => None,
+            Err(_error) => None //Probably need to log at some point!
         }
+        None => None
     }
-    else
-    {
-        None
-    }
-}
-
-
-pub async fn get_about(context: &impl Context) -> Result<About, ApiError>
-{
-    basic_get_request("/status", context).await
-}
-
-//Not a rocket version because we want the errors from the API
-pub async fn post_login<'a>(context: &impl Context, login: &forms::Login<'_>) -> Result<String, ApiError>
-{
-    basic_post_request("/user/login", login, context).await
-}
-
-pub async fn post_register<'a>(context: &impl Context, register: &forms::Register<'a>) -> Result<User, ApiError>
-{
-    basic_post_request("/user/register", register, context).await
-}
-
-pub async fn post_email_confirm(context: &impl Context, email: &forms::EmailGeneric<'_>) -> Result<bool, ApiError>
-{
-    basic_post_request("/user/sendregistrationcode", &email, context).await
-}
-
-pub async fn post_email_recover(context: &impl Context, email: &forms::EmailGeneric<'_>) -> Result<bool, ApiError>
-{
-    basic_post_request("/user/sendpasswordrecovery", &email, context).await
-}
-
-pub async fn post_registerconfirm(context: &impl Context, confirm: &forms::RegisterConfirm<'_>) -> Result<String, ApiError>
-{
-    basic_post_request("/user/confirmregistration", confirm, context).await
-}
-
-pub async fn post_usersensitive(context: &impl Context, sensitive: &forms::UserSensitive<'_>) -> Result<String, ApiError>
-{
-    basic_post_request("/user/privatedata", sensitive, context).await
-}
-
-
-
-pub async fn post_request(context: &impl Context, request: &FullRequest) -> Result<RequestResult, ApiError>
-{
-    basic_post_request("/request", request, context).await
-}
-
-pub async fn post_userupdate(context: &impl Context, user: &User) -> Result<User, ApiError>
-{
-    basic_post_request("/write/user", user, context).await
-}
-
-pub async fn post_content(context: &impl Context, content: &Content) -> Result<Content, ApiError>
-{
-    basic_post_request("/write/content", content, context).await
 }
 
 //pub async fn upload_file<'a>(context: &Context, form: &mut forms::FileUpload<'_>) -> Result<Content, ApiError>
