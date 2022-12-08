@@ -1,7 +1,52 @@
+use std::net::SocketAddr;
+
+use warp::Filter;
+
 mod bbcode;
 mod api;
+mod config;
 //mod api_data;
 
-fn main() {
-    println!("Hello, world!");
+use crate::config::create_config;
+
+static CONFIGNAME : &str = "settings";
+
+//The standard config we want here in this application. This macro is ugly but 
+//it produces a config object that can load from a chain of json files
+create_config!{
+    Config, OptConfig => {
+        api_endpoint: String,
+        http_root: String,
+        api_fileraw : String,
+        token_cookie_key: String,
+        default_cookie_expire: i32,
+        long_cookie_expire: i32,
+        default_imagebrowser_count: i32,
+        default_category_threads : i32,
+        default_display_threads : i32,
+        default_display_posts : i32,
+        forum_category_order: Vec<String>,
+        file_maxsize: i32,
+        host_address: String,
+    }
+}
+
+#[tokio::main]
+async fn main() {
+
+    //Our env is passed on the command line. If none is, we pass "None" so only the base config is read
+    let args: Vec<String> = std::env::args().collect();
+    let environment = args.get(1).map(|x| &**x); //The compiler told me to do this
+
+    let config = Config::read_with_environment_toml(CONFIGNAME, environment);
+
+    println!("The config: {:?}", config);
+
+    // GET /hello/warp => 200 OK with body "Hello, warp!"
+    let hello = warp::path!("hello" / String)
+        .map(|name| format!("Hello, {}!", name));
+    
+    warp::serve(hello)
+        .run(config.host_address.parse::<SocketAddr>().unwrap())
+        .await;
 }

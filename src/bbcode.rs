@@ -231,6 +231,27 @@ impl BBCode
             TagInfo { tag: "img", outtag: "img", tag_type: TagType::SelfClosing("src"), rawextra: None, valparse: TagValueParse::ForceVerbatim, blankconsume: BlankConsume::None } //Not required to be forced
         ]
     }
+
+    //This is to avoid the unicode requirement, which we don't need to check simple ascii tags
+    fn tag_insensitive(tag: &str) -> String {
+        let mut result = String::with_capacity(tag.len() * 4);
+        let mut skip = 0;
+        for c in tag.to_ascii_lowercase().chars() {
+            if c == '\\' {
+                skip = 2;
+            }
+            if skip > 0 {
+                skip -= 1;
+                result.push(c);
+                continue;
+            }
+            result.push_str("[");
+            result.push(c);
+            result.push(c.to_ascii_uppercase());
+            result.push_str("]");
+        }
+        result
+    }
     
     //If you have extra tags you want to add, use this function to turn the basic definitions into
     //a vector of real MatchInfo for use in the bbcode system
@@ -247,12 +268,12 @@ impl BBCode
             }
             //The existing system on SBS doesn't allow spaces in tags at ALL. I don't know if this 
             //much leniency on the = value is present in the old system though...
-            let open_tag = format!(r#"^(?i){}\[{}(=[^\]]*)?\]{}"#, openchomp, tag.tag, closechomp);
+            let open_tag = format!(r#"^{}\[{}(=[^\]]*)?\]{}"#, openchomp, Self::tag_insensitive(tag.tag), closechomp);
             matches.push(MatchInfo {
                 regex: Regex::new(&open_tag)?,
                 match_type : MatchType::Open(tag.clone())
             });
-            let close_tag = format!(r#"^(?i){}\[/{}\]{}"#, openchomp, tag.tag, closechomp);
+            let close_tag = format!(r#"^{}\[/{}\]{}"#, openchomp, Self::tag_insensitive(tag.tag), closechomp);
             matches.push(MatchInfo {
                 regex: Regex::new(&close_tag)?,
                 match_type : MatchType::Close(tag.clone())
