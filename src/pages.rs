@@ -125,9 +125,9 @@ pub fn script(config: &LinkConfig, link: &str, cache_bust: &str) -> Markup {
 }
 
 pub struct MainLayoutData<'a> {
-    pub config: &'a LinkConfig,
-    pub user_config: &'a UserConfig,
-    pub current_path: String, //since this is dynamic, it should be owned imo
+    pub config: &'a LinkConfig,     //This never changes, so it can be a pointer
+    pub user_config: UserConfig,    //But this may depend on local state!
+    pub current_path: String,       //since this is dynamic, it should be owned imo
     pub user: Option<&'a api::User>,
     pub about_api: &'a api::About,
     pub cache_bust: &'a str

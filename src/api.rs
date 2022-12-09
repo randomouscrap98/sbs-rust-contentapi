@@ -7,8 +7,8 @@ use serde_aux::prelude::*; //Necessary to deserialize bool from "anything"
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-mod endpoints;
-mod forms;
+pub mod endpoints;
+pub mod forms;
 
 
 macro_rules! enum_type {

@@ -1,9 +1,10 @@
 use std::net::SocketAddr;
 
 use pages::LinkConfig;
-use warp::Filter;
+use reqwest::Client;
+use warp::{Filter, path::FullPath};
 
-use crate::pages::UserConfig;
+use crate::pages::{UserConfig, MainLayoutData};
 
 mod bbcode;
 mod api;
@@ -55,6 +56,23 @@ config::create_config!{
 //Warp requires static, so... oh well!
 //static config: Config = Config::default();
 
+struct Context<'a> {
+    api_url: &'a str,
+    client: Client,
+}
+
+impl api::endpoints::Context for Context<'_> {
+    fn get_api_url(&self) -> &str {
+        self.api_url
+    }
+    fn get_client(&self) -> &Client {
+        &self.client
+    }
+    fn get_user_token(&self) -> Option<&str> {
+        None
+    }
+}
+
 #[tokio::main]
 async fn main() {
 
@@ -81,21 +99,27 @@ async fn main() {
 
     let static_route = warp::path("static").and(warp::fs::dir("static"));
 
-    let layout_map = async |path: String| {
+    let context_map = |path: FullPath| async {
+        let context = Context {
+            api_url: &config.api_endpoint,
+            client: reqwest::Client::new(),
+        };
         let layout_data = MainLayoutData {
             config: &link_config,
             user_config: UserConfig::default(),
-            current_path: path,
+            current_path: String::from(path.as_str()),
             user: None,
-            cache_bust: cache_bust
+            about_api: &api::endpoints::get_about(&context).await?,
+            cache_bust: &cache_bust
         };
-        layout_data
+        Ok((layout_data, context))
     };
 
     let index_route = warp::get()
         .and(warp::path::end())
-        .map(layout_map)
-        .map(|data| pages::index::index(data));
+        .and(warp::path::full())
+        .and_then(context_map)
+        .map(|(data,context)| pages::index::index(data));
 
     //let full_website = static_route.or(
     //    warp::cookie::optional(SESSIONCOOKIE).and( //Get the user cookie representing the session, but it's not necessary! At least not here

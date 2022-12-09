@@ -11,7 +11,7 @@ use super::*;
 //as well as the api endpoint to connect to. This is used to craft requests on your behalf
 pub trait Context {
     fn get_api_url(&self) -> &str;
-    fn get_client(&self) -> Client;
+    fn get_client(&self) -> &Client;
     fn get_user_token(&self) -> Option<&str>;
 
     fn get_endpoint(&self, endpoint: &str) -> String {
