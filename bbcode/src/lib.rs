@@ -9,10 +9,11 @@ use regex::{Regex, Captures, Error};
 //- close all unclosed tags at the end
 //- don't modify whitespace for version 1
 
-//The user provides this
+/// A structure to build a bbbcode tag. Nearly all bbcode tags should work through this configuration,
+/// but you may find some are too complex (for now)
 #[derive(Debug, Clone)]
 pub struct TagInfo {
-    //The tag identity, such as "b", "youtube", etc
+    ///The tag identity, such as "b", "youtube", etc
     pub tag : &'static str,
     //The tag to put out as html
     pub outtag: &'static str,
@@ -23,7 +24,7 @@ pub struct TagInfo {
 }
 
 impl TagInfo {
-    //Constructors for basic tags. Anything else, you're better off just constructing it normally
+    /// Constructors for basic tags. Anything else, you're better off just constructing it normally
     pub fn simple(tag: &'static str) -> TagInfo {
         TagInfo { tag, outtag: tag, tag_type: TagType::Simple, rawextra: None, valparse: TagValueParse::Normal, blankconsume: BlankConsume::None }
     }
@@ -34,6 +35,8 @@ impl TagInfo {
         TagInfo { tag: "", outtag: "", tag_type: TagType::Start, rawextra: None, valparse: TagValueParse::Normal, blankconsume: BlankConsume::None }
     }
 
+    /// Does this tag allow other tags inside, or none? Some tag types automatically require no other 
+    /// tags inside, while others can manually set themselves to verbatim
     pub fn is_verbatim(&self) -> bool {
         if let TagValueParse::ForceVerbatim = self.valparse {
             true
@@ -51,7 +54,8 @@ impl TagInfo {
     }
 }
 
-//Property of value parsing
+/// How are values parsed? Basically varying levels of rigidity in having tags
+/// inside other tags
 #[derive(Debug, Clone)]
 pub enum TagValueParse {
     Normal,
@@ -59,41 +63,54 @@ pub enum TagValueParse {
     DoubleCloses
 }
 
-//This is the 'silly' part of the parser. Rather than making some actually generic system, I identified some
-//standard ways tags are used and just made code around those ways. Probably bad but oh well.
+/// This is the 'silly' part of the parser. Rather than making some actually generic system, I identified some
+/// standard ways tags are used and just made code around those ways. Probably bad but oh well.
 #[derive(Debug, Clone)]
 pub enum TagType {
-    Start,          //Should ONLY have one of these! It's like S in a grammar!
-    Simple,         //Stuff like [b][/b], no args, normal translation (can change tag name still)
-    DefinedArg(&'static str),   //CAN have argument defined, attribute name is given
-    DefinedTag(&'static str, Option<&'static str>),   //Some arguments turn into tags! Crazy...
-    SelfClosing(&'static str),  //No closing tag, value is 
-    DefaultArg(&'static str),   //The tag enclosed value provides a default for the given attribute, or not if defined
+    /// Don't make tags with this type, it's for the system! Should ONLY have one of these! It's like S in a grammar!
+    Start,          
+    /// Stuff like [b][/b], no args, normal translation (can change tag name still)
+    Simple,         
+    /// CAN have argument defined (but optional), attribute name is given in enum
+    DefinedArg(&'static str),   
+    /// Some arguments turn into tags! Crazy... (like spoiler creating a "summary" tag)
+    DefinedTag(&'static str, Option<&'static str>),   
+    /// No closing tag, value turns into an arg with the name given in the enum
+    SelfClosing(&'static str),  
+    /// The tag enclosed value provides a default for the given attribute, or not if defined. Used for [url] etc
+    DefaultArg(&'static str),   
 }
 
+/// How are blanks treated around tags?
 #[derive(Debug, Clone)]
 pub enum BlankConsume {
+    /// Tag does not consume blanks
     None,
+    /// Tag comsumes UP TO the given amount of newlines before the tag
     Start(i32),
+    /// Tag comsumes UP TO the given amount of newlines after the tag
     End(i32)
 }
 
-//While "TagType" determines how the tag functions at a lower level (such as how it handles arguments), 
-//this determines how the whole block functions on a greater level. They define how scopes and whole blocks
-//of text move into the output
+/// While "TagType" determines how the tag functions at a lower level (such as how it handles arguments), 
+/// this determines how the whole block functions on a greater level. They define how scopes and whole blocks
+/// of text move into the output. This still operates on the idea of "tags" though
 #[derive(Debug, Clone)]
 pub enum MatchType { 
-    Passthrough,    //Pass this junk right out as-is
-    Open(TagInfo),  //this is so small, it's fine to dupe in open/close
+    /// Pass this junk right out as-is
+    Passthrough,    
+    /// The match should expect an open tag, which increases scope and performs open scope rules
+    Open(TagInfo),
+    /// The match should expect a closing tag, which decreases scope and performs close scope rules
     Close(TagInfo),
-    //Note: you can use BlockTransform to craft many kinds of generic matching, if it can use regex! It just won't
-    //be part of the scoping rules! IE it should be an entire block! Also, the match will ALWAYS be html escaped first!
+    /// Note: you can use BlockTransform to craft many kinds of generic matching, if it can use regex! It just won't
+    /// be part of the scoping rules! IE it should be an entire block! Also, the match will ALWAYS be html escaped first!
     BlockTransform(&'static str),  //Take the full match and transform it into something entirely different
     DirectReplace(&'static str)
 }
 
-//Definition for a block level matcher. Analogous to "TypeInfo" but for the greater scope. Should always be
-//readonly, it is just a definition. Not necessary a tag element, could define eating garbage, escape chars, etc.
+/// Definition for a block level matcher. Analogous to "TypeInfo" but for the greater scope. Should always be
+/// readonly, it is just a definition. Not necessary a tag element, could define eating garbage, escape chars, etc.
 #[derive(Debug, Clone)]
 pub struct MatchInfo {
     pub regex : Regex,
@@ -103,27 +120,27 @@ pub struct MatchInfo {
 //For the following section, it is assumed the entire scoper and all elements within will have the same lifetime
 //as the calling function, which also houses the input string.
 
-//A scope for bbcode tags. Scopes increase and decrease as tags are opened and closed. Scopes are placed on a stack
-//to aid with auto-closing tags
+/// A scope for bbcode tags. Scopes increase and decrease as tags are opened and closed. Scopes are placed on a stack
+/// to aid with auto-closing tags
 struct BBScope<'a> {
     info: &'a TagInfo,
     inner_start: usize, //TERRIBLE! MAYBE?!
     has_arg: bool, //May need to change if more configuration needed
 }
 
-//A container with functions to help manage scopes. It doesn't understand what bbcode is or how the tags should
-//be formatted, it just handles pushing and popping scopes on the stack
+/// A container with functions to help manage scopes. It doesn't understand what bbcode is or how the tags should
+/// be formatted, it just handles pushing and popping scopes on the stack
 struct BBScoper<'a> {
     scopes : Vec<BBScope<'a>>
 }
 
-//Everything inside BBScoper expects to live as long as the object itself. So everything is 'a
+/// Everything inside BBScoper expects to live as long as the object itself. So everything is 'a
 impl<'a> BBScoper<'a> 
 {
     fn new() -> Self { BBScoper { scopes: Vec::new() }}
 
-    //Add a scope, which may close some existing scopes. The closed scopes are returned in display order.
-    //NOTE: the added infos must live as long as the scope container!
+    /// Add a scope, which may close some existing scopes. The closed scopes are returned in display order.
+    /// NOTE: the added infos must live as long as the scope container!
     fn add_scope(&mut self, scope: BBScope<'a>) -> (&BBScope, Vec<BBScope<'a>>) {
         //here we assume all taginfos have unique tags because why wouldn't they
         let mut result = Vec::new();
@@ -144,8 +161,8 @@ impl<'a> BBScoper<'a>
         (self.scopes.last().unwrap(), result) //Kind of a silly return type, might change it later
     }
     
-    //Close the given scope, which should return the scopes that got closed (including the self).
-    //If no scope could be found, the vector is empty
+    /// Close the given scope, which should return the scopes that got closed (including the self).
+    /// If no scope could be found, the vector is empty
     fn close_scope(&mut self, info: &'a TagInfo) -> Vec<BBScope<'a>> {
         let mut scope_count = 0;
         let mut tag_found = false;
@@ -178,7 +195,7 @@ impl<'a> BBScoper<'a>
         }
     }
 
-    //Consume the scope system while dumping the rest of the scopes in the right order for display
+    /// Consume the scope system while dumping the rest of the scopes in the right order for display
     fn dump_remaining(self) -> Vec<BBScope<'a>> {
         self.scopes.into_iter().rev().collect()
     }
@@ -189,21 +206,21 @@ impl<'a> BBScoper<'a>
 // *     MAIN FUNCTIONALITY    *
 // ------------------------------
 
-//The main bbcode system. You create this to parse bbcode!
+/// The main bbcode system. You create this to parse bbcode!
 pub struct BBCode {
-    //Supply this!
+    /// Supply this!
     pub matchers: Vec<MatchInfo> //These are SOMETIMES processed (based on context)
 }
 
 impl BBCode 
 {
-    //Get a default bbcode parser. Should hopefully have reasonable defaults!
+    /// Get a default bbcode parser. Should hopefully have reasonable defaults!
     #[allow(dead_code)]
     pub fn default() -> Result<Self, Error> {
         Ok(Self { matchers: Self::basics()? })
     }
 
-    //The basic direct replacement escapes for HTML. You don't need these if you're using 'basics()'
+    /// The basic direct replacement escapes for HTML. You don't need these if you're using 'basics()'
     pub fn html_escapes() -> Vec<(&'static str, &'static str)> {
         vec![
             ("<", "&lt;"),
@@ -215,7 +232,7 @@ impl BBCode
         ]
     }
 
-    //Get a vector of the basic taginfos of bbcode. You don't need this if you're using 'basics()'
+    /// Get a vector of the basic taginfos of bbcode. You don't need this if you're using 'basics()'
     pub fn basic_tags() -> Vec<TagInfo> {
         vec![
             TagInfo::simple("b"),
@@ -232,7 +249,7 @@ impl BBCode
         ]
     }
 
-    //This is to avoid the unicode requirement, which we don't need to check simple ascii tags
+    /// This is to avoid the unicode requirement, which we don't need to check simple ascii tags
     fn tag_insensitive(tag: &str) -> String {
         let mut result = String::with_capacity(tag.len() * 4);
         let mut skip = 0;
@@ -253,8 +270,8 @@ impl BBCode
         result
     }
     
-    //If you have extra tags you want to add, use this function to turn the basic definitions into
-    //a vector of real MatchInfo for use in the bbcode system
+    /// If you have extra tags you want to add, use this function to turn the basic definitions into
+    /// a vector of real MatchInfo for use in the bbcode system
     pub fn tags_to_matches(taginfos: Vec<TagInfo>) -> Result<Vec<MatchInfo>, Error> {
         let mut matches = Vec::new();
         //Next, convert the taginfos to even more "do".
@@ -268,7 +285,7 @@ impl BBCode
             }
             //The existing system on SBS doesn't allow spaces in tags at ALL. I don't know if this 
             //much leniency on the = value is present in the old system though...
-            let open_tag = format!(r#"^{}\[{}(=[^\]]*)?\]{}"#, openchomp, Self::tag_insensitive(tag.tag), closechomp);
+            let open_tag = format!(r#"^{}\[{}(=[^\]\n]*)?\]{}"#, openchomp, Self::tag_insensitive(tag.tag), closechomp);
             matches.push(MatchInfo {
                 regex: Regex::new(&open_tag)?,
                 match_type : MatchType::Open(tag.clone())
@@ -283,8 +300,8 @@ impl BBCode
     }
 
 
-    //Get a vector of ALL basic matchers! This is the function you want to call to get a vector for the bbcode
-    //generator!
+    /// Get a vector of ALL basic matchers! This is the function you want to call to get a vector for the bbcode
+    /// generator!
     pub fn basics() -> Result<Vec<MatchInfo>, regex::Error> {
         //First, get the default direct replacements
         let mut matches = Self::html_escapes().iter().map(|e| {
@@ -318,7 +335,7 @@ impl BBCode
         Ok(matches)
     }
 
-    //Some fancy extra bbcode. You have to append it yourself to basic! These are nonstandard, you don't have to use them!
+    /// Some fancy extra bbcode. Does not include basics! These are nonstandard, you don't have to use them!
     pub fn extras() -> Result<Vec<MatchInfo>, Error> {
         BBCode::tags_to_matches(vec![
             TagInfo { tag: "quote", outtag: "blockquote", tag_type : TagType::DefinedArg("cite"), rawextra : None, valparse: TagValueParse::Normal, blankconsume: BlankConsume::End(1) },
@@ -333,7 +350,7 @@ impl BBCode
         ])
     }
 
-    //Push an argument="value" part onto the result. Will omit the last " if argval is None
+    /// Push an argument="value" part onto the result. Will omit the last " if argval is None
     fn push_tagarg(mut result: String, argname: &str, argval: Option<&str>) -> String {
         result.push_str(" ");
         result.push_str(argname);
@@ -361,7 +378,7 @@ impl BBCode
         result
     }
 
-    //Write the "open" tag to the given result for the given new scope. 
+    /// Write the "open" tag to the given result for the given new scope. 
     fn push_open_tag(mut result: String, scope: &BBScope, captures: &Captures) -> String {
         result.push_str("<");
         result.push_str(scope.info.outtag);
@@ -418,8 +435,8 @@ impl BBCode
         result
     }
 
-    //Emit the closing tag for the given scope. This also needs the full input string and the position
-    //of the end of this scope, because certain complicated closing tags need it.
+    /// Emit the closing tag for the given scope. This also needs the full input string and the position
+    /// of the end of this scope, because certain complicated closing tags need it.
     fn push_close_tag(mut result: String, scope: &BBScope, input: &str, end: usize) -> String {
         match scope.info.tag_type {
             TagType::SelfClosing(_) => {
@@ -453,9 +470,9 @@ impl BBCode
         result
     }
 
-    //Main function! You call this to parse your raw bbcode! It also escapes html stuff so it can
-    //be used raw!  Current version keeps newlines as-is and it's expected you use pre-wrap, later
-    //there may be modes for more standard implementations
+    /// Main function! You call this to parse your raw bbcode! It also escapes html stuff so it can
+    /// be used raw!  Current version keeps newlines as-is and it's expected you use pre-wrap, later
+    /// there may be modes for more standard implementations
     pub fn parse(&self, input: &str) -> String 
     {
         //We know it will be at LEAST as big, and that strings usually double in size

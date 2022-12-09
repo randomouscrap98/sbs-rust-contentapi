@@ -9,27 +9,27 @@ use super::*;
 //}
 
 #[derive(Serialize, Debug)]
-pub struct Login<'a>
+pub struct Login
 {
-    pub username: &'a str,
-    pub password: &'a str,
+    pub username: String,
+    pub password: String,
     pub expireSeconds: i64 
 }
 
 
 #[derive(Serialize, Debug)]
-pub struct Register<'a>
+pub struct Register
 {
-    pub username: &'a str,
-    pub password: &'a str,
-    pub email: &'a str 
+    pub username: String,
+    pub password: String,
+    pub email: String
 }
 
 #[derive(Serialize, Debug)]
-pub struct RegisterConfirm<'a>
+pub struct RegisterConfirm
 {
-    pub email: &'a str,
-    pub key: &'a str
+    pub email: String,
+    pub key: String
 }
 
 #[derive(Serialize, Debug)]

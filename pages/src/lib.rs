@@ -1,5 +1,7 @@
+
 pub mod index;
 pub mod about;
+pub mod login;
 
 use contentapi;
 use serde_urlencoded;
@@ -126,6 +128,28 @@ pub fn script(config: &LinkConfig, link: &str, cache_bust: &str) -> Markup {
     }
 }
 
+pub fn errorlist(errors: Option<Vec<String>>) -> Markup {
+    html! {
+        div."errorlist" {
+            @if let Some(errors) = errors {
+                @for error in errors {
+                    div."error" {(error)}
+                }
+            }
+        }
+    }
+}
+
+pub fn threadicon(config: &LinkConfig, neutral: bool, sticky: bool, locked: bool) -> Markup {
+    html! {
+        div."threadicon" {
+            @if neutral { img src={(config.resource_root)"/sb-page.png"}; }
+            @if sticky { span{"📌"} }
+            @if locked { span{"🔒"} }
+        }
+    }
+}
+
 pub struct MainLayoutData {
     pub config: LinkConfig,     //This never changes, so it can be a pointer
     pub user_config: UserConfig,    //But this may depend on local state!
@@ -135,7 +159,7 @@ pub struct MainLayoutData {
     pub cache_bust: String
 }
 
-pub fn layout(main_data: MainLayoutData, page: Markup) -> Markup {
+pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
     html! {
         (DOCTYPE)
         html lang=(main_data.user_config.language) {

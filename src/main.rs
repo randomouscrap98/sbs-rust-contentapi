@@ -1,13 +1,14 @@
 use std::{net::SocketAddr, convert::Infallible, sync::Arc};
 
-use contentapi::endpoints::ApiContext;
-use contentapi::endpoints::ApiError;
-use pages::LinkConfig;
+use contentapi::endpoints::{ApiContext, ApiError};
+use pages::{LinkConfig, UserConfig, MainLayoutData};
+
 use warp::hyper::StatusCode;
-use warp::{Filter, path::FullPath, reject::Reject, Rejection, Reply};
+use warp::path::FullPath;
+use warp::reject::Reject;
+use warp::{Filter, Rejection, Reply};
 
-use pages::{UserConfig, MainLayoutData};
-
+mod sbsforms;
 mod config;
 mod conversion;
 
@@ -115,6 +116,10 @@ async fn main() {
             let this_state = map_state.clone();
             async move { this_state.context_map(path, token).await }
         });
+    
+    let form_state = global_state.clone();
+    let form_filter = warp::body::content_length_limit(form_state.config.body_maxsize as u64);
+        //.and(warp::body::form());
 
     let index_route = warp::get()
         .and(warp::path::end())
@@ -126,9 +131,23 @@ async fn main() {
         .and(state_filter.clone())
         .map(|(data,_context)| warp::reply::html(pages::about::render(data)));
 
+    let login_route = warp::get()
+        .and(warp::path!("login"))
+        .and(state_filter.clone())
+        .map(|(data,_context)| warp::reply::html(pages::login::render(data, None, None, None)));
+
+    let login_post_route = warp::post()
+        .and(warp::path!("login"))
+        .and(state_filter.clone())
+        .and(form_filter.clone())
+        .and(warp::body::form::<sbsforms::Login>())
+        .map(|(data,_context),form| warp::reply::html(pages::login::render(data, None, None, None)));
+
     warp::serve(static_route.or(favicon_route)
         .or(index_route)
         .or(about_route)
+        .or(login_route)
+        .or(login_post_route)
         .recover(handle_rejection)
     ).run(global_state.config.host_address.parse::<SocketAddr>().unwrap()).await;
 }

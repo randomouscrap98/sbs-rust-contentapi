@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod endpoints;
 pub mod forms;
+pub mod conversion;
 
 
 macro_rules! enum_type {

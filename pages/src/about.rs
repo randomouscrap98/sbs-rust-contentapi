@@ -1,7 +1,7 @@
 use super::*;
 
 pub fn render(data: MainLayoutData) -> String {
-    layout(data, html!{
+    layout(&data, html!{
         section {
             h1 { "About SmileBASIC Source"}
             p { 
