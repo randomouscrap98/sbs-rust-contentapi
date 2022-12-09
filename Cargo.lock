@@ -631,6 +631,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "86f0b0d4bf799edbc74508c1e8bf170ff5f41238e5f8225603ca7caaae2b7860"
 
 [[package]]
+name = "pages"
+version = "0.1.0"
+dependencies = [
+ "contentapi",
+ "maud",
+ "serde_json",
+ "serde_urlencoded",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -846,12 +856,11 @@ checksum = "ef703b7cb59335eae2eb93ceb664c0eb7ea6bf567079d843e09420219668e072"
 name = "sbs-rust-contentapi"
 version = "0.3.0"
 dependencies = [
+ "bbcode",
  "chrono",
  "contentapi",
- "maud",
+ "pages",
  "serde",
- "serde_json",
- "serde_urlencoded",
  "tokio",
  "toml",
  "warp",

@@ -4,10 +4,8 @@ version = "0.3.0"
 edition = "2021"
 
 [workspace]
-members = [
-    "bbcode",
-    "contentapi"
-]
+members = [ "bbcode", "contentapi", "pages" ]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -15,9 +13,8 @@ chrono = { version = "0.4", features = ["serde"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 warp = { version = "0.3", default-features = false, features = ["multipart"]}
 serde = { version = "1", features = ["derive"] }
-serde_json = "1.0"
-maud = "0.24.0"
 toml = "0.5.9"
-serde_urlencoded = "0.7.1"
 
 contentapi = { path = "contentapi" }
+bbcode = { path = "bbcode" }
+pages = { path = "pages" }

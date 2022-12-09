@@ -4,23 +4,43 @@ use contentapi::endpoints::ApiContext;
 use contentapi::endpoints::ApiError;
 use pages::LinkConfig;
 use warp::hyper::StatusCode;
-//use reqwest::{Client, StatusCode};
 use warp::{Filter, path::FullPath, reject::Reject, Rejection, Reply};
 
-use crate::pages::{UserConfig, MainLayoutData};
+use pages::{UserConfig, MainLayoutData};
 
 mod config;
-//mod templates;
 mod conversion;
-//mod routing;
-mod pages;
-//mod api_data;
-
-//use crate::config::create_config;
-//use crate::templates;
 
 static CONFIGNAME : &str = "settings";
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
+
+#[derive(Debug)]
+pub enum MyError {
+    Api(ApiError)
+}
+
+impl Reject for MyError {}
+
+//This is so stupid. Oh well
+macro_rules! apierr {
+    ($apierr:expr) => {
+        $apierr.map_err(|e| MyError::Api(e))
+    };
+}
+
+
+//impl From<ApiError> for MyError {
+//    fn from(other: ApiError) -> Self {
+//        MyError::Api(other)
+//    }
+//}
+
+//impl From<MyError> for Rejection {
+//    fn from(other: MyError) -> Self {
+//        //This is so stupid, honestly. All this wrapping? What's the point??
+//        warp::reject::custom(other)
+//    }
+//}
 
 //The standard config we want here in this application. This macro is ugly but 
 //it produces a config object that can load from a chain of json files
@@ -43,36 +63,6 @@ config::create_config!{
     }
 }
 
-//impl From<&Config> for LinkConfig<'_> {
-//    fn from(config: &Config) -> Self {
-//        LinkConfig { 
-//            http_root: &config.http_root, 
-//            static_root: (), 
-//            resource_root: (), 
-//            file_root: &config.
-//        }
-//    }
-//}
-
-//Warp requires static, so... oh well!
-//static config: Config = Config::default();
-
-//struct Context {
-//    api_url: String,
-//    client: Client,
-//}
-//
-//impl api::endpoints::Context for Context {
-//    fn get_api_url(&self) -> &str {
-//        &self.api_url
-//    }
-//    fn get_client(&self) -> &Client {
-//        &self.client
-//    }
-//    fn get_user_token(&self) -> Option<&str> {
-//        None
-//    }
-//}
 
 //oof
 #[derive(Clone)]
@@ -83,17 +73,16 @@ struct GlobalState {
 }
 
 impl GlobalState {
-    async fn context_map<'a>(&'a self, path: FullPath) -> Result<(MainLayoutData,ApiContext), Infallible> {
+    async fn context_map<'a>(&'a self, path: FullPath) -> Result<(MainLayoutData,ApiContext), Rejection> {
         let context = ApiContext::new(self.config.api_endpoint.clone(), None);
         let layout_data = MainLayoutData {
             config: self.link_config.clone(),
             user_config: UserConfig::default(),
             current_path: String::from(path.as_str()),
             user: None,
-            about_api: context.get_about().await.unwrap(),
+            about_api: apierr!(context.get_about().await)?,
             cache_bust: self.cache_bust.clone()
         };
-        //Ok((layout_data, context))
         Ok((layout_data, ApiContext::new(self.config.api_endpoint.clone(), None)))
     }
 }
@@ -127,39 +116,23 @@ async fn main() {
 
     let static_route = warp::path("static").and(warp::fs::dir("static"));
     let favicon_route = warp::path("favicon.ico").and(warp::fs::file("static/resources/favicon.ico"));
-    let ugh = global_state.clone();
+    let index_state = global_state.clone();
 
     let index_route = warp::get()
         .and(warp::path::end())
         .and(warp::path::full())
-        //.and(warp::any().map(|| global_state.clone()))
         .and_then(move |path| {
-            let whatever = ugh.clone();
+            let whatever = index_state.clone();
             async move { whatever.context_map(path).await }
         })
-        .map(|(data,_context)| pages::index::index(data));
+        .map(|(data,_context)| warp::reply::html(pages::index::index(data)));
 
-    //let full_website = static_route.or(
-    //    warp::cookie::optional(SESSIONCOOKIE).and( //Get the user cookie representing the session, but it's not necessary! At least not here
-    //        warp::get()
-    //            .and(warp::path::end())
-    //            .and(warp::path::full())
-    //            .map(|path| {
-    //                
-    //                pages::index::index()
-    //            })
-    //    )
-    //);
-
-    
     warp::serve(static_route.or(favicon_route)
         .or(index_route)
         .recover(handle_rejection)
     ).run(global_state.config.host_address.parse::<SocketAddr>().unwrap()).await;
 }
 
-impl Reject for ApiError {}
-
-async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
+async fn handle_rejection(_err: Rejection) -> Result<impl Reply, Infallible> {
     Ok(warp::reply::with_status("Well, that failed", StatusCode::BAD_REQUEST))
 }
