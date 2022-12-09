@@ -1,4 +1,5 @@
 pub mod index;
+pub mod about;
 
 use contentapi;
 use serde_urlencoded;

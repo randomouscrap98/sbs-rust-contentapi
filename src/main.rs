@@ -29,19 +29,6 @@ macro_rules! apierr {
 }
 
 
-//impl From<ApiError> for MyError {
-//    fn from(other: ApiError) -> Self {
-//        MyError::Api(other)
-//    }
-//}
-
-//impl From<MyError> for Rejection {
-//    fn from(other: MyError) -> Self {
-//        //This is so stupid, honestly. All this wrapping? What's the point??
-//        warp::reject::custom(other)
-//    }
-//}
-
 //The standard config we want here in this application. This macro is ugly but 
 //it produces a config object that can load from a chain of json files
 config::create_config!{
@@ -73,13 +60,13 @@ struct GlobalState {
 }
 
 impl GlobalState {
-    async fn context_map<'a>(&'a self, path: FullPath) -> Result<(MainLayoutData,ApiContext), Rejection> {
-        let context = ApiContext::new(self.config.api_endpoint.clone(), None);
+    async fn context_map<'a>(&'a self, path: FullPath, token: Option<String>) -> Result<(MainLayoutData,ApiContext), Rejection> {
+        let context = ApiContext::new(self.config.api_endpoint.clone(), token);
         let layout_data = MainLayoutData {
             config: self.link_config.clone(),
             user_config: UserConfig::default(),
             current_path: String::from(path.as_str()),
-            user: None,
+            user: context.get_me_safe().await,
             about_api: apierr!(context.get_about().await)?,
             cache_bust: self.cache_bust.clone()
         };
@@ -98,6 +85,9 @@ async fn main() {
 
     println!("{:#?}", config);
 
+    //Set up the SINGULAR global state, which will be passed around with a counting reference.
+    //So when you see "clone" on this, it's not actually cloning all the data, it's just making
+    //a new pointer and incrementing a count.
     let global_state = Arc::new(GlobalState {
         cache_bust : chrono::offset::Utc::now().to_string(),
         link_config : {
@@ -112,23 +102,33 @@ async fn main() {
         config
     });
 
-    //Basically "global" state
-
     let static_route = warp::path("static").and(warp::fs::dir("static"));
     let favicon_route = warp::path("favicon.ico").and(warp::fs::file("static/resources/favicon.ico"));
-    let index_state = global_state.clone();
+
+    //This "state filter" should be placed at the end of your path but before you start collecting your
+    //route-specific data. It will collect the path and the session cookie (if there is one) and create
+    //a context with lots of useful data to pass to all the templates (but not ALL of it like before)
+    let map_state = global_state.clone();
+    let state_filter = warp::path::full()
+        .and(warp::cookie::optional::<String>(SESSIONCOOKIE))
+        .and_then(move |path, token| {  //Create a closure that takes ownership of map_state to let it infinitely clone
+            let this_state = map_state.clone();
+            async move { this_state.context_map(path, token).await }
+        });
 
     let index_route = warp::get()
         .and(warp::path::end())
-        .and(warp::path::full())
-        .and_then(move |path| {
-            let whatever = index_state.clone();
-            async move { whatever.context_map(path).await }
-        })
-        .map(|(data,_context)| warp::reply::html(pages::index::index(data)));
+        .and(state_filter.clone())
+        .map(|(data,_context)| warp::reply::html(pages::index::render(data)));
+
+    let about_route = warp::get()
+        .and(warp::path!("about"))
+        .and(state_filter.clone())
+        .map(|(data,_context)| warp::reply::html(pages::about::render(data)));
 
     warp::serve(static_route.or(favicon_route)
         .or(index_route)
+        .or(about_route)
         .recover(handle_rejection)
     ).run(global_state.config.host_address.parse::<SocketAddr>().unwrap()).await;
 }
