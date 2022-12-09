@@ -130,6 +130,7 @@ async fn main() {
     //Basically "global" state
 
     let static_route = warp::path("static").and(warp::fs::dir("static"));
+    let favicon_route = warp::path("favicon.ico").and(warp::fs::file("static/resources/favicon.ico"));
     let ugh = global_state.clone();
 
     let index_route = warp::get()
@@ -155,7 +156,7 @@ async fn main() {
     //);
 
     
-    warp::serve(static_route
+    warp::serve(static_route.or(favicon_route)
         .or(index_route)
         .recover(handle_rejection)
     ).run(global_state.config.host_address.parse::<SocketAddr>().unwrap()).await;

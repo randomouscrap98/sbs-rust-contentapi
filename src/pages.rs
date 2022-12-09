@@ -147,12 +147,12 @@ pub fn layout(main_data: MainLayoutData, page: Markup) -> Markup {
                 (script(&main_data.config, "/layout.js", &main_data.cache_bust))
                 (script(&main_data.config, "/base.js", &main_data.cache_bust))
                 (script(&main_data.config, "/sb-highlight.js", &main_data.cache_bust))
-                style { r#"
+                style { (PreEscaped(r#"
                     body {
                         background-repeat: repeat;
-                        background-image: url(""# (main_data.config.resource_root) r#"/sb-title.png")
+                        background-image: url(""#))(main_data.config.resource_root)(PreEscaped(r#"/sb-tile.png")
                     }
-                    "#
+                    "#))
                 }
             }
         }
