@@ -1,8 +1,9 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, convert::Infallible, sync::Arc};
 
+use api::endpoints::ApiError;
 use pages::LinkConfig;
-use reqwest::Client;
-use warp::{Filter, path::FullPath};
+use reqwest::{Client, StatusCode};
+use warp::{Filter, path::FullPath, reject::Reject, Rejection, Reply};
 
 use crate::pages::{UserConfig, MainLayoutData};
 
@@ -56,20 +57,48 @@ config::create_config!{
 //Warp requires static, so... oh well!
 //static config: Config = Config::default();
 
-struct Context<'a> {
-    api_url: &'a str,
+struct Context {
+    api_url: String,
     client: Client,
 }
 
-impl api::endpoints::Context for Context<'_> {
+impl api::endpoints::Context for Context {
     fn get_api_url(&self) -> &str {
-        self.api_url
+        &self.api_url
     }
     fn get_client(&self) -> &Client {
         &self.client
     }
     fn get_user_token(&self) -> Option<&str> {
         None
+    }
+}
+
+//oof
+#[derive(Clone)]
+struct GlobalState {
+    link_config: LinkConfig,
+    cache_bust: String,
+    config: Config
+}
+
+impl GlobalState {
+    async fn context_map<'a>(&'a self, path: FullPath) -> Result<(MainLayoutData,Context), Infallible> {
+
+        let context = Context {
+            api_url: self.config.api_endpoint.clone(),
+            client: reqwest::Client::new(),
+        };
+        let layout_data = MainLayoutData {
+            config: self.link_config.clone(),
+            user_config: UserConfig::default(),
+            current_path: String::from(path.as_str()),
+            user: None,
+            about_api: api::endpoints::get_about(&context).await.unwrap(),
+            cache_bust: self.cache_bust.clone()
+        };
+        //Ok((layout_data, context))
+        Ok((layout_data, context))
     }
 }
 
@@ -84,42 +113,34 @@ async fn main() {
 
     println!("{:#?}", config);
 
-    let cache_bust = chrono::offset::Utc::now().to_string();
+    let global_state = Arc::new(GlobalState {
+        cache_bust : chrono::offset::Utc::now().to_string(),
+        link_config : {
+            let root = config.http_root.clone();
+            LinkConfig {
+                static_root: format!("{}/static", &root),
+                resource_root: format!("{}/static/resources", &root),
+                file_root: config.api_fileraw.clone(),
+                http_root: root
+            }
+        },
+        config
+    });
 
     //Basically "global" state
-    let link_config = {
-        let root = config.http_root.clone();
-        LinkConfig {
-            static_root: format!("{}/static", &root),
-            resource_root: format!("{}/static/resources", &root),
-            file_root: config.api_fileraw.clone(),
-            http_root: root
-        }
-    };
 
     let static_route = warp::path("static").and(warp::fs::dir("static"));
-
-    let context_map = |path: FullPath| async {
-        let context = Context {
-            api_url: &config.api_endpoint,
-            client: reqwest::Client::new(),
-        };
-        let layout_data = MainLayoutData {
-            config: &link_config,
-            user_config: UserConfig::default(),
-            current_path: String::from(path.as_str()),
-            user: None,
-            about_api: &api::endpoints::get_about(&context).await?,
-            cache_bust: &cache_bust
-        };
-        Ok((layout_data, context))
-    };
+    let ugh = global_state.clone();
 
     let index_route = warp::get()
         .and(warp::path::end())
         .and(warp::path::full())
-        .and_then(context_map)
-        .map(|(data,context)| pages::index::index(data));
+        //.and(warp::any().map(|| global_state.clone()))
+        .and_then(move |path| {
+            let whatever = ugh.clone();
+            async move { whatever.context_map(path).await }
+        })
+        .map(|(data,_context)| pages::index::index(data));
 
     //let full_website = static_route.or(
     //    warp::cookie::optional(SESSIONCOOKIE).and( //Get the user cookie representing the session, but it's not necessary! At least not here
@@ -132,8 +153,16 @@ async fn main() {
     //            })
     //    )
     //);
+
     
     warp::serve(static_route
         .or(index_route)
-    ).run(config.host_address.parse::<SocketAddr>().unwrap()).await;
+        .recover(handle_rejection)
+    ).run(global_state.config.host_address.parse::<SocketAddr>().unwrap()).await;
+}
+
+impl Reject for ApiError {}
+
+async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
+    Ok(warp::reply::with_status("Well, that failed", StatusCode::BAD_REQUEST))
 }

@@ -4,6 +4,7 @@ use crate::api;
 use serde_urlencoded;
 use maud::{Markup, html, PreEscaped, DOCTYPE};
 
+#[derive(Clone)]
 pub struct LinkConfig {
     pub http_root: String,
     pub static_root: String,
@@ -89,7 +90,7 @@ pub fn header_user_inner(config: &LinkConfig, user: &api::User) -> Markup {
     }
 }
 
-pub fn header(config: &LinkConfig, current_path: &str, user: Option<&api::User>) -> Markup {
+pub fn header(config: &LinkConfig, current_path: &str, user: &Option<api::User>) -> Markup {
     html! {
         header."controlbar" {
             nav {
@@ -124,28 +125,28 @@ pub fn script(config: &LinkConfig, link: &str, cache_bust: &str) -> Markup {
     }
 }
 
-pub struct MainLayoutData<'a> {
-    pub config: &'a LinkConfig,     //This never changes, so it can be a pointer
+pub struct MainLayoutData {
+    pub config: LinkConfig,     //This never changes, so it can be a pointer
     pub user_config: UserConfig,    //But this may depend on local state!
     pub current_path: String,       //since this is dynamic, it should be owned imo
-    pub user: Option<&'a api::User>,
-    pub about_api: &'a api::About,
-    pub cache_bust: &'a str
+    pub user: Option<api::User>,
+    pub about_api: api::About,      //this is also generated per request, so no lifetime
+    pub cache_bust: String
 }
 
-pub fn layout(main_data: MainLayoutData<'_>, page: Markup) -> Markup {
+pub fn layout(main_data: MainLayoutData, page: Markup) -> Markup {
     html! {
         (DOCTYPE)
         html lang=(main_data.user_config.language) {
             head {
-                (basic_meta(main_data.config))
+                (basic_meta(&main_data.config))
                 title { "SmileBASIC Source" }
                 meta name="description" content="A community for sharing programs and getting advice on SmileBASIC applications on the Nintendo DSi, 3DS, and Switch";
-                (style(main_data.config, "/base.css", main_data.cache_bust))
-                (style(main_data.config, "/layout.css", main_data.cache_bust))
-                (script(main_data.config, "/layout.js", main_data.cache_bust))
-                (script(main_data.config, "/base.js", main_data.cache_bust))
-                (script(main_data.config, "/sb-highlight.js", main_data.cache_bust))
+                (style(&main_data.config, "/base.css", &main_data.cache_bust))
+                (style(&main_data.config, "/layout.css", &main_data.cache_bust))
+                (script(&main_data.config, "/layout.js", &main_data.cache_bust))
+                (script(&main_data.config, "/base.js", &main_data.cache_bust))
+                (script(&main_data.config, "/sb-highlight.js", &main_data.cache_bust))
                 style { r#"
                     body {
                         background-repeat: repeat;
@@ -156,9 +157,9 @@ pub fn layout(main_data: MainLayoutData<'_>, page: Markup) -> Markup {
             }
         }
         body {
-            (header(main_data.config, &main_data.current_path, main_data.user))
+            (header(&main_data.config, &main_data.current_path, &main_data.user))
             main { (page) }
-            (footer(main_data.config, main_data.about_api, &main_data.current_path ))
+            (footer(&main_data.config, &main_data.about_api, &main_data.current_path ))
         }
     }
 }
