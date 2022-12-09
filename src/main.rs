@@ -5,9 +5,10 @@ use warp::Filter;
 mod bbcode;
 mod api;
 mod config;
-mod templates;
+//mod templates;
 mod conversion;
 mod routing;
+mod pages;
 //mod api_data;
 
 //use crate::config::create_config;
