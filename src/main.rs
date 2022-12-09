@@ -1,18 +1,18 @@
 use std::{net::SocketAddr, convert::Infallible, sync::Arc};
 
-use api::endpoints::ApiError;
+use contentapi::endpoints::ApiContext;
+use contentapi::endpoints::ApiError;
 use pages::LinkConfig;
-use reqwest::{Client, StatusCode};
+use warp::hyper::StatusCode;
+//use reqwest::{Client, StatusCode};
 use warp::{Filter, path::FullPath, reject::Reject, Rejection, Reply};
 
 use crate::pages::{UserConfig, MainLayoutData};
 
-mod bbcode;
-mod api;
 mod config;
 //mod templates;
 mod conversion;
-mod routing;
+//mod routing;
 mod pages;
 //mod api_data;
 
@@ -57,22 +57,22 @@ config::create_config!{
 //Warp requires static, so... oh well!
 //static config: Config = Config::default();
 
-struct Context {
-    api_url: String,
-    client: Client,
-}
-
-impl api::endpoints::Context for Context {
-    fn get_api_url(&self) -> &str {
-        &self.api_url
-    }
-    fn get_client(&self) -> &Client {
-        &self.client
-    }
-    fn get_user_token(&self) -> Option<&str> {
-        None
-    }
-}
+//struct Context {
+//    api_url: String,
+//    client: Client,
+//}
+//
+//impl api::endpoints::Context for Context {
+//    fn get_api_url(&self) -> &str {
+//        &self.api_url
+//    }
+//    fn get_client(&self) -> &Client {
+//        &self.client
+//    }
+//    fn get_user_token(&self) -> Option<&str> {
+//        None
+//    }
+//}
 
 //oof
 #[derive(Clone)]
@@ -83,22 +83,18 @@ struct GlobalState {
 }
 
 impl GlobalState {
-    async fn context_map<'a>(&'a self, path: FullPath) -> Result<(MainLayoutData,Context), Infallible> {
-
-        let context = Context {
-            api_url: self.config.api_endpoint.clone(),
-            client: reqwest::Client::new(),
-        };
+    async fn context_map<'a>(&'a self, path: FullPath) -> Result<(MainLayoutData,ApiContext), Infallible> {
+        let context = ApiContext::new(self.config.api_endpoint.clone(), None);
         let layout_data = MainLayoutData {
             config: self.link_config.clone(),
             user_config: UserConfig::default(),
             current_path: String::from(path.as_str()),
             user: None,
-            about_api: api::endpoints::get_about(&context).await.unwrap(),
+            about_api: context.get_about().await.unwrap(),
             cache_bust: self.cache_bust.clone()
         };
         //Ok((layout_data, context))
-        Ok((layout_data, context))
+        Ok((layout_data, ApiContext::new(self.config.api_endpoint.clone(), None)))
     }
 }
 

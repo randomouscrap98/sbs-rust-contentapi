@@ -340,4 +340,3 @@ impl FullRequest {
         FullRequest { values: HashMap::new(), requests: Vec::new() }
     }
 }
-

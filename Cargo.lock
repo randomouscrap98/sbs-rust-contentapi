@@ -24,6 +24,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
+name = "bbcode"
+version = "0.1.0"
+dependencies = [
+ "html-escape",
+ "regex",
+]
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -96,6 +104,17 @@ checksum = "3538270d33cc669650c4b093848450d380def10c331d38c768e34cac80576e6e"
 dependencies = [
  "termcolor",
  "unicode-width",
+]
+
+[[package]]
+name = "contentapi"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "reqwest",
+ "serde",
+ "serde-aux",
+ "serde_json",
 ]
 
 [[package]]
@@ -828,12 +847,9 @@ name = "sbs-rust-contentapi"
 version = "0.3.0"
 dependencies = [
  "chrono",
- "html-escape",
+ "contentapi",
  "maud",
- "regex",
- "reqwest",
  "serde",
- "serde-aux",
  "serde_json",
  "serde_urlencoded",
  "tokio",

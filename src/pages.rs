@@ -1,6 +1,6 @@
 pub mod index;
 
-use crate::api;
+use contentapi;
 use serde_urlencoded;
 use maud::{Markup, html, PreEscaped, DOCTYPE};
 
@@ -25,7 +25,7 @@ impl Default for UserConfig {
 }
 
 pub fn get_image_link(config: &LinkConfig, hash: &str, size: i32, crop: bool) -> String {
-    let query = api::QueryImage { 
+    let query = contentapi::QueryImage { 
         size : Some(size as i64),
         crop : Some(crop) 
     };
@@ -71,7 +71,7 @@ pub fn main_nav_link_raw(config: &LinkConfig, body: Markup, href: &str, current_
 }
 
 //Produce the footer for the main selection of pages
-pub fn footer(config: &LinkConfig, about_api: &api::About, current_path: &str) -> Markup {
+pub fn footer(config: &LinkConfig, about_api: &contentapi::About, current_path: &str) -> Markup {
     html! {
         footer class="controlbar smallseparate" {
             span #"api_about" { (about_api.environment) "-" (about_api.version) }
@@ -83,14 +83,14 @@ pub fn footer(config: &LinkConfig, about_api: &api::About, current_path: &str) -
 }
 
 //Produce just the inner user element (not the link itself) for a logged-in user
-pub fn header_user_inner(config: &LinkConfig, user: &api::User) -> Markup {
+pub fn header_user_inner(config: &LinkConfig, user: &contentapi::User) -> Markup {
     html! {
         span { (user.username) }
         img src=(get_image_link(config, &user.avatar, 100, true));
     }
 }
 
-pub fn header(config: &LinkConfig, current_path: &str, user: &Option<api::User>) -> Markup {
+pub fn header(config: &LinkConfig, current_path: &str, user: &Option<contentapi::User>) -> Markup {
     html! {
         header."controlbar" {
             nav {
@@ -129,8 +129,8 @@ pub struct MainLayoutData {
     pub config: LinkConfig,     //This never changes, so it can be a pointer
     pub user_config: UserConfig,    //But this may depend on local state!
     pub current_path: String,       //since this is dynamic, it should be owned imo
-    pub user: Option<api::User>,
-    pub about_api: api::About,      //this is also generated per request, so no lifetime
+    pub user: Option<contentapi::User>,
+    pub about_api: contentapi::About,      //this is also generated per request, so no lifetime
     pub cache_bust: String
 }
 
