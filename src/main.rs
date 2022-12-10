@@ -3,25 +3,25 @@ use std::{net::SocketAddr, convert::Infallible, sync::Arc};
 use contentapi::endpoints::{ApiContext, ApiError};
 use pages::{LinkConfig, UserConfig, MainLayoutData};
 
-use warp::hyper::StatusCode;
-use warp::path::FullPath;
-use warp::reject::Reject;
-use warp::{Filter, Rejection, Reply};
+//use warp::hyper::StatusCode;
+//use warp::path::FullPath;
+//use warp::reject::Reject;
+//use warp::{Filter, Rejection, Reply};
 
 mod config;
 
 static CONFIGNAME : &str = "settings";
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 
-#[derive(Debug)]
-pub struct ErrorWrapper {
-    error: pages::Error
-}
-
-//Just a bunch of stupid repetitive stuff because IMO bad design (can't impl Reject on types that aren't defined in the crate)
-impl Reject for ErrorWrapper {}
-impl From<ApiError> for ErrorWrapper { fn from(error: ApiError) -> Self { Self { error: pages::Error::Api(error) } } }
-impl From<pages::Error> for ErrorWrapper { fn from(error: pages::Error) -> Self { Self { error } } }
+//#[derive(Debug)]
+//pub struct ErrorWrapper {
+//    error: pages::Error
+//}
+//
+////Just a bunch of stupid repetitive stuff because IMO bad design (can't impl Reject on types that aren't defined in the crate)
+//impl Reject for ErrorWrapper {}
+//impl From<ApiError> for ErrorWrapper { fn from(error: ApiError) -> Self { Self { error: pages::Error::Api(error) } } }
+//impl From<pages::Error> for ErrorWrapper { fn from(error: pages::Error) -> Self { Self { error } } }
 
 //This is so stupid. Oh well
 //macro_rules! apierr {
@@ -78,24 +78,24 @@ struct RequestContext {
     layout_data: MainLayoutData
 }
 
-impl RequestContext {
-    async fn generate(state: Arc<GlobalState>, path: FullPath, token: Option<String>) -> Result<Self, ErrorWrapper> {
-        let context = ApiContext::new(state.config.api_endpoint.clone(), token);
-        let layout_data = MainLayoutData {
-            config: state.link_config.clone(),
-            user_config: UserConfig::default(),
-            current_path: String::from(path.as_str()),
-            user: context.get_me_safe().await,
-            about_api: context.get_about().await?,
-            cache_bust: state.cache_bust.clone()
-        };
-        Ok(RequestContext {
-            global_state: state,
-            api_context: context,
-            layout_data
-        })
-    }
-}
+//impl RequestContext {
+//    async fn generate(state: Arc<GlobalState>, path: FullPath, token: Option<String>) -> Result<Self, ErrorWrapper> {
+//        let context = ApiContext::new(state.config.api_endpoint.clone(), token);
+//        let layout_data = MainLayoutData {
+//            config: state.link_config.clone(),
+//            user_config: UserConfig::default(),
+//            current_path: String::from(path.as_str()),
+//            user: context.get_me_safe().await,
+//            about_api: context.get_about().await?,
+//            cache_bust: state.cache_bust.clone()
+//        };
+//        Ok(RequestContext {
+//            global_state: state,
+//            api_context: context,
+//            layout_data
+//        })
+//    }
+//}
 
 #[tokio::main]
 async fn main() {
@@ -125,58 +125,58 @@ async fn main() {
         config
     });
 
-    let static_route = warp::path("static").and(warp::fs::dir("static"));
-    let favicon_route = warp::path("favicon.ico").and(warp::fs::file("static/resources/favicon.ico"));
+    //let static_route = warp::path("static").and(warp::fs::dir("static"));
+    //let favicon_route = warp::path("favicon.ico").and(warp::fs::file("static/resources/favicon.ico"));
 
-    //This "state filter" should be placed at the end of your path but before you start collecting your
-    //route-specific data. It will collect the path and the session cookie (if there is one) and create
-    //a context with lots of useful data to pass to all the templates (but not ALL of it like before)
-    let global_for_state = global_state.clone();
-    let state_filter = warp::path::full()
-        .and(warp::cookie::optional::<String>(SESSIONCOOKIE))
-        .and_then(move |path, token| {  //Create a closure that takes ownership of map_state to let it infinitely clone
-            let this_state = global_for_state.clone();
-            async move { RequestContext::generate(this_state, path, token).await.map_err(|e| Into::<Rejection>::into(e)) }
-        });
+    ////This "state filter" should be placed at the end of your path but before you start collecting your
+    ////route-specific data. It will collect the path and the session cookie (if there is one) and create
+    ////a context with lots of useful data to pass to all the templates (but not ALL of it like before)
+    //let global_for_state = global_state.clone();
+    //let state_filter = warp::path::full()
+    //    .and(warp::cookie::optional::<String>(SESSIONCOOKIE))
+    //    .and_then(move |path, token| {  //Create a closure that takes ownership of map_state to let it infinitely clone
+    //        let this_state = global_for_state.clone();
+    //        async move { RequestContext::generate(this_state, path, token).await.map_err(|e| Into::<Rejection>::into(e)) }
+    //    });
     
-    let global_for_form = global_state.clone();
-    let form_filter = warp::body::content_length_limit(global_for_form.config.body_maxsize as u64);
+    //let global_for_form = global_state.clone();
+    //let form_filter = warp::body::content_length_limit(global_for_form.config.body_maxsize as u64);
 
-    //Lets anybody get the global state (maybe you want some extra config value?)
-    //let global_for_arb = global_state.clone();
-    //let get_global_state = warp::path::any().map(move || global_for_arb.clone());
+    ////Lets anybody get the global state (maybe you want some extra config value?)
+    ////let global_for_arb = global_state.clone();
+    ////let get_global_state = warp::path::any().map(move || global_for_arb.clone());
 
-    let index_route = warp::get()
-        .and(warp::path::end())
-        .and(state_filter.clone())
-        .map(|context:RequestContext| warp::reply::html(pages::index::render(context.layout_data)));
+    //let index_route = warp::get()
+    //    .and(warp::path::end())
+    //    .and(state_filter.clone())
+    //    .map(|context:RequestContext| warp::reply::html(pages::index::render(context.layout_data)));
 
-    let about_route = warp::get()
-        .and(warp::path!("about"))
-        .and(state_filter.clone())
-        .map(|context:RequestContext| warp::reply::html(pages::about::render(context.layout_data)));
+    //let about_route = warp::get()
+    //    .and(warp::path!("about"))
+    //    .and(state_filter.clone())
+    //    .map(|context:RequestContext| warp::reply::html(pages::about::render(context.layout_data)));
 
-    let login_route = warp::get()
-        .and(warp::path!("login"))
-        .and(state_filter.clone())
-        .map(|context:RequestContext| warp::reply::html(pages::login::render(context.layout_data, None, None, None)));
+    //let login_route = warp::get()
+    //    .and(warp::path!("login"))
+    //    .and(state_filter.clone())
+    //    .map(|context:RequestContext| warp::reply::html(pages::login::render(context.layout_data, None, None, None)));
 
-    let login_post_route = warp::post()
-        .and(warp::path!("login"))
-        .and(state_filter.clone())
-        .and(form_filter.clone())
-        .and(warp::body::form::<pages::login::Login>())
-        .map(|context:RequestContext,form| warp::reply::html(pages::login::render(context.layout_data, None, None, None)));
+    //let login_post_route = warp::post()
+    //    .and(warp::path!("login"))
+    //    .and(state_filter.clone())
+    //    .and(form_filter.clone())
+    //    .and(warp::body::form::<pages::login::Login>())
+    //    .map(|context:RequestContext,form| warp::reply::html(pages::login::render(context.layout_data, None, None, None)));
 
-    warp::serve(static_route.or(favicon_route)
-        .or(index_route)
-        .or(about_route)
-        .or(login_route)
-        .or(login_post_route)
-        .recover(handle_rejection)
-    ).run(global_state.config.host_address.parse::<SocketAddr>().unwrap()).await;
+    //warp::serve(static_route.or(favicon_route)
+    //    .or(index_route)
+    //    .or(about_route)
+    //    .or(login_route)
+    //    .or(login_post_route)
+    //    .recover(handle_rejection)
+    //).run(global_state.config.host_address.parse::<SocketAddr>().unwrap()).await;
 }
 
-async fn handle_rejection(_err: Rejection) -> Result<impl Reply, Infallible> {
-    Ok(warp::reply::with_status("Well, that failed", StatusCode::BAD_REQUEST))
-}
+//async fn handle_rejection(_err: Rejection) -> Result<impl Reply, Infallible> {
+//    Ok(warp::reply::with_status("Well, that failed", StatusCode::BAD_REQUEST))
+//}
