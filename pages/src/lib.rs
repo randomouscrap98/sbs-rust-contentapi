@@ -46,7 +46,7 @@ pub struct MainLayoutData {
 
 #[derive(Debug)]
 pub enum Response {
-    Render(Markup),
+    Render(String), //string is the markup
     Redirect(String)
 }
 

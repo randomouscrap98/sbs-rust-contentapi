@@ -1,15 +1,13 @@
 use std::{net::SocketAddr, convert::Infallible, sync::Arc};
 
-//use axum::{Router, routing::get, async_trait, extract::{FromRequestParts, FromRef}, http::{StatusCode, request::Parts, header::USER_AGENT}, TypedHeader};
-//use axum::RequestPartsExt;
 use contentapi::endpoints::{ApiContext, ApiError};
 use pages::{LinkConfig, UserConfig, MainLayoutData};
-use warp::{path::FullPath, reject::Reject, Filter, Rejection, hyper::StatusCode, Reply};
 
-//use warp::hyper::StatusCode;
-//use warp::path::FullPath;
-//use warp::reject::Reject;
-//use warp::{Filter, Rejection, Reply};
+use warp::http::uri::InvalidUri;
+use warp::hyper::{StatusCode, Uri};
+use warp::path::FullPath;
+use warp::reject::Reject;
+use warp::{Filter, Rejection, Reply};
 
 mod config;
 
@@ -25,20 +23,16 @@ pub struct ErrorWrapper {
 impl Reject for ErrorWrapper {}
 impl From<ApiError> for ErrorWrapper { fn from(error: ApiError) -> Self { Self { error: pages::Error::Api(error) } } }
 impl From<pages::Error> for ErrorWrapper { fn from(error: pages::Error) -> Self { Self { error } } }
+impl From<InvalidUri> for ErrorWrapper { fn from(error: InvalidUri) -> Self { Self { error: pages::Error::Other(error.to_string())} }}
 
 //This is so stupid. Oh well
-//macro_rules! apierr {
-//    ($apierr:expr) => {
-//        $apierr.map_err(|e| Into::<ErrorWrapper>::into(e))
-//    };
-//}
-
-//Why do we need this when we have from? Well, because warp is stupid, that's why! Warp REQUIRES
-//that you return a "Rejection" in your Result, but only THEY have the impl for Into<Rejection>, so
-//not only do I have to write a wrapper
-//fn apierr(error: ApiError) -> ErrorWrapper {
-//
-//}
+macro_rules! errwrap {
+    ($result:expr) => {
+        //This is bad, oh well though, maybe I'll fix it later? I assume error mapping only happens
+        //ON error, which should rarely happen
+        $result.map_err(|e| Into::<ErrorWrapper>::into(e)).map_err(|e| Into::<Rejection>::into(e))
+    };
+}
 
 
 //The standard config we want here in this application. This macro is ugly but 
@@ -81,32 +75,6 @@ struct RequestContext {
     layout_data: MainLayoutData
 }
 
-//#[async_trait]
-//impl<S> FromRequestParts<S> for RequestContext
-//    where Arc<GlobalState>: FromRef<S>, S: Send + Sync,
-//{
-//    type Rejection = (StatusCode, &'static str);
-//
-//    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> 
-//    {
-//        let state = Arc::<GlobalState>::from_ref(state);
-//
-//        let cookie: Option<TypedHeader<axum::headers::Cookie>> = parts.extract().await.unwrap();
-//
-//        let session_cookie = cookie
-//            .as_ref()
-//            .and_then(|cookie| cookie.get(SESSIONCOOKIE));
-//
-//        // return the new created session cookie for client
-//        if session_cookie.is_none() {
-//        }
-//    }
-//}
-
-//async fn make_context<T>() -> T {
-//    
-//}
-
 impl RequestContext {
     async fn generate(state: Arc<GlobalState>, path: FullPath, token: Option<String>) -> Result<Self, ErrorWrapper> {
         let context = ApiContext::new(state.config.api_endpoint.clone(), token);
@@ -125,27 +93,6 @@ impl RequestContext {
         })
     }
 }
-//struct ExtractRequestContext(RequestContext);
-//
-//#[async_trait]
-//impl<GlobalState> FromRequestParts<GlobalState> for ExtractRequestContext
-////where
-//    //S: Send + Sync,
-//{
-//    type Rejection = (StatusCode, &'static str);
-//
-//    async fn from_request_parts(parts: &mut Parts, state: &GlobalState) -> Result<Self, Self::Rejection> {
-//        if let Some(user_agent) = parts.headers.get(USER_AGENT) {
-//            //Ok(ExtractRequestContext(user_agent.clone()))
-//        //} else {
-//            Err((StatusCode::BAD_REQUEST, "`User-Agent` header is missing"))
-//        }
-//        else {
-//
-//            Err((StatusCode::BAD_REQUEST, "`User-Agent` header is missing"))
-//        }
-//    }
-//}
 
 #[tokio::main]
 async fn main() {
@@ -177,16 +124,6 @@ async fn main() {
 
     let address = global_state.config.host_address.parse::<SocketAddr>().unwrap();
 
-//    let app = Router::new()
-//        .route("/", get(|| async { "Hello, World!" }))
-//        .with_state(global_state);
-//
-//    // run it with hyper on localhost:3000
-//    axum::Server::bind(&address)
-//        .serve(app.into_make_service())
-//        .await
-//        .unwrap();
-//
     let static_route = warp::path("static").and(warp::fs::dir("static"));
     let favicon_route = warp::path("favicon.ico").and(warp::fs::file("static/resources/favicon.ico"));
 
@@ -198,7 +135,9 @@ async fn main() {
         .and(warp::cookie::optional::<String>(SESSIONCOOKIE))
         .and_then(move |path, token| {  //Create a closure that takes ownership of map_state to let it infinitely clone
             let this_state = global_for_state.clone();
-            async move { RequestContext::generate(this_state, path, token).await.map_err(|e| Into::<Rejection>::into(e)) }
+            async move { 
+                errwrap!(RequestContext::generate(this_state, path, token).await)
+            }
         });
     
     let global_for_form = global_state.clone();
@@ -228,7 +167,17 @@ async fn main() {
         .and(state_filter.clone())
         .and(form_filter.clone())
         .and(warp::body::form::<pages::login::Login>())
-        .map(|context:RequestContext,form| warp::reply::html(pages::login::render(context.layout_data, None, None, None)));
+        .and_then(|context: RequestContext, mut form: pages::login::Login| {
+            form.default_session_seconds = context.global_state.config.default_cookie_expire;
+            form.long_session_seconds = context.global_state.config.long_cookie_expire;
+            async move {
+                let (response,token) = errwrap!(pages::login::post_login_render(context.layout_data, &context.api_context, form).await)?;
+                if let Some(token) = token {
+                    println!("Setting cookie? {}", token);
+                }
+                handle_response(response, &context.global_state.link_config)
+            }
+        });
 
     warp::serve(static_route.or(favicon_route)
         .or(index_route)
@@ -236,9 +185,22 @@ async fn main() {
         .or(login_route)
         .or(login_post_route)
         .recover(handle_rejection)
-    ).run(global_state.config.host_address.parse::<SocketAddr>().unwrap()).await;
+    ).run(address).await;
 }
+
 
 async fn handle_rejection(_err: Rejection) -> Result<impl Reply, Infallible> {
     Ok(warp::reply::with_status("Well, that failed", StatusCode::BAD_REQUEST))
+}
+
+fn handle_response(response: pages::Response, link_config: &LinkConfig) -> Result<Box<dyn Reply>, Rejection> //Box<dyn Reply>
+{
+
+    match response {
+        pages::Response::Redirect(url) => {
+            let uri = errwrap!(format!("{}{}", link_config.http_root, url).parse::<Uri>())?;
+            Ok(Box::new(warp::redirect::see_other(uri)))
+        },
+        pages::Response::Render(page) => Ok(Box::new(warp::reply::html(page)))
+    }
 }

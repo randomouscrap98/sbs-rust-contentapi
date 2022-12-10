@@ -67,9 +67,16 @@ pub fn convert_login(login: Login) -> contentapi::forms::Login
     }
 }
 
-//pub async fn post_login_render(data: MainLayoutData, context: &contentapi::endpoints::ApiContext, login: Login) -> 
-//    Result<Response, Error> 
-//{
-//    let api_login = convert_login(login);
-//    let login_result = context.post_login(api_login).await?;
-//}
+/// Rendering for posting a user login. But, may redirect instead! You have to inspect the Response! On success,
+/// the Ok result has a string as well, that's the token
+pub async fn post_login_render(data: MainLayoutData, context: &contentapi::endpoints::ApiContext, login: Login) -> 
+    Result<(Response, Option<String>), Error> 
+{
+    let api_login = convert_login(login);
+    match context.post_login(&api_login).await {
+        Ok(token) => Ok((Response::Redirect(String::from("/userhome")), Some(token))),
+        Err(error) => {
+            Ok((Response::Render(render(data, Some(vec![error.to_user_string()]), None, None)), None))
+        }
+    }
+}

@@ -22,6 +22,17 @@ pub enum ApiError
     Request(AboutRequest, String, u16), //Oh something went wrong with the request itself! Probably a 400 or 500 error
 }
 
+impl ApiError {
+    pub fn to_user_string(&self) -> String {
+        match self {
+            Self::NonRequest(_,err) => err.clone(),
+            Self::Parse(_,err) => err.clone(),
+            Self::Network(_,err) => err.clone(),
+            Self::Request(_,err,_) => err.clone() //May change?
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct AboutRequest {
     //This is GET/POST/etc. I don't care for it to be an enum, since I'm just printing it
