@@ -1,19 +1,16 @@
 use std::{net::SocketAddr, convert::Infallible, sync::Arc};
 
 use contentapi::endpoints::{ApiContext, ApiError};
-//use errors::ErrorWrapper;
 use pages::{LinkConfig, UserConfig, MainLayoutData};
 
 use warp::hyper::{StatusCode};
 use warp::path::FullPath;
 use warp::{Filter, Rejection, Reply};
 
-use crate::errors::{ApiErrorWrapper, apierrwrap};
-
-//use crate::errors::errwrap;
-
 mod config;
 mod errors;
+
+use crate::errors::{ErrorWrapper, errwrap};
 
 static CONFIGNAME : &str = "settings";
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
@@ -78,11 +75,6 @@ impl RequestContext {
     }
 }
 
-//enum ContextOrElse {
-//    Context(RequestContext),
-//    Error(ApiError)
-//}
-
 #[tokio::main]
 async fn main() {
 
@@ -125,16 +117,12 @@ async fn main() {
         .and_then(move |path, token| {  //Create a closure that takes ownership of map_state to let it infinitely clone
             let this_state = global_for_state.clone();
             async move { 
-                apierrwrap!(RequestContext::generate(this_state, path, token).await)
+                errwrap!(RequestContext::generate(this_state, path, token).await)
             }
         }).boxed();
     
     let global_for_form = global_state.clone();
     let form_filter = warp::body::content_length_limit(global_for_form.config.body_maxsize as u64);
-
-    //Lets anybody get the global state (maybe you want some extra config value?)
-    //let global_for_arb = global_state.clone();
-    //let get_global_state = warp::path::any().map(move || global_for_arb.clone());
 
     let index_route = warp::get()
         .and(warp::path::end())
@@ -161,7 +149,7 @@ async fn main() {
                 context.global_state.config.default_cookie_expire, 
                 context.global_state.config.long_cookie_expire);
             async move {
-                let (response,token) = apierrwrap!(pages::login::post_login_render(context.layout_data, &context.api_context, &login).await)?;
+                let (response,token) = errwrap!(pages::login::post_login_render(context.layout_data, &context.api_context, &login).await)?;
                 handle_response(response, &context.global_state.link_config, token, login.expireSeconds)
             }
         });
@@ -173,37 +161,36 @@ async fn main() {
         .or(about_route.boxed())
         .or(login_route.boxed())
         .or(login_post_route.boxed())
-        .recover(|err:Rejection| async {
-            if let Some(error) = err.find::<ApiErrorWrapper>() {
-                Ok(warp::reply::with_status(error.error.to_verbose_string(), StatusCode::from_u16(error.error.to_status()).unwrap()))
-            }
-            else {
-                Ok(warp::reply::with_status(String::from("CRITICAL ERROR: ROUTE FAILED TO RESPOND WHILE RETRIEVING CONTEXT!"), StatusCode::INTERNAL_SERVER_ERROR))
-            }
-        }).boxed();
-        //.recover(handle_rejection)
+        .recover(handle_rejection)
     ).run(address).await;
 }
 
 
-//async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
-//    let code;
-//    let message;
-//    if err.is_not_found() {
-//        code = StatusCode::NOT_FOUND;
-//        message = "Couldn't figure out what to do with this URL!";
-//    } else if let Some(ErrorWrapper) = err.find() {
-//        match error {
-//
-//        }
-//        code = StatusCode::BAD_REQUEST;
-//        message = "DIVIDE_BY_ZERO";
-//    } else {
-//        code = StatusCode::INTERNAL_SERVER_ERROR;
-//        message = 
-//    }
-//    Ok(warp::reply::with_status("Well, that failed", StatusCode::BAD_REQUEST))
-//}
+async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
+    let code: StatusCode;
+    let message: String;
+    if err.is_not_found() {
+        code = StatusCode::NOT_FOUND;
+        message = String::from("Couldn't figure out what to do with this URL!");
+    } 
+    else if let Some(error) = err.find::<ErrorWrapper>() {
+        match &error.error {
+            pages::Error::Api(apierr) => { 
+                code = StatusCode::from_u16(apierr.to_status()).unwrap();
+                message = apierr.to_verbose_string();
+            }
+            pages::Error::Other(otherr) => {
+                code = StatusCode::INTERNAL_SERVER_ERROR;
+                message = otherr.clone();
+            }
+        }
+    }
+    else {
+        code = StatusCode::INTERNAL_SERVER_ERROR;
+        message = String::from("COULD NOT RESOLVE ERROR! UNKNOWN STATE!");
+    }
+    Ok(warp::reply::with_status(message, code))
+}
 
 fn handle_response(response: pages::Response, link_config: &LinkConfig, token: Option<String>, expire: i64) -> Result<impl Reply, Rejection>
 {
