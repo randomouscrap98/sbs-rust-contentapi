@@ -110,7 +110,7 @@ enum_type!{
 // *     RESULTS FROM API      *
 // -----------------------------
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct About
 {
     pub version: String,

@@ -46,21 +46,30 @@ pub struct Login
 {
     pub username: String,
     pub password: String,
-    pub long_session : bool  //This is from the form itself, just a checkbox
+    pub long_session : bool,  //This is from the form itself, just a checkbox
+
+    //While not really a great design IMO, this lets the caller pass values to us
+    #[serde(skip)]
+    pub long_session_seconds: i32,
+    #[serde(skip)]
+    pub default_session_seconds: i32
 }
 
-////Produce the API login with the appropriate values. 
-pub fn convert_login(config: &Config, login: Login) -> contentapi::forms::Login
+/// Produce the API login with the appropriate values. 
+pub fn convert_login(login: Login) -> contentapi::forms::Login
 {
     contentapi::forms::Login {
         username: login.username,
         password: login.password,
         expireSeconds : 
-            if login.long_session { config.long_cookie_expire.into() }
-            else { config.default_cookie_expire.into() }
+            if login.long_session { login.long_session_seconds.into() }
+            else { login.default_session_seconds.into() }
     }
 }
 
-pub async fn post_login_render(data: MainLayoutData, login: Login) -> Markup {
-    let api_login = convert_login(config, login);
-}
+//pub async fn post_login_render(data: MainLayoutData, context: &contentapi::endpoints::ApiContext, login: Login) -> 
+//    Result<Response, Error> 
+//{
+//    let api_login = convert_login(login);
+//    let login_result = context.post_login(api_login).await?;
+//}

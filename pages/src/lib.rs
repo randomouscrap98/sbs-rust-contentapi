@@ -3,11 +3,11 @@ pub mod index;
 pub mod about;
 pub mod login;
 
-use contentapi;
+use contentapi::{self, endpoints::ApiError};
 use serde_urlencoded;
 use maud::{Markup, html, PreEscaped, DOCTYPE};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LinkConfig {
     pub http_root: String,
     pub static_root: String,
@@ -15,6 +15,7 @@ pub struct LinkConfig {
     pub file_root: String,
 }
 
+#[derive(Clone, Debug)]
 pub struct UserConfig {
     pub language: String
 }
@@ -24,6 +25,46 @@ impl Default for UserConfig {
         Self {
             language: String::from("en")
         }
+    }
+}
+
+
+#[derive(Debug)]
+pub struct MainLayoutData {
+    pub config: LinkConfig,     
+    pub user_config: UserConfig,    
+    pub current_path: String, 
+    pub user: Option<contentapi::User>,
+    pub about_api: contentapi::About, 
+    pub cache_bust: String
+}
+
+
+// -------------------------------------
+// *     Response/Error from pages     *
+// -------------------------------------
+
+#[derive(Debug)]
+pub enum Response {
+    Render(Markup),
+    Redirect(String)
+}
+
+#[derive(Debug)]
+pub enum Error {
+    Api(contentapi::endpoints::ApiError),
+    Other(String) //Something "general" happened, who the heck knows?
+}
+
+impl From<ApiError> for Error {
+    fn from(error: ApiError) -> Self {
+        Error::Api(error) 
+    }
+}
+
+impl From<Box<dyn std::error::Error>> for Error {
+    fn from(error: Box<dyn std::error::Error>) -> Self {
+        Error::Other(error.to_string()) 
     }
 }
 
@@ -148,15 +189,6 @@ pub fn threadicon(config: &LinkConfig, neutral: bool, sticky: bool, locked: bool
             @if locked { span{"🔒"} }
         }
     }
-}
-
-pub struct MainLayoutData {
-    pub config: LinkConfig,     //This never changes, so it can be a pointer
-    pub user_config: UserConfig,    //But this may depend on local state!
-    pub current_path: String,       //since this is dynamic, it should be owned imo
-    pub user: Option<contentapi::User>,
-    pub about_api: contentapi::About,      //this is also generated per request, so no lifetime
-    pub cache_bust: String
 }
 
 pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {

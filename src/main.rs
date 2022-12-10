@@ -8,26 +8,34 @@ use warp::path::FullPath;
 use warp::reject::Reject;
 use warp::{Filter, Rejection, Reply};
 
-mod sbsforms;
 mod config;
-mod conversion;
 
 static CONFIGNAME : &str = "settings";
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 
 #[derive(Debug)]
-pub enum MyError {
-    Api(ApiError)
+pub struct ErrorWrapper {
+    error: pages::Error
 }
 
-impl Reject for MyError {}
+//Just a bunch of stupid repetitive stuff because IMO bad design (can't impl Reject on types that aren't defined in the crate)
+impl Reject for ErrorWrapper {}
+impl From<ApiError> for ErrorWrapper { fn from(error: ApiError) -> Self { Self { error: pages::Error::Api(error) } } }
+impl From<pages::Error> for ErrorWrapper { fn from(error: pages::Error) -> Self { Self { error } } }
 
 //This is so stupid. Oh well
-macro_rules! apierr {
-    ($apierr:expr) => {
-        $apierr.map_err(|e| MyError::Api(e))
-    };
-}
+//macro_rules! apierr {
+//    ($apierr:expr) => {
+//        $apierr.map_err(|e| Into::<ErrorWrapper>::into(e))
+//    };
+//}
+
+//Why do we need this when we have from? Well, because warp is stupid, that's why! Warp REQUIRES
+//that you return a "Rejection" in your Result, but only THEY have the impl for Into<Rejection>, so
+//not only do I have to write a wrapper
+//fn apierr(error: ApiError) -> ErrorWrapper {
+//
+//}
 
 
 //The standard config we want here in this application. This macro is ugly but 
@@ -52,7 +60,8 @@ config::create_config!{
 }
 
 
-//oof
+/// The unchanging configuration for the current runtime. Mostly values read from 
+/// config, but some other constructed data too
 #[derive(Clone)]
 struct GlobalState {
     link_config: LinkConfig,
@@ -60,18 +69,31 @@ struct GlobalState {
     config: Config
 }
 
-impl GlobalState {
-    async fn context_map<'a>(&'a self, path: FullPath, token: Option<String>) -> Result<(MainLayoutData,ApiContext), Rejection> {
-        let context = ApiContext::new(self.config.api_endpoint.clone(), token);
+/// A context generated for each request. Even if the request doesn't need all the data,
+/// this context is generated. The global_state is pretty cheap, and nearly all pages 
+/// require the api_about in MainLayoutData, which requires the api_context.
+struct RequestContext {
+    global_state: Arc<GlobalState>,
+    api_context: ApiContext,
+    layout_data: MainLayoutData
+}
+
+impl RequestContext {
+    async fn generate(state: Arc<GlobalState>, path: FullPath, token: Option<String>) -> Result<Self, ErrorWrapper> {
+        let context = ApiContext::new(state.config.api_endpoint.clone(), token);
         let layout_data = MainLayoutData {
-            config: self.link_config.clone(),
+            config: state.link_config.clone(),
             user_config: UserConfig::default(),
             current_path: String::from(path.as_str()),
             user: context.get_me_safe().await,
-            about_api: apierr!(context.get_about().await)?,
-            cache_bust: self.cache_bust.clone()
+            about_api: context.get_about().await?,
+            cache_bust: state.cache_bust.clone()
         };
-        Ok((layout_data, ApiContext::new(self.config.api_endpoint.clone(), None)))
+        Ok(RequestContext {
+            global_state: state,
+            api_context: context,
+            layout_data
+        })
     }
 }
 
@@ -109,39 +131,42 @@ async fn main() {
     //This "state filter" should be placed at the end of your path but before you start collecting your
     //route-specific data. It will collect the path and the session cookie (if there is one) and create
     //a context with lots of useful data to pass to all the templates (but not ALL of it like before)
-    let map_state = global_state.clone();
+    let global_for_state = global_state.clone();
     let state_filter = warp::path::full()
         .and(warp::cookie::optional::<String>(SESSIONCOOKIE))
         .and_then(move |path, token| {  //Create a closure that takes ownership of map_state to let it infinitely clone
-            let this_state = map_state.clone();
-            async move { this_state.context_map(path, token).await }
+            let this_state = global_for_state.clone();
+            async move { RequestContext::generate(this_state, path, token).await.map_err(|e| Into::<Rejection>::into(e)) }
         });
     
-    let form_state = global_state.clone();
-    let form_filter = warp::body::content_length_limit(form_state.config.body_maxsize as u64);
-        //.and(warp::body::form());
+    let global_for_form = global_state.clone();
+    let form_filter = warp::body::content_length_limit(global_for_form.config.body_maxsize as u64);
+
+    //Lets anybody get the global state (maybe you want some extra config value?)
+    //let global_for_arb = global_state.clone();
+    //let get_global_state = warp::path::any().map(move || global_for_arb.clone());
 
     let index_route = warp::get()
         .and(warp::path::end())
         .and(state_filter.clone())
-        .map(|(data,_context)| warp::reply::html(pages::index::render(data)));
+        .map(|context:RequestContext| warp::reply::html(pages::index::render(context.layout_data)));
 
     let about_route = warp::get()
         .and(warp::path!("about"))
         .and(state_filter.clone())
-        .map(|(data,_context)| warp::reply::html(pages::about::render(data)));
+        .map(|context:RequestContext| warp::reply::html(pages::about::render(context.layout_data)));
 
     let login_route = warp::get()
         .and(warp::path!("login"))
         .and(state_filter.clone())
-        .map(|(data,_context)| warp::reply::html(pages::login::render(data, None, None, None)));
+        .map(|context:RequestContext| warp::reply::html(pages::login::render(context.layout_data, None, None, None)));
 
     let login_post_route = warp::post()
         .and(warp::path!("login"))
         .and(state_filter.clone())
         .and(form_filter.clone())
-        .and(warp::body::form::<sbsforms::Login>())
-        .map(|(data,_context),form| warp::reply::html(pages::login::render(data, None, None, None)));
+        .and(warp::body::form::<pages::login::Login>())
+        .map(|context:RequestContext,form| warp::reply::html(pages::login::render(context.layout_data, None, None, None)));
 
     warp::serve(static_route.or(favicon_route)
         .or(index_route)
