@@ -2,6 +2,8 @@
 pub mod index;
 pub mod about;
 pub mod login;
+pub mod activity;
+pub mod search;
 
 use contentapi::{self, endpoints::ApiError};
 use serde_urlencoded;
@@ -38,11 +40,6 @@ pub struct MainLayoutData {
     pub about_api: contentapi::About, 
     pub cache_bust: String
 }
-
-//pub struct LoginToken {
-//    pub value: String,
-//    pub max_age: i32
-//}
 
 
 // -------------------------------------
@@ -86,6 +83,17 @@ pub fn get_image_link(config: &LinkConfig, hash: &str, size: i32, crop: bool) ->
         }
     }
 }
+
+///// A macro to convert an API error into a simple rendered response. The "place"
+///// you pass in is used both for printing an error AND for finding the appropriate render function
+//macro_rules! emit_error_response {
+//    ($place:path,$error:expr,$) => {
+//        {
+//            println!("{} raw error: {}", stringify!(place), error.to_verbose_string());
+//            Response::Render($place::render(data, Some(vec![error.to_user_string()]), None, None))
+//        }
+//    };
+//}
 
 
 // ---------------------
@@ -142,7 +150,7 @@ pub fn header(config: &LinkConfig, current_path: &str, user: &Option<contentapi:
                 @if let Some(user) = user {
                     (main_nav_link_raw(config,header_user_inner(config,user),"/userhome",current_path,None))
                 }
-                else {
+                @else {
                     (main_nav_link(config,"Login","/login",current_path,None))
                 }
             }

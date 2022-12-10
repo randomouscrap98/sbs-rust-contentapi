@@ -17,7 +17,7 @@ use super::*;
 pub enum ApiError
 {
     NonRequest(AboutRequest, String),   //Something not pertaining to the actual request itself happened!
-    Parse(AboutRequest, String),        //Something didn't parse correctly! This is common enough to be its own error
+    Parse(AboutRequest, String, Option<Vec<u8>>),        //Something didn't parse correctly! This is common enough to be its own error
     Network(AboutRequest, String),      //Is the API reachable? Endpoint not necessary most likely; this indicates an error beyond 404
     Request(AboutRequest, String, u16), //Oh something went wrong with the request itself! Probably a 400 or 500 error
 }
@@ -26,7 +26,7 @@ impl ApiError {
     pub fn to_user_string(&self) -> String {
         match self {
             Self::NonRequest(_,err) => err.clone(),
-            Self::Parse(_,err) => err.clone(),
+            Self::Parse(_,err,_) => err.clone(),
             Self::Network(_,err) => err.clone(),
             Self::Request(_,err,_) => err.clone() //May change?
         }
@@ -34,7 +34,7 @@ impl ApiError {
     pub fn to_status(&self) -> u16 {
         match self {
             Self::NonRequest(_,_) => 500,
-            Self::Parse(_,_) => 500,
+            Self::Parse(_,_,_) => 500,
             Self::Network(_,_) => 503,
             Self::Request(_,_,_) => 400
         }
@@ -43,8 +43,14 @@ impl ApiError {
         match self {
             Self::NonRequest(about,err) => 
                 format!("[{}]{} - Something happened before we could reach the backend: {}", about.verb, about.endpoint, err),
-            Self::Parse(about,err) => 
-                format!("[{}]{} - Couldn't parse data from backend: {}", about.verb, about.endpoint, err),
+            Self::Parse(about,err,data) => 
+                if let Some(data) = data {
+                    format!("[{}]{} - Couldn't parse response from backend: {}. Data:\n{}", 
+                        about.verb, about.endpoint, err, String::from_utf8_lossy(data).into_owned()) 
+                }
+                else { 
+                    format!("[{}]{} - 'ParseError': COULDN'T GET BYTES FROM BODY OF RESPONSE (THIS IS BAD!): {}", about.verb, about.endpoint, err) 
+                },
             Self::Network(about,err) => 
                 format!("[{}]{} - The backend seems to be unreachable: {}", about.verb, about.endpoint, err),
             Self::Request(about,err,api_status_code) => 
@@ -82,7 +88,10 @@ macro_rules! neterr {
 /// This isn't needed as often: just convert any generic error into a "parse" error
 macro_rules! parseerr {
     ($result:expr, $req:ident) => {
-        $result.map_err(|e| ApiError::Parse($req.clone(), e.to_string()))
+        parseerr!($result, $req, None)
+    };
+    ($result:expr, $req:ident, $data:expr) => {
+        $result.map_err(|e| ApiError::Parse($req.clone(), e.to_string(), $data))
     };
 }
 
@@ -113,7 +122,8 @@ impl ApiContext {
 
         let mut reqbuilder = hyper::Request::builder()
             .method(method)
-            .uri(endpoint_uri);
+            .uri(endpoint_uri)
+            .header("Accept", "application/json");
         
         if let Some(token) = &self.user_token {
             reqbuilder = reqbuilder.header("Authorization", format!("Bearer {}", token));
@@ -131,7 +141,9 @@ impl ApiContext {
 
         //Good status vs all the rest.
         if status.is_success() {
-            parseerr!(serde_json::from_slice::<T>(&body), about)
+            //At this point, the body isn't needed anymore, since the json will have run before we
+            //call Some(body.into())
+            parseerr!(serde_json::from_slice::<T>(&body), about, Some(body.into()))
         }
         else {
             match String::from_utf8(body.into_iter().collect()) {
@@ -146,8 +158,7 @@ impl ApiContext {
     //status codes, message is assumed to be parsed from body
     pub async fn basic_get_request<T: DeserializeOwned>(&self, request: AboutRequest) -> Result<T, ApiError>
     {
-        let reqbuilder = self.get_request_builder(&request, hyper::Method::GET)?
-            .header("Accept", "application/json");
+        let reqbuilder = self.get_request_builder(&request, hyper::Method::GET)?;
         let req = noreqerr!(reqbuilder.body(hyper::Body::empty()), request)?;
 
         //Mapping the request error to a string is PERFECTLY ok in this library because these errors are
@@ -162,7 +173,7 @@ impl ApiContext {
     //request context. Automatically add bearer headers and all that
     pub async fn basic_post_request<U: Serialize+Debug, T: DeserializeOwned>(&self, request: AboutRequest, data: &U) -> Result<T, ApiError>
     {
-        let reqbuilder = self.get_request_builder(&request, hyper::Method::GET)?
+        let reqbuilder = self.get_request_builder(&request, hyper::Method::POST)?
             .header("Content-Type", "application/json");
         let json = noreqerr!(serde_json::ser::to_string(data), request)?; //Even though this is serde, it's not a parse error because it's before the request
         let req = noreqerr!(reqbuilder.body(hyper::Body::from(json)), request)?; 

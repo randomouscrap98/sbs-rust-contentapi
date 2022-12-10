@@ -140,6 +140,16 @@ async fn main() {
         .and(state_filter.clone())
         .map(|context:RequestContext| warp::reply::html(pages::login::render(context.layout_data, None, None, None)));
 
+    let activity_route = warp::get()
+        .and(warp::path!("activity"))
+        .and(state_filter.clone())
+        .map(|context:RequestContext| warp::reply::html(pages::activity::render(context.layout_data)));
+
+    let search_route = warp::get()
+        .and(warp::path!("search"))
+        .and(state_filter.clone())
+        .map(|context:RequestContext| warp::reply::html(pages::search::render(context.layout_data)));
+
     let login_post_route = warp::post()
         .and(warp::path!("login"))
         .and(state_filter.clone())
@@ -159,6 +169,8 @@ async fn main() {
         static_route.boxed()
         .or(favicon_route.boxed())
         .or(index_route.boxed())
+        .or(activity_route.boxed())
+        .or(search_route.boxed())
         .or(about_route.boxed())
         .or(login_route.boxed())
         .or(login_post_route.boxed())
