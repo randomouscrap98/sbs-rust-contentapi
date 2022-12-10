@@ -11,10 +11,13 @@ members = [ "bbcode", "contentapi", "pages" ]
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
-warp = { version = "0.3", default-features = false, features = ["multipart"]}
-# axum = { version = "0.6.1", features = ["multipart", "http2","headers"] }
+#warp = { version = "0.3", default-features = false, features = ["multipart"]}
+axum = { version = "0.6.1", features = ["multipart","http2"] }
 serde = { version = "1", features = ["derive"] }
-# tower-cookies = { version = "0.8" }
+tower-cookies = { version = "0.8" }
+mime_guess = { version = "2.0.4", default-features = false }
+include_dir = "0.7.3"
+# tower-http = { version = "0.3.5", features = [ "fs" ] }
 toml = "0.5.9"
 
 contentapi = { path = "contentapi" }

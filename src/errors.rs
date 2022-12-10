@@ -1,5 +1,5 @@
 use contentapi::endpoints::ApiError;
-use warp::{reject::Reject, http::uri::InvalidUri};
+//use warp::{reject::Reject, http::uri::InvalidUri};
 
 
 #[derive(Debug)]
@@ -24,11 +24,11 @@ impl Reject for ApiErrorWrapper {}
 //wrap_from_error!(warp::http::Error);
 //
 ////This is so stupid. Oh well
-macro_rules! apierrwrap {
-    ($result:expr) => {
-        //This is bad, oh well though, maybe I'll fix it later? I assume error mapping only happens
-        //ON error, which should rarely happen
-        $result.map_err(|error| ApiErrorWrapper{ error }).map_err(|e| Into::<Rejection>::into(e))
-    };
-}
-pub(crate) use apierrwrap;
+//macro_rules! apierrwrap {
+//    ($result:expr) => {
+//        //This is bad, oh well though, maybe I'll fix it later? I assume error mapping only happens
+//        //ON error, which should rarely happen
+//        $result.map_err(|error| ApiErrorWrapper{ error }).map_err(|e| Into::<Rejection>::into(e))
+//    };
+//}
+//pub(crate) use apierrwrap;
