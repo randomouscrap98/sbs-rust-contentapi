@@ -11,7 +11,7 @@ members = [ "bbcode", "contentapi", "pages" ]
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
-axum = "0.6.1"
+axum = { version = "0.6.1", features = ["multipart"] }
 serde = { version = "1", features = ["derive"] }
 toml = "0.5.9"
 

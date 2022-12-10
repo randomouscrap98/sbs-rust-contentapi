@@ -1,5 +1,6 @@
 use std::{net::SocketAddr, convert::Infallible, sync::Arc};
 
+use axum::{Router, routing::get, async_trait, extract::FromRequestParts, http::{StatusCode, request::Parts, header::USER_AGENT}};
 use contentapi::endpoints::{ApiContext, ApiError};
 use pages::{LinkConfig, UserConfig, MainLayoutData};
 
@@ -73,13 +74,13 @@ struct GlobalState {
 /// this context is generated. The global_state is pretty cheap, and nearly all pages 
 /// require the api_about in MainLayoutData, which requires the api_context.
 struct RequestContext {
-    global_state: Arc<GlobalState>,
-    api_context: ApiContext,
+    //global_state: Arc<GlobalState>,
+    //api_context: ApiContext,
     layout_data: MainLayoutData
 }
 
 //impl RequestContext {
-//    async fn generate(state: Arc<GlobalState>, path: FullPath, token: Option<String>) -> Result<Self, ErrorWrapper> {
+//    async fn generate(state: &GlobalState, path: FullPath, token: Option<String>) -> Result<Self, ErrorWrapper> {
 //        let context = ApiContext::new(state.config.api_endpoint.clone(), token);
 //        let layout_data = MainLayoutData {
 //            config: state.link_config.clone(),
@@ -94,6 +95,27 @@ struct RequestContext {
 //            api_context: context,
 //            layout_data
 //        })
+//    }
+//}
+//struct ExtractRequestContext(RequestContext);
+//
+//#[async_trait]
+//impl<GlobalState> FromRequestParts<GlobalState> for ExtractRequestContext
+////where
+//    //S: Send + Sync,
+//{
+//    type Rejection = (StatusCode, &'static str);
+//
+//    async fn from_request_parts(parts: &mut Parts, state: &GlobalState) -> Result<Self, Self::Rejection> {
+//        if let Some(user_agent) = parts.headers.get(USER_AGENT) {
+//            //Ok(ExtractRequestContext(user_agent.clone()))
+//        //} else {
+//            Err((StatusCode::BAD_REQUEST, "`User-Agent` header is missing"))
+//        }
+//        else {
+//
+//            Err((StatusCode::BAD_REQUEST, "`User-Agent` header is missing"))
+//        }
 //    }
 //}
 
@@ -124,6 +146,18 @@ async fn main() {
         },
         config
     });
+
+    let address = global_state.config.host_address.parse::<SocketAddr>().unwrap();
+
+    let app = Router::new()
+        .route("/", get(|| async { "Hello, World!" }))
+        .with_state(global_state);
+
+    // run it with hyper on localhost:3000
+    axum::Server::bind(&address)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
 
     //let static_route = warp::path("static").and(warp::fs::dir("static"));
     //let favicon_route = warp::path("favicon.ico").and(warp::fs::file("static/resources/favicon.ico"));
