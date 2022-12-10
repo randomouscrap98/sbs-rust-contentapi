@@ -2,6 +2,7 @@ use super::*;
 use contentapi;
 
 use serde::{Serialize, Deserialize};
+use serde_aux::prelude::deserialize_bool_from_anything;
 
 pub fn render(data: MainLayoutData, login_errors: Option<Vec<String>>, recover_errors: Option<Vec<String>>, 
               email: Option<String>) -> String {
@@ -16,7 +17,7 @@ pub fn render(data: MainLayoutData, login_errors: Option<Vec<String>>, recover_e
                 input #"login_password" type="password" required="" name="password";
                 label."inline" for="login_extended"{
                     span{"Very long session:"} 
-                    input #"login_extended" type="checkbox" name="long_session";
+                    input #"login_extended" type="checkbox" name="long_session" value="true";
                 }
                 input type="submit" value="Login";
             }
@@ -46,6 +47,7 @@ pub struct Login
 {
     pub username: String,
     pub password: String,
+    #[serde(deserialize_with = "deserialize_bool_from_anything")]
     pub long_session : bool,  //This is from the form itself, just a checkbox
 
     ////While not really a great design IMO, this lets the caller pass values to us
@@ -70,15 +72,16 @@ impl Login {
 }
 
 /// Rendering for posting a user login. But, may redirect instead! You have to inspect the Response! On success,
-/// the Ok result has a string as well, that's the token
+/// the Ok result has a string as well, that's the token. There's no way for this to fail, as one way or another,
+/// you're going to get a response
 pub async fn post_login_render(data: MainLayoutData, context: &contentapi::endpoints::ApiContext, login: &contentapi::forms::Login) -> 
-    Result<(Response, Option<String>), Error> 
+    (Response, Option<String>)
 {
-    //let api_login = convert_login(login);
     match context.post_login(login).await {
-        Ok(token) => Ok((Response::Redirect(String::from("/userhome")), Some(token))),
+        Ok(token) => (Response::Redirect(String::from("/userhome")), Some(token)),
         Err(error) => {
-            Ok((Response::Render(render(data, Some(vec![error.to_user_string()]), None, None)), None))
+            println!("Login raw error: {}", error.to_verbose_string());
+            (Response::Render(render(data, Some(vec![error.to_user_string()]), None, None)), None)
         }
     }
 }

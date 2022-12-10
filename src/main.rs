@@ -3,6 +3,7 @@ use std::{net::SocketAddr, convert::Infallible, sync::Arc};
 use contentapi::endpoints::{ApiContext, ApiError};
 use pages::{LinkConfig, UserConfig, MainLayoutData};
 
+use warp::body::BodyDeserializeError;
 use warp::hyper::{StatusCode};
 use warp::path::FullPath;
 use warp::{Filter, Rejection, Reply};
@@ -149,7 +150,7 @@ async fn main() {
                 context.global_state.config.default_cookie_expire, 
                 context.global_state.config.long_cookie_expire);
             async move {
-                let (response,token) = errwrap!(pages::login::post_login_render(context.layout_data, &context.api_context, &login).await)?;
+                let (response,token) = pages::login::post_login_render(context.layout_data, &context.api_context, &login).await;
                 handle_response(response, &context.global_state.link_config, token, login.expireSeconds)
             }
         });
@@ -185,10 +186,16 @@ async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
             }
         }
     }
+    else if let Some(error) = err.find::<BodyDeserializeError>() {
+        code = StatusCode::BAD_REQUEST;
+        message = error.to_string();    
+    }
     else {
         code = StatusCode::INTERNAL_SERVER_ERROR;
         message = String::from("COULD NOT RESOLVE ERROR! UNKNOWN STATE!");
+        println!("UNHANDLED REJECTION: {:?}", err);
     }
+    println!("Rejecting as {}: {}", code, message);
     Ok(warp::reply::with_status(message, code))
 }
 

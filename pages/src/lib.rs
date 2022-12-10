@@ -119,18 +119,6 @@ pub fn main_nav_link_raw(config: &LinkConfig, body: Markup, href: &str, current_
     }
 }
 
-//Produce the footer for the main selection of pages
-pub fn footer(config: &LinkConfig, about_api: &contentapi::About, current_path: &str) -> Markup {
-    html! {
-        footer class="controlbar smallseparate" {
-            span #"api_about" { (about_api.environment) "-" (about_api.version) }
-            (main_nav_link(config,"About","/about",current_path,Some("footer-about")))
-            //<!--<span id="debug">{{client_ip}}</span>-->
-            //<!--<span id="debug">{{route_path}}</span>-->
-        }
-    }
-}
-
 //Produce just the inner user element (not the link itself) for a logged-in user
 pub fn header_user_inner(config: &LinkConfig, user: &contentapi::User) -> Markup {
     html! {
@@ -161,6 +149,19 @@ pub fn header(config: &LinkConfig, current_path: &str, user: &Option<contentapi:
         }
     }
 }
+
+//Produce the footer for the main selection of pages
+pub fn footer(config: &LinkConfig, about_api: &contentapi::About, current_path: &str) -> Markup {
+    html! {
+        footer class="controlbar smallseparate" {
+            span #"api_about" { (about_api.environment) " - " (about_api.version) }
+            (main_nav_link(config,"About","/about",current_path,Some("footer-about")))
+            //<!--<span id="debug">{{client_ip}}</span>-->
+            //<!--<span id="debug">{{route_path}}</span>-->
+        }
+    }
+}
+
 
 pub fn style(config: &LinkConfig, link: &str, cache_bust: &str) -> Markup {
     html! {
