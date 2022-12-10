@@ -1,9 +1,5 @@
 use core::fmt::Debug;
 
-//use hyper::Uri;
-//use hyper::client::HttpConnector;
-//use hyper::client::HttpConnector;
-//use reqwest::Client;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -44,7 +40,6 @@ macro_rules! noreqerr {
         $result.map_err(|e| ApiError::NonRequest($req.clone(), e.to_string()))
     };
 }
-//pub(crate) use noreqerr;
 
 /// This isn't needed as often: just convert any generic error into a "network" error
 macro_rules! neterr {
@@ -65,7 +60,6 @@ macro_rules! parseerr {
 pub struct ApiContext {
     api_url: String,
     client: hyper::client::Client<hyper::client::HttpConnector>,
-    //client: reqwest::Client,
     user_token: Option<String>
 }
 
@@ -73,7 +67,7 @@ impl ApiContext {
     pub fn new(api_url: String, user_token: Option<String>) -> Self {
         Self {
             api_url, user_token,
-            client : hyper::client::Client::new() //reqwest::Client::new()
+            client : hyper::client::Client::new()
         }
     }
 
@@ -103,9 +97,6 @@ impl ApiContext {
         let u_status = status.as_u16();
 
         let body = parseerr!(hyper::body::to_bytes(response.into_body()).await, about)?;
-        //response.into_body()
-        //let (parts, body) = response.into_parts();
-        //let body = serde_json::from_slice(&body)?;
 
         //Good status vs all the rest.
         if status.is_success() {
@@ -116,28 +107,8 @@ impl ApiContext {
                 Ok(error) => Err(ApiError::Request(about, error, u_status)),
                 Err(error) => Err(ApiError::Request(about, format!("RESPONSE BODY UTF-8 ERROR: {}", error), u_status))
             }
-            //Err(ApiError::Request(about, String::from_ut
         }
-        //match response.error_for_status_ref()
-        //{
-        //    //The result from the API was fine, try to parse it as json (which might fail)
-        //    Ok(_) => response.json::<T>().await.map_err(|e| ApiError::Parse(about, e.to_string())) ,
-        //    //The result from the API was 400, 500, etc. Try to parse the body as the error
-        //    Err(_) => Err(match response.text().await { //.map_err(parse_error!($endpoint, status, $data)) {
-        //            Ok(api_text_error) => ApiError::Request(about, api_text_error, u_status), //response_error.status().into(), format!("At endpoint '{}': {}", $endpoint, api_text_error), format!("{:?}", $data))),
-        //            //Ok(api_text_error) => Err(ApiError::User(response_error.status().into(), format!("At endpoint '{}': {}\nREQUEST DATA:\n{:?}", $endpoint, api_text_error, $data))),
-        //            Err(p_error) => ApiError::NonRequest(about, p_error.to_string())
-        //        })
-        //}
     }
-
-    //fn get_request_from_body(reqbuilder: hyper::http::request::Builder, body: hyper::Body) -> Result<hyper::Request<hyper::Body>, ApiError> {
-    //    reqbuilder.body(body).map_err(|e| ApiError::NonRequest(request.clone(), e.to_string()))
-        //) {
-        //    Ok(request) => request,
-        //    Err(error) => Err(ApiError::NonRequest(request.clone(), error.to_string()))
-        //}
-    //}
 
     //Construct a basic GET request to the given endpoint (including ?params) using the given
     //request context. Automatically add bearer headers and all that. Errors on the appropriate
@@ -152,24 +123,9 @@ impl ApiContext {
         //NOT from stuff like 400 or 500 statuses, they're JUST from network errors (it's localhost so
         //it should never happen, and I'm fine with funky output for the few times there are downtimes)
         let response = neterr!(self.client.request(req).await, request)?;
-            //.header("Accept", "application/json")).await;
-            //.send().await
-            //.map_err(|e| ApiError::Network(request.clone(), e.to_string()))?;
         
         Self::handle_response(response, request).await
     }
-
-    // The basis for creating POST requests (since we have a couple types)
-    //fn create_post_request(&self, endpoint: &str) -> reqwest::RequestBuilder {
-    //    let mut request = self.client.post(self.get_endpoint(endpoint))
-    //        .header("Accept", "application/json");
-    //    
-    //    if let Some(token) = &self.user_token {
-    //        request = request.bearer_auth(token);
-    //    }
-
-    //    request
-    //}
 
     //Construct a basic POST request to the given endpoint (including ?params) using the given
     //request context. Automatically add bearer headers and all that
@@ -178,19 +134,11 @@ impl ApiContext {
         let reqbuilder = self.get_request_builder(&request, hyper::Method::GET)?
             .header("Content-Type", "application/json");
         let json = noreqerr!(serde_json::ser::to_string(data), request)?; //Even though this is serde, it's not a parse error because it's before the request
-        let req = noreqerr!(reqbuilder.body(hyper::Body::from(json)), request)?; //.map_err(|e| ApiError::NonRequest(request.clone(), e.to_string()))?;
-        //let client = self.create_post_request(&request.endpoint);
+        let req = noreqerr!(reqbuilder.body(hyper::Body::from(json)), request)?; 
 
         let response = self.client.request(req).await
             .map_err(|e| ApiError::Network(request.clone(), e.to_string()))?;
 
-        //See above for info on why mapping request errors to string is fine
-        //let response = client.request(req)
-        //        reqbuilder.body(hyper::Body::from(serde_json::ser::to_string(data)))
-        //    //.json(data)
-        //    .send().await
-        //    .map_err(|e| ApiError::Network(request.clone(), e.to_string()))?;
-        
         Self::handle_response(response, request).await
     }
 }

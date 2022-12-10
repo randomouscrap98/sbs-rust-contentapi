@@ -11,8 +11,10 @@ members = [ "bbcode", "contentapi", "pages" ]
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
-axum = { version = "0.6.1", features = ["multipart"] }
+warp = { version = "0.3", default-features = false, features = ["multipart"]}
+# axum = { version = "0.6.1", features = ["multipart", "http2","headers"] }
 serde = { version = "1", features = ["derive"] }
+# tower-cookies = { version = "0.8" }
 toml = "0.5.9"
 
 contentapi = { path = "contentapi" }

@@ -32,30 +32,6 @@ macro_rules! enum_type {
         }
     };
 }
-//Ensures fields are public, optional, and don't serialize on none
-//macro_rules! api_conform {
-//    ($struct:ident => {
-//        $($name:ident : $type:ty),*
-//    }) => {
-//
-//        #[derive(Serialize, Deserialize, Default, Clone, Debug)]
-//        #[serde(default)]
-//        pub struct $struct {
-//            $(
-//                #[serde(skip_serializing_if = "Option::is_none")]
-//                pub $name: Option<$type>,
-//            )*
-//        }
-//    };
-//}
-//macro_rules! api_conform_bool {
-//    ($($name:ident),*) => {
-//        $(
-//            #[serde(deserialize_with = "deserialize_bool_from_anything")]
-//            pub $name: bool,
-//        )*
-//    };
-//}
 
 // --------------------
 // *    CONSTANTS     *
@@ -203,6 +179,14 @@ macro_rules! make_values {
 }
 pub(crate) use make_values;
 
+macro_rules! add_value {
+    ($request:expr, $key:literal, $value:expr) => {
+        $request.values.insert(String::from($key), $value.into());
+    }
+}
+pub(crate) use add_value;
+
+
 //#[serde_with::skip_serializing_none] //MUST COME BEFORE
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 #[serde(default)]
@@ -321,13 +305,6 @@ macro_rules! build_request {
     };
 }
 pub(crate) use build_request; // Now classic paths Just Work™
-
-macro_rules! add_value {
-    ($request:expr, $key:literal, $value:expr) => {
-        $request.values.insert(String::from($key), $value.into());
-    }
-}
-pub(crate) use add_value;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FullRequest
