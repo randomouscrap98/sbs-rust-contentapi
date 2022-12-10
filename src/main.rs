@@ -127,13 +127,6 @@ async fn main() {
             async move { 
                 apierrwrap!(RequestContext::generate(this_state, path, token).await)
             }
-        }).recover(|err:Rejection| async {
-            if let Some(error) = err.find::<ApiErrorWrapper>() {
-                Ok(warp::reply::with_status(error.error.to_verbose_string(), StatusCode::from_u16(error.error.to_status()).unwrap()))
-            }
-            else {
-                Ok(warp::reply::with_status(String::from("CRITICAL ERROR: ROUTE FAILED TO RESPOND WHILE RETRIEVING CONTEXT!"), StatusCode::INTERNAL_SERVER_ERROR))
-            }
         }).boxed();
     
     let global_for_form = global_state.clone();
@@ -168,7 +161,7 @@ async fn main() {
                 context.global_state.config.default_cookie_expire, 
                 context.global_state.config.long_cookie_expire);
             async move {
-                let (response,token) = errwrap!(pages::login::post_login_render(context.layout_data, &context.api_context, &login).await)?;
+                let (response,token) = apierrwrap!(pages::login::post_login_render(context.layout_data, &context.api_context, &login).await)?;
                 handle_response(response, &context.global_state.link_config, token, login.expireSeconds)
             }
         });
@@ -180,6 +173,14 @@ async fn main() {
         .or(about_route.boxed())
         .or(login_route.boxed())
         .or(login_post_route.boxed())
+        .recover(|err:Rejection| async {
+            if let Some(error) = err.find::<ApiErrorWrapper>() {
+                Ok(warp::reply::with_status(error.error.to_verbose_string(), StatusCode::from_u16(error.error.to_status()).unwrap()))
+            }
+            else {
+                Ok(warp::reply::with_status(String::from("CRITICAL ERROR: ROUTE FAILED TO RESPOND WHILE RETRIEVING CONTEXT!"), StatusCode::INTERNAL_SERVER_ERROR))
+            }
+        }).boxed();
         //.recover(handle_rejection)
     ).run(address).await;
 }
