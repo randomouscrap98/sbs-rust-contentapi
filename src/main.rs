@@ -1,38 +1,22 @@
 use std::{net::SocketAddr, convert::Infallible, sync::Arc};
 
 use contentapi::endpoints::{ApiContext, ApiError};
+//use errors::ErrorWrapper;
 use pages::{LinkConfig, UserConfig, MainLayoutData};
 
-use warp::http::uri::InvalidUri;
-use warp::hyper::{StatusCode, Uri};
+use warp::hyper::{StatusCode};
 use warp::path::FullPath;
-use warp::reject::Reject;
 use warp::{Filter, Rejection, Reply};
 
+use crate::errors::{ApiErrorWrapper, apierrwrap};
+
+//use crate::errors::errwrap;
+
 mod config;
+mod errors;
 
 static CONFIGNAME : &str = "settings";
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
-
-#[derive(Debug)]
-pub struct ErrorWrapper {
-    error: pages::Error
-}
-
-//Just a bunch of stupid repetitive stuff because IMO bad design (can't impl Reject on types that aren't defined in the crate)
-impl Reject for ErrorWrapper {}
-impl From<ApiError> for ErrorWrapper { fn from(error: ApiError) -> Self { Self { error: pages::Error::Api(error) } } }
-impl From<pages::Error> for ErrorWrapper { fn from(error: pages::Error) -> Self { Self { error } } }
-impl From<InvalidUri> for ErrorWrapper { fn from(error: InvalidUri) -> Self { Self { error: pages::Error::Other(error.to_string())} }}
-
-//This is so stupid. Oh well
-macro_rules! errwrap {
-    ($result:expr) => {
-        //This is bad, oh well though, maybe I'll fix it later? I assume error mapping only happens
-        //ON error, which should rarely happen
-        $result.map_err(|e| Into::<ErrorWrapper>::into(e)).map_err(|e| Into::<Rejection>::into(e))
-    };
-}
 
 
 //The standard config we want here in this application. This macro is ugly but 
@@ -76,7 +60,7 @@ struct RequestContext {
 }
 
 impl RequestContext {
-    async fn generate(state: Arc<GlobalState>, path: FullPath, token: Option<String>) -> Result<Self, ErrorWrapper> {
+    async fn generate(state: Arc<GlobalState>, path: FullPath, token: Option<String>) -> Result<Self, ApiError> {
         let context = ApiContext::new(state.config.api_endpoint.clone(), token);
         let layout_data = MainLayoutData {
             config: state.link_config.clone(),
@@ -93,6 +77,11 @@ impl RequestContext {
         })
     }
 }
+
+//enum ContextOrElse {
+//    Context(RequestContext),
+//    Error(ApiError)
+//}
 
 #[tokio::main]
 async fn main() {
@@ -136,9 +125,16 @@ async fn main() {
         .and_then(move |path, token| {  //Create a closure that takes ownership of map_state to let it infinitely clone
             let this_state = global_for_state.clone();
             async move { 
-                errwrap!(RequestContext::generate(this_state, path, token).await)
+                apierrwrap!(RequestContext::generate(this_state, path, token).await)
             }
-        });
+        }).recover(|err:Rejection| async {
+            if let Some(error) = err.find::<ApiErrorWrapper>() {
+                Ok(warp::reply::with_status(error.error.to_verbose_string(), StatusCode::from_u16(error.error.to_status()).unwrap()))
+            }
+            else {
+                Ok(warp::reply::with_status(String::from("CRITICAL ERROR: ROUTE FAILED TO RESPOND WHILE RETRIEVING CONTEXT!"), StatusCode::INTERNAL_SERVER_ERROR))
+            }
+        }).boxed();
     
     let global_for_form = global_state.clone();
     let form_filter = warp::body::content_length_limit(global_for_form.config.body_maxsize as u64);
@@ -167,40 +163,64 @@ async fn main() {
         .and(state_filter.clone())
         .and(form_filter.clone())
         .and(warp::body::form::<pages::login::Login>())
-        .and_then(|context: RequestContext, mut form: pages::login::Login| {
-            form.default_session_seconds = context.global_state.config.default_cookie_expire;
-            form.long_session_seconds = context.global_state.config.long_cookie_expire;
+        .and_then(|context: RequestContext, form: pages::login::Login| {
+            let login = form.to_api_login(
+                context.global_state.config.default_cookie_expire, 
+                context.global_state.config.long_cookie_expire);
             async move {
-                let (response,token) = errwrap!(pages::login::post_login_render(context.layout_data, &context.api_context, form).await)?;
-                if let Some(token) = token {
-                    println!("Setting cookie? {}", token);
-                }
-                handle_response(response, &context.global_state.link_config)
+                let (response,token) = errwrap!(pages::login::post_login_render(context.layout_data, &context.api_context, &login).await)?;
+                handle_response(response, &context.global_state.link_config, token, login.expireSeconds)
             }
         });
 
-    warp::serve(static_route.or(favicon_route)
-        .or(index_route)
-        .or(about_route)
-        .or(login_route)
-        .or(login_post_route)
-        .recover(handle_rejection)
+    warp::serve(
+        static_route.boxed()
+        .or(favicon_route.boxed())
+        .or(index_route.boxed())
+        .or(about_route.boxed())
+        .or(login_route.boxed())
+        .or(login_post_route.boxed())
+        //.recover(handle_rejection)
     ).run(address).await;
 }
 
 
-async fn handle_rejection(_err: Rejection) -> Result<impl Reply, Infallible> {
-    Ok(warp::reply::with_status("Well, that failed", StatusCode::BAD_REQUEST))
-}
+//async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
+//    let code;
+//    let message;
+//    if err.is_not_found() {
+//        code = StatusCode::NOT_FOUND;
+//        message = "Couldn't figure out what to do with this URL!";
+//    } else if let Some(ErrorWrapper) = err.find() {
+//        match error {
+//
+//        }
+//        code = StatusCode::BAD_REQUEST;
+//        message = "DIVIDE_BY_ZERO";
+//    } else {
+//        code = StatusCode::INTERNAL_SERVER_ERROR;
+//        message = 
+//    }
+//    Ok(warp::reply::with_status("Well, that failed", StatusCode::BAD_REQUEST))
+//}
 
-fn handle_response(response: pages::Response, link_config: &LinkConfig) -> Result<Box<dyn Reply>, Rejection> //Box<dyn Reply>
+fn handle_response(response: pages::Response, link_config: &LinkConfig, token: Option<String>, expire: i64) -> Result<impl Reply, Rejection>
 {
+    //Have to begin the builder here? Then if there's a token, add the header?
+    let mut builder = warp::http::Response::builder();
+
+    if let Some(token) = token {
+        builder = builder.header("set-cookie", format!("{}={}; Max-Age={}; SameSite=Strict", SESSIONCOOKIE, token, expire));
+    }
 
     match response {
         pages::Response::Redirect(url) => {
-            let uri = errwrap!(format!("{}{}", link_config.http_root, url).parse::<Uri>())?;
-            Ok(Box::new(warp::redirect::see_other(uri)))
+            builder = builder.status(303).header("Location", format!("{}{}", link_config.http_root, url));
+            Ok(errwrap!(builder.body(String::from("")))?) 
         },
-        pages::Response::Render(page) => Ok(Box::new(warp::reply::html(page)))
+        pages::Response::Render(page) => {
+            builder = builder.status(200).header("Content-Type", "text/html");
+            Ok(errwrap!(builder.body(page))?)
+        }
     }
 }

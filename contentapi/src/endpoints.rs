@@ -31,6 +31,26 @@ impl ApiError {
             Self::Request(_,err,_) => err.clone() //May change?
         }
     }
+    pub fn to_status(&self) -> u16 {
+        match self {
+            Self::NonRequest(_,_) => 500,
+            Self::Parse(_,_) => 500,
+            Self::Network(_,_) => 503,
+            Self::Request(_,_,_) => 400
+        }
+    }
+    pub fn to_verbose_string(&self) -> String {
+        match self {
+            Self::NonRequest(about,err) => 
+                format!("[{}]{} - Something happened before we could reach the backend: {}", about.verb, about.endpoint, err),
+            Self::Parse(about,err) => 
+                format!("[{}]{} - Couldn't parse data from backend: {}", about.verb, about.endpoint, err),
+            Self::Network(about,err) => 
+                format!("[{}]{} - The backend seems to be unreachable: {}", about.verb, about.endpoint, err),
+            Self::Request(about,err,api_status_code) => 
+                format!("[{}]{} - Bad request to API ({}): {}", about.verb, about.endpoint, api_status_code, err),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -48,32 +48,34 @@ pub struct Login
     pub password: String,
     pub long_session : bool,  //This is from the form itself, just a checkbox
 
-    //While not really a great design IMO, this lets the caller pass values to us
-    #[serde(skip)]
-    pub long_session_seconds: i32,
-    #[serde(skip)]
-    pub default_session_seconds: i32
+    ////While not really a great design IMO, this lets the caller pass values to us
+    //#[serde(skip)]
+    //pub long_session_seconds: i32,
+    //#[serde(skip)]
+    //pub default_session_seconds: i32
 }
 
-/// Produce the API login with the appropriate values. 
-pub fn convert_login(login: Login) -> contentapi::forms::Login
-{
-    contentapi::forms::Login {
-        username: login.username,
-        password: login.password,
-        expireSeconds : 
-            if login.long_session { login.long_session_seconds.into() }
-            else { login.default_session_seconds.into() }
+impl Login {
+    /// Produce the API login with the appropriate values. 
+    pub fn to_api_login(self, default_seconds: i32, long_seconds: i32) -> contentapi::forms::Login
+    {
+        contentapi::forms::Login {
+            username: self.username,
+            password: self.password,
+            expireSeconds : 
+                if self.long_session { long_seconds.into() }
+                else { default_seconds.into() }
+        }
     }
 }
 
 /// Rendering for posting a user login. But, may redirect instead! You have to inspect the Response! On success,
 /// the Ok result has a string as well, that's the token
-pub async fn post_login_render(data: MainLayoutData, context: &contentapi::endpoints::ApiContext, login: Login) -> 
+pub async fn post_login_render(data: MainLayoutData, context: &contentapi::endpoints::ApiContext, login: &contentapi::forms::Login) -> 
     Result<(Response, Option<String>), Error> 
 {
-    let api_login = convert_login(login);
-    match context.post_login(&api_login).await {
+    //let api_login = convert_login(login);
+    match context.post_login(login).await {
         Ok(token) => Ok((Response::Redirect(String::from("/userhome")), Some(token))),
         Err(error) => {
             Ok((Response::Render(render(data, Some(vec![error.to_user_string()]), None, None)), None))

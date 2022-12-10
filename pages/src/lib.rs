@@ -39,6 +39,11 @@ pub struct MainLayoutData {
     pub cache_bust: String
 }
 
+//pub struct LoginToken {
+//    pub value: String,
+//    pub max_age: i32
+//}
+
 
 // -------------------------------------
 // *     Response/Error from pages     *
