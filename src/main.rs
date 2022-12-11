@@ -74,7 +74,7 @@ async fn main() {
         .and(warp::method())
         .and(warp::cookie::optional::<String>(SESSIONCOOKIE))
         .and_then(move |path, method, token| {  //Create a closure that takes ownership of map_state to let it infinitely clone
-            println!("[{}] {} - {:?}", chrono::Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true), &method, &path);
+            println!("[{}] {:>4} - {:?}", chrono::Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true), &method, &path);
             let this_state = global_for_state.clone();
             async move { 
                 errwrap!(RequestContext::generate(this_state, path, token).await)
@@ -122,6 +122,9 @@ async fn main() {
 
     let get_register_route = warp_get!(warp::path!("register"),
         |context:RequestContext| warp::reply::html(pages::register::render(context.layout_data, None, None, None)));
+
+    let get_registerconfirm_route = warp_get!(warp::path!("register"/"confirm"),
+        |context:RequestContext| warp::reply::html(pages::registerconfirm::render(context.layout_data, None, None, None, None, false)));
 
     let get_recover_route = warp_get!(warp::path!("recover"),
         |context:RequestContext| warp::reply::html(pages::recover::render(context.layout_data, None, None)));
@@ -194,6 +197,7 @@ async fn main() {
         .or(get_logout_route)
         .or(get_register_route)
         .or(post_register_route)
+        .or(get_registerconfirm_route)
         .or(post_registerconfirm_multi_route(&state_filter, &form_filter)) //Multiplexed! Confirm registration OR resend confirmation!
         .or(get_recover_route)
         .or(post_recover_route)
@@ -273,7 +277,7 @@ fn post_registerconfirm_multi_route(state_filter: &BoxedFilter<(RequestContext,)
         }).boxed();
 
     warp::post()
-        .and(warp::path!("register/confirm"))
+        .and(warp::path!("register"/"confirm"))
         .and(form_filter.clone())
         .and(registerconfirm_email_post.or(registerconfirm_post))
         .boxed()

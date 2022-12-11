@@ -9,6 +9,7 @@ pub mod userhome;
 pub mod recover;
 pub mod register;
 pub mod registerconfirm;
+pub mod user;
 
 use contentapi::{self, endpoints::ApiError};
 use serde::{Serialize, Deserialize};

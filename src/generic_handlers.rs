@@ -52,7 +52,7 @@ pub fn handle_response_with_token(response: pages::Response, link_config: &LinkC
     let mut builder = warp::http::Response::builder();
 
     if let Some(token) = token {
-        builder = builder.header("set-cookie", format!("{}={}; Max-Age={}; SameSite=Strict", SESSIONCOOKIE, token, expire));
+        builder = builder.header("set-cookie", format!("{}={}; Max-Age={}; Path=/; SameSite=Strict", SESSIONCOOKIE, token, expire));
     }
 
     match response {
