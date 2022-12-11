@@ -1,6 +1,5 @@
-window.onload = function() {
-    set_copy_on_click();
-};
+//Everything is on "defer" so it's fine to just do this out in the open
+set_copy_on_click();
 
 //Modify all the image list inputs so users just have to click to get the hash
 function set_copy_on_click() {

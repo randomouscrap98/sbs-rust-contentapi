@@ -1,17 +1,17 @@
-use std::{net::SocketAddr, convert::Infallible, sync::Arc};
+use std::{net::SocketAddr, sync::Arc};
 
 use contentapi::endpoints::{ApiContext, ApiError};
 use pages::{LinkConfig, UserConfig, MainLayoutData};
 
-use warp::body::BodyDeserializeError;
-use warp::hyper::{StatusCode};
 use warp::path::FullPath;
-use warp::{Filter, Rejection, Reply};
+use warp::{Filter, Rejection};
 
 mod config;
 mod errors;
+mod generic_handlers;
 
 use crate::errors::{ErrorWrapper, errwrap};
+use crate::generic_handlers::*;
 
 static CONFIGNAME : &str = "settings";
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
@@ -148,6 +148,21 @@ async fn main() {
         .and(state_filter.clone())
         .map(|context:RequestContext| warp::reply::html(pages::search::render(context.layout_data)));
 
+    let imagebrowser_route = warp::get()
+        .and(warp::path!("widget" / "imagebrowser"))
+        .and(state_filter.clone())
+        .and(warp::query::<pages::widget_imagebrowser::Search>()
+            .or(warp::any().map(|| pages::widget_imagebrowser::Search::default()))
+            .unify())
+        .and_then(|context:RequestContext, search:pages::widget_imagebrowser::Search| {
+            async move {
+                handle_response(
+                    errwrap!(pages::widget_imagebrowser::query_render(context.layout_data, 
+                        &context.api_context, search, context.global_state.config.default_imagebrowser_count).await)?,
+                        &context.global_state.link_config)
+            }
+        });
+
     let login_post_route = warp::post()
         .and(warp::path!("login"))
         .and(state_filter.clone())
@@ -159,7 +174,7 @@ async fn main() {
                 context.global_state.config.long_cookie_expire);
             async move {
                 let (response,token) = pages::login::post_login_render(context.layout_data, &context.api_context, &login).await;
-                handle_response(response, &context.global_state.link_config, token, login.expireSeconds)
+                handle_response_with_token(response, &context.global_state.link_config, token, login.expireSeconds)
             }
         });
 
@@ -172,60 +187,8 @@ async fn main() {
         .or(about_route.boxed())
         .or(login_route.boxed())
         .or(login_post_route.boxed())
+        .or(imagebrowser_route.boxed())
         .recover(handle_rejection)
     ).run(address).await;
 }
 
-
-async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
-    let code: StatusCode;
-    let message: String;
-    if err.is_not_found() {
-        code = StatusCode::NOT_FOUND;
-        message = String::from("Couldn't figure out what to do with this URL!");
-    } 
-    else if let Some(error) = err.find::<ErrorWrapper>() {
-        match &error.error {
-            pages::Error::Api(apierr) => { 
-                code = StatusCode::from_u16(apierr.to_status()).unwrap();
-                message = apierr.to_verbose_string();
-            }
-            pages::Error::Other(otherr) => {
-                code = StatusCode::INTERNAL_SERVER_ERROR;
-                message = otherr.clone();
-            }
-        }
-    }
-    else if let Some(error) = err.find::<BodyDeserializeError>() {
-        code = StatusCode::BAD_REQUEST;
-        message = error.to_string();    
-    }
-    else {
-        code = StatusCode::INTERNAL_SERVER_ERROR;
-        message = String::from("COULD NOT RESOLVE ERROR! UNKNOWN STATE!");
-        println!("UNHANDLED REJECTION: {:?}", err);
-    }
-    println!("Rejecting as {}: {}", code, message);
-    Ok(warp::reply::with_status(message, code))
-}
-
-fn handle_response(response: pages::Response, link_config: &LinkConfig, token: Option<String>, expire: i64) -> Result<impl Reply, Rejection>
-{
-    //Have to begin the builder here? Then if there's a token, add the header?
-    let mut builder = warp::http::Response::builder();
-
-    if let Some(token) = token {
-        builder = builder.header("set-cookie", format!("{}={}; Max-Age={}; SameSite=Strict", SESSIONCOOKIE, token, expire));
-    }
-
-    match response {
-        pages::Response::Redirect(url) => {
-            builder = builder.status(303).header("Location", format!("{}{}", link_config.http_root, url));
-            Ok(errwrap!(builder.body(String::from("")))?) 
-        },
-        pages::Response::Render(page) => {
-            builder = builder.status(200).header("Content-Type", "text/html");
-            Ok(errwrap!(builder.body(page))?)
-        }
-    }
-}

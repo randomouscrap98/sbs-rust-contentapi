@@ -171,20 +171,21 @@ pub struct Content //Remember, these are files, pages, threads etc. Lovely!
     pub lastRevisionId: Option<i64>
 }
 
+#[macro_export]
 macro_rules! make_values {
     ($($field_name:literal : $field_value:expr),*$(,)*) => {
         vec![$((String::from($field_name), serde_json::to_value($field_value)?))*]
             .into_iter().collect::<std::collections::HashMap<String, serde_json::Value>>()
     };
 }
-pub(crate) use make_values;
 
+#[macro_export]
 macro_rules! add_value {
     ($request:expr, $key:literal, $value:expr) => {
         $request.values.insert(String::from($key), $value.into());
     }
 }
-pub(crate) use add_value;
+//pub use add_value;
 
 
 //#[serde_with::skip_serializing_none] //MUST COME BEFORE
@@ -272,6 +273,7 @@ pub struct Request
     pub skip: i64
 }
 
+#[macro_export]
 macro_rules! build_request {
     //All these expect the RequestType enum
     ($type:expr) => { 
@@ -293,7 +295,7 @@ macro_rules! build_request {
         build_request!($type, $fields, Some($query), Some($order), $limit, $skip, None)
     };
     ($type:expr, $fields:expr, $query:expr, $order:expr, $limit:expr, $skip:expr, $name:expr) => {
-        crate::api_data::Request {
+        contentapi::Request {
             name: $name,
             r#type: $type.to_string(), //enum to string, because we implement display on all
             fields: $fields,
@@ -304,7 +306,6 @@ macro_rules! build_request {
         }
     };
 }
-pub(crate) use build_request; // Now classic paths Just Work™
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FullRequest

@@ -1,11 +1,10 @@
 //The website is designed to have maximum usability without javascript. As such, most of what
 //you'll find here are quality of life improvements
 
-window.onload = function(wole) {
-    upgrade_forms();
-    upgrade_times();
-    upgrade_code();
-};
+//This all happens on "defer" so it's fine to do it out in the open like this
+upgrade_forms();
+upgrade_times();
+upgrade_code();
 
 function upgrade_forms()
 {

@@ -77,7 +77,7 @@ pub fn base_image_link(config: &LinkConfig, hash: &str) -> String {
 
 pub fn image_link(config: &LinkConfig, hash: &str, size: i64, crop: bool) -> String {
     let query = contentapi::QueryImage { 
-        size : if size > 0 { None } else { Some(size as i64) },
+        size : if size > 0 { Some(size as i64) } else { None },
         crop : if crop { Some(crop) } else { None }
     };
     match serde_urlencoded::to_string(&query) {
@@ -86,6 +86,15 @@ pub fn image_link(config: &LinkConfig, hash: &str, size: i64, crop: bool) -> Str
             println!("Serde_qs failed? Not printing link for {}. Error: {}", hash, error);
             format!("#ERRORFOR-{}",hash)
         }
+    }
+}
+
+pub fn is_empty(string: &Option<String>) -> bool {
+    if let Some(s) = string {
+        s.is_empty()
+    }
+    else {
+        true
     }
 }
 
@@ -184,7 +193,7 @@ pub fn style(config: &LinkConfig, link: &str) -> Markup {
 
 pub fn script(config: &LinkConfig, link: &str) -> Markup {
     html! {
-        script src={(config.static_root) (link) "?" (config.cache_bust) } { }
+        script src={(config.static_root) (link) "?" (config.cache_bust) } defer { }
     }
 }
 
