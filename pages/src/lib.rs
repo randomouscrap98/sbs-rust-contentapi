@@ -9,6 +9,7 @@ pub mod userhome;
 pub mod recover;
 
 use contentapi::{self, endpoints::ApiError};
+use serde::{Serialize, Deserialize};
 use serde_urlencoded;
 use maud::{Markup, html, PreEscaped, DOCTYPE};
 
@@ -42,6 +43,17 @@ pub struct MainLayoutData {
     pub current_path: String, 
     pub user: Option<contentapi::User>,
     pub about_api: contentapi::About, 
+}
+
+
+// ------------------------
+// *     GENERIC FORMS    *
+// ------------------------
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct EmailGeneric
+{
+    pub email: String
 }
 
 

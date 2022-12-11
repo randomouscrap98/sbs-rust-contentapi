@@ -32,12 +32,6 @@ pub struct RegisterConfirm
     pub key: String
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct EmailGeneric
-{
-    pub email: String
-}
-
 #[derive(Serialize, Debug)]
 pub struct UserSensitive
 {

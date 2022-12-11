@@ -26,3 +26,4 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, email: Option<S
         }
     }).into_string()
 }
+

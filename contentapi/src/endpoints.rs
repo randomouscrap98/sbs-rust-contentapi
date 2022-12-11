@@ -178,6 +178,8 @@ impl ApiContext {
         let json = noreqerr!(serde_json::ser::to_string(data), request)?; //Even though this is serde, it's not a parse error because it's before the request
         let req = noreqerr!(reqbuilder.body(hyper::Body::from(json)), request)?; 
 
+        println!("Request: {:?}", &req);
+
         let response = self.client.request(req).await
             .map_err(|e| ApiError::Network(request.clone(), e.to_string()))?;
 
@@ -217,8 +219,8 @@ impl ApiContext {
 
     make_post_endpoint!{post_login<forms::Login,String>("/user/login")}
     make_post_endpoint!{post_register<forms::Register,User>("/user/register")}
-    make_post_endpoint!{post_email_sendregistration<forms::EmailGeneric,bool>("/user/sendregistrationcode")}
-    make_post_endpoint!{post_email_recover<forms::EmailGeneric,bool>("/user/sendpasswordrecovery")}
+    make_post_endpoint!{post_email_sendregistration<String,bool>("/user/sendregistrationcode")}
+    make_post_endpoint!{post_email_recover<String,bool>("/user/sendpasswordrecovery")}
     make_post_endpoint!{post_register_confirm<forms::RegisterConfirm,String>("/user/confirmregistration")}
     make_post_endpoint!{post_usersensitive<forms::UserSensitive,String>("/user/privatedata")} //Returns token now
     make_post_endpoint!{post_request<FullRequest,RequestResult>("/request")}

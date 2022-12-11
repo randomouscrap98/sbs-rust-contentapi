@@ -4,6 +4,7 @@ use chrono::SecondsFormat;
 use contentapi::endpoints::{ApiContext, ApiError};
 use pages::{LinkConfig, UserConfig, MainLayoutData};
 
+use serde::Deserialize;
 use warp::path::FullPath;
 use warp::{Filter, Rejection};
 
@@ -75,6 +76,19 @@ impl RequestContext {
     }
 }
 
+//Silly thing to limit a route by a single flag present (must be i8)
+macro_rules! qflag {
+    ($flag:ident) => {
+        {
+            #[allow(dead_code)]
+            #[derive(Deserialize)]
+            struct QueryFlag { $flag: i8 }
+
+            warp::query::<QueryFlag>()
+        } 
+    };
+}
+
 #[tokio::main]
 async fn main() {
 
@@ -113,9 +127,10 @@ async fn main() {
     //a context with lots of useful data to pass to all the templates (but not ALL of it like before)
     let global_for_state = global_state.clone();
     let state_filter = warp::path::full()
+        .and(warp::method())
         .and(warp::cookie::optional::<String>(SESSIONCOOKIE))
-        .and_then(move |path, token| {  //Create a closure that takes ownership of map_state to let it infinitely clone
-            println!("[{}] {:?}", chrono::Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true), &path);
+        .and_then(move |path, method, token| {  //Create a closure that takes ownership of map_state to let it infinitely clone
+            println!("[{}] {} - {:?}", chrono::Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true), &method, &path);
             let this_state = global_for_state.clone();
             async move { 
                 errwrap!(RequestContext::generate(this_state, path, token).await)
@@ -125,50 +140,67 @@ async fn main() {
     let global_for_form = global_state.clone();
     let form_filter = warp::body::content_length_limit(global_for_form.config.body_maxsize as u64);
 
-    let index_route = warp::get()
-        .and(warp::path::end())
-        .and(state_filter.clone())
-        .map(|context:RequestContext| warp::reply::html(pages::index::render(context.layout_data)));
+    macro_rules! warp_get {
+        ($filter:expr, $map:expr) => {
+            warp::get()
+                .and($filter)
+                .and(state_filter.clone())
+                .map($map)
+                .boxed()
+        };
+    }
 
-    let about_route = warp::get()
-        .and(warp::path!("about"))
-        .and(state_filter.clone())
-        .map(|context:RequestContext| warp::reply::html(pages::about::render(context.layout_data)));
+    macro_rules! warp_get_async {
+        ($filter:expr, $map:expr) => {
+            warp::get()
+                .and($filter)
+                .and(state_filter.clone())
+                .and_then($map)
+                .boxed()
+        };
+    }
 
-    let login_route = warp::get()
-        .and(warp::path!("login"))
-        .and(state_filter.clone())
-        .map(|context:RequestContext| warp::reply::html(pages::login::render(context.layout_data, None, None, None)));
+    let index_route = warp_get!(warp::path::end(), 
+        |context:RequestContext| warp::reply::html(pages::index::render(context.layout_data)));
 
-    let activity_route = warp::get()
-        .and(warp::path!("activity"))
-        .and(state_filter.clone())
-        .map(|context:RequestContext| warp::reply::html(pages::activity::render(context.layout_data)));
+    let about_route = warp_get!(warp::path!("about"),
+        |context:RequestContext| warp::reply::html(pages::about::render(context.layout_data)));
 
-    let search_route = warp::get()
-        .and(warp::path!("search"))
-        .and(state_filter.clone())
-        .map(|context:RequestContext| warp::reply::html(pages::search::render(context.layout_data)));
+    let login_route = warp_get!(warp::path!("login"),
+        |context:RequestContext| warp::reply::html(pages::login::render(context.layout_data, None, None, None)));
 
-    let userhome_get_route = warp::get()
-        .and(warp::path!("userhome"))
-        .and(state_filter.clone())
-        .and_then(|context:RequestContext| {
+    let logout_route = warp_get_async!(warp::path!("logout"),
+        |context:RequestContext| async move {
+            //Logout is a Set-Cookie to empty string with Max-Age set to 0, then redirect to root
+            handle_response_with_token(pages::Response::Redirect(format!("{}/",&context.global_state.link_config.http_root)),
+                &context.global_state.link_config, Some(String::from("")), 0)
+        });
+
+    let activity_route = warp_get!(warp::path!("activity"),
+        |context:RequestContext| warp::reply::html(pages::activity::render(context.layout_data)));
+
+    let search_route = warp_get!(warp::path!("search"),
+        |context:RequestContext| warp::reply::html(pages::search::render(context.layout_data)));
+
+    let recover_route = warp_get!(warp::path!("recover"),
+        |context:RequestContext| warp::reply::html(pages::recover::render(context.layout_data, None, None)));
+
+    let userhome_get_route = warp_get_async!(warp::path!("userhome"),
+        |context:RequestContext| {
             async move {
                 handle_response(
                     errwrap!(pages::userhome::get_render(context.layout_data, &context.api_context).await)?,
                     &context.global_state.link_config
                 )
             }
-        }); //warp::reply::html(pages::search::render(context.layout_data)));
+        }); 
 
-    let imagebrowser_route = warp::get()
-        .and(warp::path!("widget" / "imagebrowser"))
-        .and(state_filter.clone())
-        .and(warp::query::<pages::widget_imagebrowser::Search>()
-            .or(warp::any().map(|| pages::widget_imagebrowser::Search::default()))
-            .unify())
-        .and_then(|context:RequestContext, search:pages::widget_imagebrowser::Search| {
+    let imagebrowser_route = warp_get_async!(
+        warp::path!("widget" / "imagebrowser")
+            .and(warp::query::<pages::widget_imagebrowser::Search>()
+                .or(warp::any().map(|| pages::widget_imagebrowser::Search::default()))
+                .unify()),
+        |search:pages::widget_imagebrowser::Search, context:RequestContext| {
             async move {
                 handle_response(
                     errwrap!(pages::widget_imagebrowser::query_render(context.layout_data, 
@@ -177,9 +209,10 @@ async fn main() {
             }
         });
 
-    let login_filter = state_filter.clone()
+    let login_post = warp::any()
         .and(warp::body::form::<pages::login::Login>())
-        .and_then(|context: RequestContext, form: pages::login::Login| {
+        .and(state_filter.clone())
+        .and_then(|form: pages::login::Login, context: RequestContext| {
             let login = form.to_api_login(
                 context.global_state.config.default_cookie_expire, 
                 context.global_state.config.long_cookie_expire);
@@ -188,10 +221,12 @@ async fn main() {
                 handle_response_with_token(response, &context.global_state.link_config, token, login.expireSeconds)
             }
         }).boxed();
-
-    let recover_filter = state_filter.clone()
-        .and(warp::body::form::<contentapi::forms::EmailGeneric>())
-        .and_then(|context: RequestContext, form: contentapi::forms::EmailGeneric| {
+    
+    let recover_post = warp::any()
+        .and(qflag!(recover)) 
+        .and(warp::body::form::<pages::EmailGeneric>())
+        .and(state_filter.clone())
+        .and_then(|_query, form: pages::EmailGeneric, context: RequestContext| {
             async move {
                 let response = pages::login::post_login_recover(context.layout_data, &context.api_context, &form).await;
                 handle_response(response, &context.global_state.link_config)
@@ -202,20 +237,21 @@ async fn main() {
     let login_post_route = warp::post()
         .and(warp::path!("login"))
         .and(form_filter.clone())
-        .and(login_filter)
-        .or(recover_filter);
+        .and(recover_post.or(login_post));
 
     warp::serve(
         static_route.boxed()
-        .or(favicon_route.boxed())
-        .or(index_route.boxed())
-        .or(activity_route.boxed())
-        .or(search_route.boxed())
-        .or(about_route.boxed())
-        .or(login_route.boxed())
-        .or(login_post_route.boxed())
-        .or(imagebrowser_route.boxed())
-        .or(userhome_get_route.boxed())
+        .or(favicon_route)
+        .or(index_route)
+        .or(activity_route)
+        .or(search_route)
+        .or(about_route)
+        .or(login_route)
+        .or(login_post_route)
+        .or(logout_route)
+        .or(recover_route)
+        .or(imagebrowser_route)
+        .or(userhome_get_route)
         .recover(handle_rejection)
     ).run(address).await;
 }

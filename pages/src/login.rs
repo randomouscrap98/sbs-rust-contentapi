@@ -2,7 +2,6 @@ use super::*;
 use contentapi;
 
 use serde::{Serialize, Deserialize};
-use serde_aux::prelude::deserialize_bool_from_anything;
 
 pub fn render(data: MainLayoutData, login_errors: Option<Vec<String>>, recover_errors: Option<Vec<String>>, 
               email: Option<String>) -> String {
@@ -24,9 +23,9 @@ pub fn render(data: MainLayoutData, login_errors: Option<Vec<String>>, recover_e
             hr;
             h2{"Password expired / forgotten?"}
             p.""{"Send an email with a temporary recovery code, which you can use to reset your password"}
-            form method="POST" action={(data.config.http_root)"/login?recover"} {
+            form method="POST" action={(data.config.http_root)"/login?recover=1"} {
                 (errorlist(recover_errors))
-                label for="recover_email"{"Email"}
+                label for="recover_email" {"Email"}
                 input #"recover_email" type="text" name="email" required="" value=[email];
                 input type="submit" value="Send recovery email";
             }
@@ -47,25 +46,19 @@ pub struct Login
 {
     pub username: String,
     pub password: String,
-    #[serde(deserialize_with = "deserialize_bool_from_anything")]
-    pub long_session : bool,  //This is from the form itself, just a checkbox
-
-    ////While not really a great design IMO, this lets the caller pass values to us
-    //#[serde(skip)]
-    //pub long_session_seconds: i32,
-    //#[serde(skip)]
-    //pub default_session_seconds: i32
+    pub long_session : Option<bool>,  //This is from the form itself, just a checkbox
 }
 
 impl Login {
     /// Produce the API login with the appropriate values. 
     pub fn to_api_login(self, default_seconds: i32, long_seconds: i32) -> contentapi::forms::Login
     {
+        let long_session = self.long_session.unwrap_or(false);
         contentapi::forms::Login {
             username: self.username,
             password: self.password,
             expireSeconds : 
-                if self.long_session { long_seconds.into() }
+                if long_session { long_seconds.into() }
                 else { default_seconds.into() }
         }
     }
@@ -87,10 +80,10 @@ pub async fn post_login_render(data: MainLayoutData, context: &contentapi::endpo
 }
 
 pub async fn post_login_recover(data: MainLayoutData, context: &contentapi::endpoints::ApiContext, 
-    recover: &contentapi::forms::EmailGeneric) -> Response
+    recover: &EmailGeneric) -> Response
 {
     let email = recover.email.clone(); //make a copy for later
-    match context.post_email_recover(recover).await {
+    match context.post_email_recover(&recover.email).await {
         Ok(success) => {
             if success {
                 //Render the recover page with this email!

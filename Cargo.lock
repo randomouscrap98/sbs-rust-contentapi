@@ -612,7 +612,6 @@ dependencies = [
  "contentapi",
  "maud",
  "serde",
- "serde-aux",
  "serde_json",
  "serde_urlencoded",
 ]

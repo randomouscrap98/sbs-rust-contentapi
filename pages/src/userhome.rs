@@ -21,6 +21,7 @@ pub fn render(data: MainLayoutData, private: Option<contentapi::UserPrivate>, us
     }
     layout(&data, html!{
         @if let Some(user) = &data.user {
+            (style(&data.config, "/forpage/userhome.css"))
             section {
                 h1 {(user.username)}
                 div #"userhomeinfo" {
@@ -83,7 +84,9 @@ pub fn render(data: MainLayoutData, private: Option<contentapi::UserPrivate>, us
             }
         }
         @else {
-            p."error"{"You must be logged in to see userhome!"}
+            section {
+                p."error"{"You must be logged in to see userhome!"}
+            }
         }
     }).into_string()
 }
