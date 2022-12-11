@@ -79,6 +79,8 @@ pub async fn post_login_render(data: MainLayoutData, context: &contentapi::endpo
     }
 }
 
+/// Account recovery just requires an email, which we will try to send the recovery code to. On 
+/// success, we render the recovery page. Otherwise, we render the login page again (all on same url)
 pub async fn post_login_recover(data: MainLayoutData, context: &contentapi::endpoints::ApiContext, 
     recover: &EmailGeneric) -> Response
 {

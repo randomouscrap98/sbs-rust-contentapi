@@ -4,7 +4,8 @@ use chrono::SecondsFormat;
 use pages::LinkConfig;
 
 use serde::Deserialize;
-use warp::{Filter, Rejection};
+use warp::filters::BoxedFilter;
+use warp::{Filter, Rejection, Reply};
 
 mod config;
 mod errors;
@@ -62,8 +63,8 @@ async fn main() {
 
     let address = global_state.config.host_address.parse::<SocketAddr>().unwrap();
 
-    let static_route = warp::path("static").and(warp::fs::dir("static")).boxed();
-    let favicon_route = warp::path("favicon.ico").and(warp::fs::file("static/resources/favicon.ico")).boxed();
+    let fs_static_route = warp::path("static").and(warp::fs::dir("static")).boxed();
+    let fs_favicon_route = warp::path("favicon.ico").and(warp::fs::file("static/resources/favicon.ico")).boxed();
 
     //This "state filter" should be placed at the end of your path but before you start collecting your
     //route-specific data. It will collect the path and the session cookie (if there is one) and create
@@ -81,7 +82,7 @@ async fn main() {
         }).boxed();
     
     let global_for_form = global_state.clone();
-    let form_filter = warp::body::content_length_limit(global_for_form.config.body_maxsize as u64);
+    let form_filter = warp::body::content_length_limit(global_for_form.config.body_maxsize as u64).boxed();
 
     macro_rules! warp_get {
         ($filter:expr, $map:expr) => {
@@ -103,35 +104,35 @@ async fn main() {
         };
     }
 
-    let index_route = warp_get!(warp::path::end(), 
+    let get_index_route = warp_get!(warp::path::end(), 
         |context:RequestContext| warp::reply::html(pages::index::render(context.layout_data)));
 
-    let about_route = warp_get!(warp::path!("about"),
+    let get_about_route = warp_get!(warp::path!("about"),
         |context:RequestContext| warp::reply::html(pages::about::render(context.layout_data)));
 
-    let login_route = warp_get!(warp::path!("login"),
+    let get_login_route = warp_get!(warp::path!("login"),
         |context:RequestContext| warp::reply::html(pages::login::render(context.layout_data, None, None, None)));
 
-    let logout_route = warp_get_async!(warp::path!("logout"),
+    let get_logout_route = warp_get_async!(warp::path!("logout"),
         |context:RequestContext| async move {
             //Logout is a Set-Cookie to empty string with Max-Age set to 0, then redirect to root
             handle_response_with_token(pages::Response::Redirect(String::from("/")),
                 &context.global_state.link_config, Some(String::from("")), 0)
         });
 
-    let register_route = warp_get!(warp::path!("register"),
+    let get_register_route = warp_get!(warp::path!("register"),
         |context:RequestContext| warp::reply::html(pages::register::render(context.layout_data, None, None, None)));
 
-    let recover_route = warp_get!(warp::path!("recover"),
+    let get_recover_route = warp_get!(warp::path!("recover"),
         |context:RequestContext| warp::reply::html(pages::recover::render(context.layout_data, None, None)));
 
-    let activity_route = warp_get!(warp::path!("activity"),
+    let get_activity_route = warp_get!(warp::path!("activity"),
         |context:RequestContext| warp::reply::html(pages::activity::render(context.layout_data)));
 
-    let search_route = warp_get!(warp::path!("search"),
+    let get_search_route = warp_get!(warp::path!("search"),
         |context:RequestContext| warp::reply::html(pages::search::render(context.layout_data)));
 
-    let userhome_get_route = warp_get_async!(warp::path!("userhome"),
+    let get_userhome_route = warp_get_async!(warp::path!("userhome"),
         |context:RequestContext| {
             async move {
                 handle_response(
@@ -141,7 +142,7 @@ async fn main() {
             }
         }); 
 
-    let imagebrowser_route = warp_get_async!(
+    let get_imagebrowser_route = warp_get_async!(
         warp::path!("widget" / "imagebrowser")
             .and(warp::query::<pages::widget_imagebrowser::Search>()
                 .or(warp::any().map(|| pages::widget_imagebrowser::Search::default()))
@@ -155,6 +156,60 @@ async fn main() {
             }
         });
 
+    let post_recover_route = warp::post()
+        .and(warp::path!("recover"))
+        .and(form_filter.clone())
+        .and(warp::body::form::<contentapi::forms::UserSensitive>())
+        .and(state_filter.clone())
+        .and_then(|form: contentapi::forms::UserSensitive, context: RequestContext| {
+            async move {
+                let (response, token) = pages::recover::post_render(context.layout_data, &context.api_context, &form).await;
+                handle_response_with_token(response, &context.global_state.link_config, token, context.global_state.config.default_cookie_expire as i64)
+            }
+        })
+        .boxed();
+
+    let post_register_route = warp::post()
+        .and(warp::path!("register"))
+        .and(form_filter.clone())
+        .and(warp::body::form::<contentapi::forms::Register>())
+        .and(state_filter.clone())
+        .and_then(|form: contentapi::forms::Register, context: RequestContext| {
+            async move {
+                let response = pages::register::post_render(context.layout_data, &context.api_context, &form).await;
+                handle_response(response, &context.global_state.link_config)
+            }
+        })
+        .boxed();
+        
+    warp::serve(
+            fs_static_route
+        .or(fs_favicon_route)
+        .or(get_index_route)
+        .or(get_activity_route)
+        .or(get_search_route)
+        .or(get_about_route)
+        .or(get_login_route)
+        .or(post_login_multi_route(&state_filter, &form_filter)) //Multiplexed! Login OR send recovery!
+        .or(get_logout_route)
+        .or(get_register_route)
+        .or(post_register_route)
+        .or(post_registerconfirm_multi_route(&state_filter, &form_filter)) //Multiplexed! Confirm registration OR resend confirmation!
+        .or(get_recover_route)
+        .or(post_recover_route)
+        .or(get_imagebrowser_route)
+        .or(get_userhome_route)
+        .recover(handle_rejection)
+    ).run(address).await;
+}
+
+
+/// 'POST:/login' is a multiplexed route, where multiple forms can be posted to it. We determine
+/// which route to take based on the query parameter
+fn post_login_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> 
+    BoxedFilter<(impl Reply,)> 
+{
+    // The standard login post, main endpoint
     let login_post = warp::any()
         .and(warp::body::form::<pages::login::Login>())
         .and(state_filter.clone())
@@ -168,6 +223,7 @@ async fn main() {
             }
         }).boxed();
     
+    // The secondary endpoint, to send account recovery emails
     let recover_email_post = warp::any()
         .and(qflag!(recover)) 
         .and(warp::body::form::<pages::EmailGeneric>())
@@ -180,55 +236,46 @@ async fn main() {
         }).boxed();
 
     //ALL post routes!
-    let login_post_route = warp::post()
+    warp::post()
         .and(warp::path!("login"))
         .and(form_filter.clone())
         .and(recover_email_post.or(login_post))
-        .boxed();
-    
-    let recover_post_route = warp::post()
-        .and(warp::path!("recover"))
-        .and(form_filter.clone())
-        .and(warp::body::form::<contentapi::forms::UserSensitive>())
+        .boxed()
+}
+
+/// 'POST':/register/confirm is a multiplexed route, where multiple forms can be submitted to the same endpoint.
+/// These are the regular registration confirmation form (primary), and the confirmation email resend (secondary)
+fn post_registerconfirm_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> 
+    BoxedFilter<(impl Reply,)> 
+{
+    // Primary endpoint: finish up confirmation. Because of that, we might get a token back (on success)
+    let registerconfirm_post = warp::any()
+        .and(warp::body::form::<contentapi::forms::RegisterConfirm>())
         .and(state_filter.clone())
-        .and_then(|form: contentapi::forms::UserSensitive, context: RequestContext| {
+        .and_then(|form: contentapi::forms::RegisterConfirm, context: RequestContext| {
             async move {
-                let (response, token) = pages::recover::post_render(context.layout_data, &context.api_context, &form).await;
+                let (response,token) = pages::registerconfirm::post_render(context.layout_data, &context.api_context, &form).await;
                 handle_response_with_token(response, &context.global_state.link_config, token, context.global_state.config.default_cookie_expire as i64)
             }
         })
         .boxed();
 
-    let register_post_route = warp::post()
-        .and(warp::path!("register"))
-        .and(form_filter.clone())
-        .and(warp::body::form::<contentapi::forms::Register>())
+    // Secondary endpoint: resend confirmation email
+    let registerconfirm_email_post = warp::any()
+        .and(qflag!(resend)) 
+        .and(warp::body::form::<pages::EmailGeneric>())
         .and(state_filter.clone())
-        .and_then(|form: contentapi::forms::Register, context: RequestContext| {
+        .and_then(|_query, form: pages::EmailGeneric, context: RequestContext| {
             async move {
-                let response = pages::register::post_render(context.layout_data, &context.api_context, &form).await;
+                let response = pages::registerconfirm::post_email_render(context.layout_data, &context.api_context, &form).await;
                 handle_response(response, &context.global_state.link_config)
             }
-        })
-        .boxed();
+        }).boxed();
 
-    warp::serve(
-            static_route
-        .or(favicon_route)
-        .or(index_route)
-        .or(activity_route)
-        .or(search_route)
-        .or(about_route)
-        .or(login_route)
-        .or(login_post_route)
-        .or(logout_route)
-        .or(register_route)
-        .or(register_post_route)
-        .or(recover_route)
-        .or(recover_post_route)
-        .or(imagebrowser_route)
-        .or(userhome_get_route)
-        .recover(handle_rejection)
-    ).run(address).await;
+    warp::post()
+        .and(warp::path!("register/confirm"))
+        .and(form_filter.clone())
+        .and(registerconfirm_email_post.or(registerconfirm_post))
+        .boxed()
+
 }
-
