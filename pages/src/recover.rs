@@ -30,7 +30,7 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, email: Option<S
 }
 
 
-pub async fn post_recover(data: MainLayoutData, context: &contentapi::endpoints::ApiContext, sensitive: &UserSensitive) -> 
+pub async fn post_render(data: MainLayoutData, context: &contentapi::endpoints::ApiContext, sensitive: &UserSensitive) -> 
     (Response, Option<String>)
 {
     match context.post_usersensitive(sensitive).await {

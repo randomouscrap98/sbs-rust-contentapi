@@ -119,14 +119,17 @@ async fn main() {
                 &context.global_state.link_config, Some(String::from("")), 0)
         });
 
+    let register_route = warp_get!(warp::path!("register"),
+        |context:RequestContext| warp::reply::html(pages::register::render(context.layout_data, None, None, None)));
+
+    let recover_route = warp_get!(warp::path!("recover"),
+        |context:RequestContext| warp::reply::html(pages::recover::render(context.layout_data, None, None)));
+
     let activity_route = warp_get!(warp::path!("activity"),
         |context:RequestContext| warp::reply::html(pages::activity::render(context.layout_data)));
 
     let search_route = warp_get!(warp::path!("search"),
         |context:RequestContext| warp::reply::html(pages::search::render(context.layout_data)));
-
-    let recover_route = warp_get!(warp::path!("recover"),
-        |context:RequestContext| warp::reply::html(pages::recover::render(context.layout_data, None, None)));
 
     let userhome_get_route = warp_get_async!(warp::path!("userhome"),
         |context:RequestContext| {
@@ -190,8 +193,21 @@ async fn main() {
         .and(state_filter.clone())
         .and_then(|form: contentapi::forms::UserSensitive, context: RequestContext| {
             async move {
-                let (response, token) = pages::recover::post_recover(context.layout_data, &context.api_context, &form).await;
+                let (response, token) = pages::recover::post_render(context.layout_data, &context.api_context, &form).await;
                 handle_response_with_token(response, &context.global_state.link_config, token, context.global_state.config.default_cookie_expire as i64)
+            }
+        })
+        .boxed();
+
+    let register_post_route = warp::post()
+        .and(warp::path!("register"))
+        .and(form_filter.clone())
+        .and(warp::body::form::<contentapi::forms::Register>())
+        .and(state_filter.clone())
+        .and_then(|form: contentapi::forms::Register, context: RequestContext| {
+            async move {
+                let response = pages::register::post_render(context.layout_data, &context.api_context, &form).await;
+                handle_response(response, &context.global_state.link_config)
             }
         })
         .boxed();
@@ -206,6 +222,8 @@ async fn main() {
         .or(login_route)
         .or(login_post_route)
         .or(logout_route)
+        .or(register_route)
+        .or(register_post_route)
         .or(recover_route)
         .or(recover_post_route)
         .or(imagebrowser_route)
