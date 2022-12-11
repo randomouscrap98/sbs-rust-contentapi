@@ -17,7 +17,7 @@ pub struct Login
 }
 
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Register
 {
     pub username: String,
@@ -25,14 +25,14 @@ pub struct Register
     pub email: String
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RegisterConfirm
 {
     pub email: String,
     pub key: String
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct UserSensitive
 {
     //pub username: Option<&'a str>,

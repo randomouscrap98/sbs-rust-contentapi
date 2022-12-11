@@ -178,7 +178,7 @@ impl ApiContext {
         let json = noreqerr!(serde_json::ser::to_string(data), request)?; //Even though this is serde, it's not a parse error because it's before the request
         let req = noreqerr!(reqbuilder.body(hyper::Body::from(json)), request)?; 
 
-        println!("Request: {:?}", &req);
+        //println!("Request: {:?}", &req);
 
         let response = self.client.request(req).await
             .map_err(|e| ApiError::Network(request.clone(), e.to_string()))?;

@@ -37,7 +37,7 @@ macro_rules! create_config {
             //This creates a filled out configuration by applying the given toml files (if they exist) one after
             //another in the order given. It starts with purely default values. It does not throw errors on 
             //files not existing
-            fn read_chain_toml(chain: Vec<String>) -> Self {
+            pub fn read_chain_toml(chain: Vec<String>) -> Self {
                 let mut result = Self::default(); 
 
                 for filename in chain {
@@ -66,7 +66,7 @@ macro_rules! create_config {
             }
             //The basic case of "I just want to load settings for the given environment". If you give
             //(settings, Dev), it will read from the chain "settings.json, settings.Dev.json"
-            fn read_with_environment_toml(basename: &str, env: Option<&str>) -> Self {
+            pub fn read_with_environment_toml(basename: &str, env: Option<&str>) -> Self {
                 let mut chain = vec![ format!("./{}.toml", basename) ];
                 if let Some(env) = env {
                     chain.push(format!("./{}.{}.toml", basename, env));

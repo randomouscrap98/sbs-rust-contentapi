@@ -1,80 +1,23 @@
 use std::{net::SocketAddr, sync::Arc};
 
 use chrono::SecondsFormat;
-use contentapi::endpoints::{ApiContext, ApiError};
-use pages::{LinkConfig, UserConfig, MainLayoutData};
+use pages::LinkConfig;
 
 use serde::Deserialize;
-use warp::path::FullPath;
 use warp::{Filter, Rejection};
 
 mod config;
 mod errors;
 mod generic_handlers;
+mod state;
 
-use crate::errors::{ErrorWrapper, errwrap};
+use crate::errors::*;
 use crate::generic_handlers::*;
+use crate::state::*;
 
 static CONFIGNAME : &str = "settings";
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 
-
-//The standard config we want here in this application. This macro is ugly but 
-//it produces a config object that can load from a chain of json files
-config::create_config!{
-    Config, OptConfig => {
-        api_endpoint: String,
-        http_root: String,
-        api_fileraw : String,
-        //token_cookie_key: String,
-        default_cookie_expire: i32,
-        long_cookie_expire: i32,
-        default_imagebrowser_count: i32,
-        default_category_threads : i32,
-        default_display_threads : i32,
-        default_display_posts : i32,
-        forum_category_order: Vec<String>,
-        //file_maxsize: i32,
-        body_maxsize: i32, //this can be used for a lot of things, I don't really care
-        host_address: String,
-    }
-}
-
-
-/// The unchanging configuration for the current runtime. Mostly values read from 
-/// config, but some other constructed data too
-#[derive(Clone)]
-struct GlobalState {
-    link_config: LinkConfig,
-    config: Config
-}
-
-/// A context generated for each request. Even if the request doesn't need all the data,
-/// this context is generated. The global_state is pretty cheap, and nearly all pages 
-/// require the api_about in MainLayoutData, which requires the api_context.
-struct RequestContext {
-    global_state: Arc<GlobalState>,
-    api_context: ApiContext,
-    layout_data: MainLayoutData
-}
-
-impl RequestContext {
-    async fn generate(state: Arc<GlobalState>, path: FullPath, token: Option<String>) -> Result<Self, ApiError> {
-        let context = ApiContext::new(state.config.api_endpoint.clone(), token);
-        let layout_data = MainLayoutData {
-            config: state.link_config.clone(),
-            user_config: UserConfig::default(),
-            current_path: String::from(path.as_str()),
-            user: context.get_me_safe().await,
-            about_api: context.get_about().await?
-        };
-        Ok(RequestContext {
-            global_state: state,
-            api_context: context,
-            layout_data
-        })
-    }
-}
 
 //Silly thing to limit a route by a single flag present (must be i8)
 macro_rules! qflag {
@@ -119,8 +62,8 @@ async fn main() {
 
     let address = global_state.config.host_address.parse::<SocketAddr>().unwrap();
 
-    let static_route = warp::path("static").and(warp::fs::dir("static"));
-    let favicon_route = warp::path("favicon.ico").and(warp::fs::file("static/resources/favicon.ico"));
+    let static_route = warp::path("static").and(warp::fs::dir("static")).boxed();
+    let favicon_route = warp::path("favicon.ico").and(warp::fs::file("static/resources/favicon.ico")).boxed();
 
     //This "state filter" should be placed at the end of your path but before you start collecting your
     //route-specific data. It will collect the path and the session cookie (if there is one) and create
@@ -172,7 +115,7 @@ async fn main() {
     let logout_route = warp_get_async!(warp::path!("logout"),
         |context:RequestContext| async move {
             //Logout is a Set-Cookie to empty string with Max-Age set to 0, then redirect to root
-            handle_response_with_token(pages::Response::Redirect(format!("{}/",&context.global_state.link_config.http_root)),
+            handle_response_with_token(pages::Response::Redirect(String::from("/")),
                 &context.global_state.link_config, Some(String::from("")), 0)
         });
 
@@ -222,7 +165,7 @@ async fn main() {
             }
         }).boxed();
     
-    let recover_post = warp::any()
+    let recover_email_post = warp::any()
         .and(qflag!(recover)) 
         .and(warp::body::form::<pages::EmailGeneric>())
         .and(state_filter.clone())
@@ -237,10 +180,24 @@ async fn main() {
     let login_post_route = warp::post()
         .and(warp::path!("login"))
         .and(form_filter.clone())
-        .and(recover_post.or(login_post));
+        .and(recover_email_post.or(login_post))
+        .boxed();
+    
+    let recover_post_route = warp::post()
+        .and(warp::path!("recover"))
+        .and(form_filter.clone())
+        .and(warp::body::form::<contentapi::forms::UserSensitive>())
+        .and(state_filter.clone())
+        .and_then(|form: contentapi::forms::UserSensitive, context: RequestContext| {
+            async move {
+                let (response, token) = pages::recover::post_recover(context.layout_data, &context.api_context, &form).await;
+                handle_response_with_token(response, &context.global_state.link_config, token, context.global_state.config.default_cookie_expire as i64)
+            }
+        })
+        .boxed();
 
     warp::serve(
-        static_route.boxed()
+            static_route
         .or(favicon_route)
         .or(index_route)
         .or(activity_route)
@@ -250,6 +207,7 @@ async fn main() {
         .or(login_post_route)
         .or(logout_route)
         .or(recover_route)
+        .or(recover_post_route)
         .or(imagebrowser_route)
         .or(userhome_get_route)
         .recover(handle_rejection)

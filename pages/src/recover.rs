@@ -1,3 +1,5 @@
+use contentapi::forms::UserSensitive;
+
 use super::*;
 
 pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, email: Option<String>) -> String {
@@ -27,3 +29,16 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, email: Option<S
     }).into_string()
 }
 
+
+pub async fn post_recover(data: MainLayoutData, context: &contentapi::endpoints::ApiContext, sensitive: &UserSensitive) -> 
+    (Response, Option<String>)
+{
+    match context.post_usersensitive(sensitive).await {
+        Ok(token) => {
+            (Response::Redirect(String::from("/userhome")), Some(token))
+        },
+        Err(error) => {
+            (Response::Render(render(data, Some(vec![error.to_user_string()]), Some(sensitive.currentEmail.clone()))), None)
+        }
+    }
+}
