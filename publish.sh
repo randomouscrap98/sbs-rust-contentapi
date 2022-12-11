@@ -52,7 +52,7 @@ then
    PRODUCT="./target/${BUILDTYPE}/${NAME}"
    # If choosing a profile, set it first before calling the product
    if [ -n "$INSTALLPROFILE" ]; then
-      PRODUCT="ROCKET_PROFILE=${INSTALLPROFILE} ${PRODUCT}"
+      PRODUCT="${PRODUCT} ${INSTALLPROFILE}"
    fi
    echo "ALSO Running ${PRODUCT}"
    SSHCMD="${SSHCMD} && echo \"Running ${NAME}...\" && ${PRODUCT}"

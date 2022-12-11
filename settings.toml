@@ -2,7 +2,7 @@
 api_endpoint = "http://localhost:5000/api"  # contentapi by default hosts on port 5000
 http_root = "" #Don't want double forwardslash
 api_fileraw = "/contentapi/images"
-host_address = "127.0.0.1:5011" # Localhost:5011, but you can change it to whatever (0.0.0.0 for global?)
+host_address = "127.0.0.1:5011" # Address to bind, but you can change it to whatever (0.0.0.0 for global?)
 
 # The rest is whatever
 # token_cookie_key = "sbs_contentapi_token"

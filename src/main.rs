@@ -148,6 +148,18 @@ async fn main() {
         .and(state_filter.clone())
         .map(|context:RequestContext| warp::reply::html(pages::search::render(context.layout_data)));
 
+    let userhome_get_route = warp::get()
+        .and(warp::path!("userhome"))
+        .and(state_filter.clone())
+        .and_then(|context:RequestContext| {
+            async move {
+                handle_response(
+                    errwrap!(pages::userhome::get_render(context.layout_data, &context.api_context).await)?,
+                    &context.global_state.link_config
+                )
+            }
+        }); //warp::reply::html(pages::search::render(context.layout_data)));
+
     let imagebrowser_route = warp::get()
         .and(warp::path!("widget" / "imagebrowser"))
         .and(state_filter.clone())
@@ -188,6 +200,7 @@ async fn main() {
         .or(login_route.boxed())
         .or(login_post_route.boxed())
         .or(imagebrowser_route.boxed())
+        .or(userhome_get_route.boxed())
         .recover(handle_rejection)
     ).run(address).await;
 }

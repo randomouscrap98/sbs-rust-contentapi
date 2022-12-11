@@ -121,6 +121,7 @@ fn image_navigation(config: &MainLayoutData, search: Search) -> Markup {
 }
 
 
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]
 pub struct Search
@@ -158,6 +159,7 @@ impl From<Content> for Image {
         }
     }
 }
+
 
 
 async fn imagebrowser_request(context: &ApiContext, search: &Search, per_page: i32) -> Result<RequestResult, ApiError>
@@ -207,14 +209,13 @@ async fn imagebrowser_request(context: &ApiContext, search: &Search, per_page: i
     context.post_request(&request).await
 }
 
+
 pub async fn query_render(data: MainLayoutData, context: &ApiContext, search: Search, per_page: i32) -> Result<Response,Error> {
     let result = imagebrowser_request(context, &search, per_page).await?;
     let images = conversion::cast_result_safe::<Content>(&result, "content")?;
     let previews = conversion::cast_result_safe::<Content>(&result, "preview")?;
 
-//pub fn render(data: MainLayoutData, search: Search, images: Vec<Image>, previews: Vec<Image>, errors: Option<Vec<String>>) -> String {
     Ok(Response::Render(render(data, search, 
         images.into_iter().map(|i| i.into()).collect(), 
         previews.into_iter().map(|i| i.into()).collect(), None)))
 }
-//pub fn render(data: MainLayoutData, search: Search, images: Vec<Image>, previews: Vec<Image>, errors: Option<Vec<String>>) -> String {

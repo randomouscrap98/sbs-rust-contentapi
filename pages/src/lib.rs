@@ -5,6 +5,7 @@ pub mod login;
 pub mod activity;
 pub mod search;
 pub mod widget_imagebrowser;
+pub mod userhome;
 
 use contentapi::{self, endpoints::ApiError};
 use serde_urlencoded;
@@ -90,12 +91,18 @@ pub fn image_link(config: &LinkConfig, hash: &str, size: i64, crop: bool) -> Str
 }
 
 pub fn is_empty(string: &Option<String>) -> bool {
-    if let Some(s) = string {
-        s.is_empty()
-    }
-    else {
-        true
-    }
+    if let Some(s) = string { s.is_empty() }
+    else { true }
+}
+
+pub fn s(string: &Option<String>) -> &str {
+    if let Some(s) = string { &s }
+    else { "" }
+}
+
+pub fn b(boolean: bool) -> &'static str {
+    if boolean { "true" }
+    else { "false" }
 }
 
 ///// A macro to convert an API error into a simple rendered response. The "place"
