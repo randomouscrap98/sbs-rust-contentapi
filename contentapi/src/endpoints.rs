@@ -217,10 +217,10 @@ impl ApiContext {
 
     make_post_endpoint!{post_login<forms::Login,String>("/user/login")}
     make_post_endpoint!{post_register<forms::Register,User>("/user/register")}
-    make_post_endpoint!{post_email_sendregistration<forms::EmailGeneric<'_>,bool>("/user/sendregistrationcode")}
-    make_post_endpoint!{post_email_recover<forms::EmailGeneric<'_>,bool>("/user/sendpasswordrecovery")}
+    make_post_endpoint!{post_email_sendregistration<forms::EmailGeneric,bool>("/user/sendregistrationcode")}
+    make_post_endpoint!{post_email_recover<forms::EmailGeneric,bool>("/user/sendpasswordrecovery")}
     make_post_endpoint!{post_register_confirm<forms::RegisterConfirm,String>("/user/confirmregistration")}
-    make_post_endpoint!{post_usersensitive<forms::UserSensitive<'_>,String>("/user/privatedata")} //Returns token now
+    make_post_endpoint!{post_usersensitive<forms::UserSensitive,String>("/user/privatedata")} //Returns token now
     make_post_endpoint!{post_request<FullRequest,RequestResult>("/request")}
     make_post_endpoint!{post_userupdate<User,User>("/write/user")}
     make_post_endpoint!{post_content<Content,Content>("/write/content")}

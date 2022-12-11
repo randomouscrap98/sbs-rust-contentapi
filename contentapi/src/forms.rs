@@ -32,20 +32,20 @@ pub struct RegisterConfirm
     pub key: String
 }
 
-#[derive(Serialize, Debug)]
-pub struct EmailGeneric<'a>
+#[derive(Serialize, Deserialize, Debug)]
+pub struct EmailGeneric
 {
-    pub email: &'a str
+    pub email: String
 }
 
 #[derive(Serialize, Debug)]
-pub struct UserSensitive<'a>
+pub struct UserSensitive
 {
     //pub username: Option<&'a str>,
-    pub password: Option<&'a str>,
-    pub email: Option<&'a str>,
-    pub currentPassword: &'a str,
-    pub currentEmail: &'a str
+    pub password: Option<String>,
+    pub email: Option<String>,
+    pub currentPassword: String,
+    pub currentEmail: String
 }
 
 #[derive(Serialize, Debug)]

@@ -6,6 +6,7 @@ pub mod activity;
 pub mod search;
 pub mod widget_imagebrowser;
 pub mod userhome;
+pub mod recover;
 
 use contentapi::{self, endpoints::ApiError};
 use serde_urlencoded;

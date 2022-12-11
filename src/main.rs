@@ -1,5 +1,6 @@
 use std::{net::SocketAddr, sync::Arc};
 
+use chrono::SecondsFormat;
 use contentapi::endpoints::{ApiContext, ApiError};
 use pages::{LinkConfig, UserConfig, MainLayoutData};
 
@@ -114,6 +115,7 @@ async fn main() {
     let state_filter = warp::path::full()
         .and(warp::cookie::optional::<String>(SESSIONCOOKIE))
         .and_then(move |path, token| {  //Create a closure that takes ownership of map_state to let it infinitely clone
+            println!("[{}] {:?}", chrono::Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true), &path);
             let this_state = global_for_state.clone();
             async move { 
                 errwrap!(RequestContext::generate(this_state, path, token).await)
@@ -175,10 +177,7 @@ async fn main() {
             }
         });
 
-    let login_post_route = warp::post()
-        .and(warp::path!("login"))
-        .and(state_filter.clone())
-        .and(form_filter.clone())
+    let login_filter = state_filter.clone()
         .and(warp::body::form::<pages::login::Login>())
         .and_then(|context: RequestContext, form: pages::login::Login| {
             let login = form.to_api_login(
@@ -188,7 +187,23 @@ async fn main() {
                 let (response,token) = pages::login::post_login_render(context.layout_data, &context.api_context, &login).await;
                 handle_response_with_token(response, &context.global_state.link_config, token, login.expireSeconds)
             }
-        });
+        }).boxed();
+
+    let recover_filter = state_filter.clone()
+        .and(warp::body::form::<contentapi::forms::EmailGeneric>())
+        .and_then(|context: RequestContext, form: contentapi::forms::EmailGeneric| {
+            async move {
+                let response = pages::login::post_login_recover(context.layout_data, &context.api_context, &form).await;
+                handle_response(response, &context.global_state.link_config)
+            }
+        }).boxed();
+
+    //ALL post routes!
+    let login_post_route = warp::post()
+        .and(warp::path!("login"))
+        .and(form_filter.clone())
+        .and(login_filter)
+        .or(recover_filter);
 
     warp::serve(
         static_route.boxed()

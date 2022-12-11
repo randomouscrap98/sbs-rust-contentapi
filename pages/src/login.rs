@@ -85,3 +85,24 @@ pub async fn post_login_render(data: MainLayoutData, context: &contentapi::endpo
         }
     }
 }
+
+pub async fn post_login_recover(data: MainLayoutData, context: &contentapi::endpoints::ApiContext, 
+    recover: &contentapi::forms::EmailGeneric) -> Response
+{
+    let email = recover.email.clone(); //make a copy for later
+    match context.post_email_recover(recover).await {
+        Ok(success) => {
+            if success {
+                //Render the recover page with this email!
+                Response::Render(recover::render(data, None, Some(email)))
+            }
+            else {
+                Response::Render(render(data, None, Some(vec![String::from("Unknown error (email endpoint returned false!)")]), Some(email)))
+            }
+        },
+        Err(error) => {
+            println!("Recover raw error: {}", error.to_verbose_string());
+            Response::Render(render(data, None, Some(vec![error.to_user_string()]), Some(email)))
+        }
+    }
+}
