@@ -4,6 +4,7 @@ pub mod about;
 pub mod login;
 pub mod activity;
 pub mod search;
+pub mod widget_imagebrowser;
 
 use contentapi::{self, endpoints::ApiError};
 use serde_urlencoded;
@@ -15,6 +16,7 @@ pub struct LinkConfig {
     pub static_root: String,
     pub resource_root: String,
     pub file_root: String,
+    pub cache_bust: String
 }
 
 #[derive(Clone, Debug)]
@@ -38,7 +40,6 @@ pub struct MainLayoutData {
     pub current_path: String, 
     pub user: Option<contentapi::User>,
     pub about_api: contentapi::About, 
-    pub cache_bust: String
 }
 
 
@@ -70,10 +71,14 @@ impl From<Box<dyn std::error::Error>> for Error {
     }
 }
 
-pub fn get_image_link(config: &LinkConfig, hash: &str, size: i32, crop: bool) -> String {
+pub fn base_image_link(config: &LinkConfig, hash: &str) -> String { 
+    image_link(config, hash, 0, false)
+}
+
+pub fn image_link(config: &LinkConfig, hash: &str, size: i64, crop: bool) -> String {
     let query = contentapi::QueryImage { 
-        size : Some(size as i64),
-        crop : Some(crop) 
+        size : if size > 0 { None } else { Some(size as i64) },
+        crop : if crop { Some(crop) } else { None }
     };
     match serde_urlencoded::to_string(&query) {
         Ok(querystring) => format!("{}/{}?{}", config.file_root, hash, querystring),
@@ -131,7 +136,7 @@ pub fn main_nav_link_raw(config: &LinkConfig, body: Markup, href: &str, current_
 pub fn header_user_inner(config: &LinkConfig, user: &contentapi::User) -> Markup {
     html! {
         span { (user.username) }
-        img src=(get_image_link(config, &user.avatar, 100, true));
+        img src=(image_link(config, &user.avatar, 100, true));
     }
 }
 
@@ -171,15 +176,15 @@ pub fn footer(config: &LinkConfig, about_api: &contentapi::About, current_path: 
 }
 
 
-pub fn style(config: &LinkConfig, link: &str, cache_bust: &str) -> Markup {
+pub fn style(config: &LinkConfig, link: &str) -> Markup {
     html! {
-        link rel="stylesheet" href={(config.static_root) (link) "?" (cache_bust) } { }
+        link rel="stylesheet" href={(config.static_root) (link) "?" (config.cache_bust) } { }
     }
 }
 
-pub fn script(config: &LinkConfig, link: &str, cache_bust: &str) -> Markup {
+pub fn script(config: &LinkConfig, link: &str) -> Markup {
     html! {
-        script src={(config.static_root) (link) "?" (cache_bust) } { }
+        script src={(config.static_root) (link) "?" (config.cache_bust) } { }
     }
 }
 
@@ -213,11 +218,11 @@ pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
                 (basic_meta(&main_data.config))
                 title { "SmileBASIC Source" }
                 meta name="description" content="A community for sharing programs and getting advice on SmileBASIC applications on the Nintendo DSi, 3DS, and Switch";
-                (style(&main_data.config, "/base.css", &main_data.cache_bust))
-                (style(&main_data.config, "/layout.css", &main_data.cache_bust))
-                (script(&main_data.config, "/layout.js", &main_data.cache_bust))
-                (script(&main_data.config, "/base.js", &main_data.cache_bust))
-                (script(&main_data.config, "/sb-highlight.js", &main_data.cache_bust))
+                (style(&main_data.config, "/base.css"))
+                (style(&main_data.config, "/layout.css"))
+                (script(&main_data.config, "/layout.js"))
+                (script(&main_data.config, "/base.js"))
+                (script(&main_data.config, "/sb-highlight.js"))
                 style { (PreEscaped(r#"
                     body {
                         background-repeat: repeat;

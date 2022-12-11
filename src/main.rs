@@ -44,7 +44,6 @@ config::create_config!{
 #[derive(Clone)]
 struct GlobalState {
     link_config: LinkConfig,
-    cache_bust: String,
     config: Config
 }
 
@@ -65,8 +64,7 @@ impl RequestContext {
             user_config: UserConfig::default(),
             current_path: String::from(path.as_str()),
             user: context.get_me_safe().await,
-            about_api: context.get_about().await?,
-            cache_bust: state.cache_bust.clone()
+            about_api: context.get_about().await?
         };
         Ok(RequestContext {
             global_state: state,
@@ -91,14 +89,14 @@ async fn main() {
     //So when you see "clone" on this, it's not actually cloning all the data, it's just making
     //a new pointer and incrementing a count.
     let global_state = Arc::new(GlobalState {
-        cache_bust : chrono::offset::Utc::now().to_string(),
         link_config : {
             let root = config.http_root.clone();
             LinkConfig {
                 static_root: format!("{}/static", &root),
                 resource_root: format!("{}/static/resources", &root),
                 file_root: config.api_fileraw.clone(),
-                http_root: root
+                http_root: root,
+                cache_bust : chrono::offset::Utc::now().to_string()
             }
         },
         config
