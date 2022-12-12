@@ -1,7 +1,8 @@
 
 use std::collections::HashMap;
 
-use contentapi::{conversion::*, User};
+use contentapi::conversion::*;
+use contentapi::{User, FullRequest};
 use contentapi::endpoints::ApiContext;
 
 use crate::_forumsys::*;
@@ -67,4 +68,60 @@ pub fn thread_item(config: &LinkConfig, thread: &ForumThread, users: &HashMap<i6
             }
         }
     }
+}
+
+async fn build_categories_with_threads(context: &ApiContext, categories_cleaned: Vec<CleanedPreCategory>, limit: i32, skip: i32) -> 
+    Result<Vec<ForumCategory>, Error> 
+{
+    //Next request: get the complicated dataset for each category (this somehow includes comments???)
+    let thread_request = get_thread_request(&categories_cleaned, limit, skip, true); //context.config.default_category_threads, 0);
+    let thread_result = context.post_request(&thread_request).await?;
+
+    let messages_raw = cast_result_required::<Message>(&thread_result, "message")?;
+
+    let mut categories = Vec::new();
+
+    for category in categories_cleaned {
+        categories.push(ForumCategory::from_result(category, &thread_result, &messages_raw)?);
+    }
+
+    Ok(categories)
+}
+
+async fn render_threads(data: MainLayoutData, context: &ApiContext, category_request: FullRequest, per_page: i32, page: Option<i32>) ->
+    Result<Response, Error>
+{
+    let page = page.unwrap_or(1) - 1;
+
+    let category_result = context.post_request(&category_request).await?;
+    let categories_cleaned = CleanedPreCategory::from_many(cast_result_required::<Content>(&category_result, CATEGORYKEY)?)?;
+    let mut categories = build_categories_with_threads(&context, categories_cleaned, 
+        per_page,
+        page * per_page
+    ).await?;
+
+    //TODO: Might want to add data to these RouteErrors?
+    let category = categories.pop().ok_or(Error::NotFound(String::from("Couldn't find that category")))?;
+    let pagelist = get_pagelist(category.threads_count, per_page, page);
+
+    //println!("Please: {:?}", category);
+
+    let path = vec![ForumPathItem::root(), ForumPathItem::from_category(&category.category)];
+    Ok(Response::Render(render(data, category, path, pagelist)))
+}
+
+//#[get("/forum/category/<hash>?<page>")]
+pub async fn get_hash_render(data: MainLayoutData, context: &ApiContext, hash: String, per_page: i32, page: Option<i32>) -> 
+    Result<Response, Error> 
+{
+    render_threads(data, &context, get_category_request(Some(hash), None), per_page, page).await
+}
+
+//Almost nobody will be visiting by fcid, so rank this poorly
+//#[get("/forum?<fcid>&<page>", rank=9)] //, rank=2)]
+
+pub async fn get_fcid_render(data: MainLayoutData, context: &ApiContext, fcid: i64, per_page: i32, page: Option<i32>) -> 
+    Result<Response, Error> 
+{
+    render_threads(data, &context, get_category_request(None, Some(fcid)), per_page, page).await
 }

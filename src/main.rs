@@ -168,11 +168,27 @@ async fn main()
     let get_search_route = warp_get!(warp::path!("search"),
         |context:RequestContext| warp::reply::html(pages::search::render(context.layout_data)));
 
+    //TODO: this has to be multiplexed!
     let get_forum_main_route = warp_get_async!(warp::path!("forum"),
         |context:RequestContext| {
             async move {
                 handle_response(
                     errwrap!(pages::forum_main::get_render(context.layout_data, &context.api_context, &context.global_state.config.forum_category_order ,context.global_state.config.default_category_threads).await)?,
+                    &context.global_state.link_config
+                )
+            }
+        }); 
+
+    #[derive(Deserialize, Debug)]
+    struct SimplePage { page: Option<i32> }
+
+    let get_forum_category_route = warp_get_async!(
+        warp::path!("forum" / "category" / String)
+            .and(warp::query::<SimplePage>()),
+        |hash: String, page_struct: SimplePage, context:RequestContext| {
+            async move {
+                handle_response(
+                    errwrap!(pages::forum_category::get_hash_render(context.layout_data, &context.api_context, hash, context.global_state.config.default_display_threads, page_struct.page).await)?,
                     &context.global_state.link_config
                 )
             }
@@ -245,6 +261,7 @@ async fn main()
         .or(get_activity_route)
         .or(get_search_route)
         .or(get_forum_main_route)
+        .or(get_forum_category_route)
         .or(get_about_route)
         .or(get_user_route)
         .or(get_userhome_route)

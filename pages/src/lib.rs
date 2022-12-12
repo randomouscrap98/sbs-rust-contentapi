@@ -77,6 +77,7 @@ pub enum Response {
 pub enum Error {
     Api(contentapi::endpoints::ApiError),
     Data(String, String), //First string is error to output, second is the data itself (don't print for user)
+    NotFound(String),   //Normal "not found" error
     Other(String) //Something "general" happened, who the heck knows?
 }
 
@@ -104,6 +105,7 @@ impl Error {
         match self {
             Self::Api(error) => error.to_user_string(),
             Self::Other(error) => error.clone(),
+            Self::NotFound(error) => error.clone(),
             Self::Data(error, _data) => error.clone()
         }
     }

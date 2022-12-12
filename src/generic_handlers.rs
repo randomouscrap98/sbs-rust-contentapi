@@ -20,7 +20,11 @@ pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> 
             pages::Error::Other(otherr) => {
                 code = StatusCode::INTERNAL_SERVER_ERROR;
                 message = otherr.clone();
-            }
+            },
+            pages::Error::NotFound(otherr) => {
+                code = StatusCode::NOT_FOUND;
+                message = otherr.clone();
+            },
             pages::Error::Data(derr,data) => {
                 code = StatusCode::INTERNAL_SERVER_ERROR;
                 message = derr.clone();

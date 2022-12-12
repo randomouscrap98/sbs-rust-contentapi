@@ -241,6 +241,21 @@ pub fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip
 // *    FORUM FUNCTIONS     *
 // --------------------------
 
+pub fn get_pagelist(total: i32, page_size: i32, current: i32) -> Vec<ForumPagelistItem>
+{
+    let mut pagelist = Vec::new();
+
+    for i in (0..total).step_by(page_size as usize) {
+        let thispage = i / page_size;
+        pagelist.push(ForumPagelistItem {
+            page: thispage + 1,
+            text: format!("{}", thispage + 1),
+            current: thispage == current
+        });
+    }
+
+    pagelist
+}
 
 // ----------------------------
 // *     TEMPLATING PLUS      *
