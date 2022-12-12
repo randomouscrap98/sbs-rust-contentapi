@@ -82,9 +82,24 @@ impl From<ApiError> for Error {
     }
 }
 
+impl From<serde_json::Error> for Error {
+    fn from(error: serde_json::Error) -> Self {
+        Error::Other(error.to_string()) 
+    }
+}
+
 impl From<Box<dyn std::error::Error>> for Error {
     fn from(error: Box<dyn std::error::Error>) -> Self {
         Error::Other(error.to_string()) 
+    }
+}
+
+impl Error {
+    pub fn to_user_string(&self) -> String {
+        match self {
+            Self::Api(error) => error.to_user_string(),
+            Self::Other(error) => error.clone()
+        }
     }
 }
 

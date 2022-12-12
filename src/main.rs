@@ -215,6 +215,7 @@ async fn main()
         .or(get_about_route)
         .or(get_user_route)
         .or(get_userhome_route)
+        .or(post_userhome_multi_route(&state_filter, &form_filter)) //Multiplexed! Login OR send recovery!
         .or(get_login_route)
         .or(post_login_multi_route(&state_filter, &form_filter)) //Multiplexed! Login OR send recovery!
         .or(get_logout_route)
@@ -302,6 +303,55 @@ fn post_registerconfirm_multi_route(state_filter: &BoxedFilter<(RequestContext,)
         .and(warp::path!("register"/"confirm"))
         .and(form_filter.clone())
         .and(registerconfirm_email_post.or(registerconfirm_post))
+        .boxed()
+
+}
+
+/// 'POST':/userhome is a 3 way multiplexed route, where you can post user updates (primary), user bio updates
+/// (secondary), and finally sensitive updates
+fn post_userhome_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> 
+    BoxedFilter<(impl Reply,)> 
+{
+    // Primary endpoint: update regular user data
+    let userhome_post = warp::any()
+        .and(warp::body::form::<pages::userhome::UserUpdate>())
+        .and(state_filter.clone())
+        .and_then(|form: pages::userhome::UserUpdate, context: RequestContext| {
+            async move {
+                let response = errwrap!(pages::userhome::post_info_render(context.layout_data, &context.api_context, form).await)?;
+                handle_response(response, &context.global_state.link_config)
+            }
+        })
+        .boxed();
+
+    // Secondary endpoint: user bio updates
+    let userhome_bio_post = warp::any()
+        .and(qflag!(bio)) 
+        .and(warp::body::form::<pages::userhome::UserBio>())
+        .and(state_filter.clone())
+        .and_then(|_query, form: pages::userhome::UserBio, context: RequestContext| {
+            async move {
+                let response = errwrap!(pages::userhome::post_bio_render(context.layout_data, &context.api_context, form).await)?;
+                handle_response(response, &context.global_state.link_config)
+            }
+        }).boxed();
+
+    // Tertiary endpoint: user sensitive updates
+    let userhome_sensitive_post = warp::any()
+        .and(qflag!(sensitive)) 
+        .and(warp::body::form::<contentapi::forms::UserSensitive>())
+        .and(state_filter.clone())
+        .and_then(|_query, form: contentapi::forms::UserSensitive, context: RequestContext| {
+            async move {
+                let response = errwrap!(pages::userhome::post_sensitive_render(context.layout_data, &context.api_context, form).await)?;
+                handle_response(response, &context.global_state.link_config)
+            }
+        }).boxed();
+
+    warp::post()
+        .and(warp::path!("userhome"))
+        .and(form_filter.clone())
+        .and(userhome_bio_post.or(userhome_sensitive_post).or(userhome_post))
         .boxed()
 
 }
