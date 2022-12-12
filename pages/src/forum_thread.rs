@@ -20,13 +20,13 @@ pub fn render(data: MainLayoutData, bbcode: &BBCode, thread: ForumThread, users:
             div."foruminfo smallseparate aside" {
                 (threadicon(&data.config, &thread))
                 span {
-                    b { "OP:" }
+                    b { "OP: " }
                     @if let Some(user) = users.get(&thread.thread.createUserId.unwrap_or(0)) {
                         a."flatlink" href=(user_link(&data.config, user)){ (user.username) }
                     }
                 }
                 span {
-                    b { "Created:" }
+                    b { "Created: " }
                     time datetime=(d(&thread.thread.createDate)) { (timeago_o(&thread.thread.createDate)) }
                 }
             }
@@ -54,19 +54,19 @@ fn post_item(config: &LinkConfig, bbcode: &BBCode, post: &Message, thread: &Cont
     html! {
         div.(class) #{"post_"(i(&post.id))} {
             div."postleft" {
-                img."avatar" src=(image_link(config, &user.avatar, 100, true)); //"{{imagelink user.avatar 100 true}}">
+                img."avatar" src=(image_link(config, &user.avatar, 100, true)); 
             }
             div."postright" {
                 div."postheader" {
                     a."flatlink username" href=(user_link(config, &user)) { (&user.username) } 
-                    a."sequence" href=(forum_post_link(config, post, thread)){ "#" (sequence) } //{{lookup @root.sequence (string ../id)}}</a>
+                    a."sequence" href=(forum_post_link(config, post, thread)){ "#" (sequence) } 
                 }
                 @if let Some(text) = &post.text {
                     div."content bbcode" { (PreEscaped(bbcode.parse(text))) }
                 }
                 div."postfooter" {
                     div."history" {
-                        time."aside" datetime=(d(&post.createDate)) { (timeago_o(&post.createDate)) } //{timeago ../createDate}}</time>
+                        time."aside" datetime=(d(&post.createDate)) { (timeago_o(&post.createDate)) } 
                         @if let Some(edit_user_id) = post.editUserId {
                             time."aside" datetime=(d(&post.editDate)) { 
                                 "Edited "(timeago_o(&post.editDate))" by "
@@ -101,7 +101,6 @@ async fn render_thread(data: MainLayoutData, context: &ApiContext, bbcode: &BBCo
             println!("Page was nonzero ({}) while there was a message index ({})", page, message_index.specialCount);
         }
         page = message_index.specialCount / per_page;
-        //context.config.default_display_posts;
     }
 
     //There must be one category, and one thread, otherwise return 404
@@ -113,7 +112,7 @@ async fn render_thread(data: MainLayoutData, context: &ApiContext, bbcode: &BBCo
     let thread_create_uid = thread.createUserId.ok_or(Error::Other(String::from("Thread result did not have createUserId field!")))?;
     let comment_count = thread.commentCount.ok_or(Error::Other(String::from("Thread result did not have commentCount field!")))?;
 
-    let sequence_start = page * per_page; //context.config.default_display_posts;
+    let sequence_start = page * per_page; 
 
     //OK NOW you can go lookup the posts, since we are sure about where in the postlist we want
     let after_request = get_finishpost_request(thread_id, vec![thread_create_uid], 
@@ -125,14 +124,6 @@ async fn render_thread(data: MainLayoutData, context: &ApiContext, bbcode: &BBCo
     let messages_raw = cast_result_required::<Message>(&after_result, "message")?;
     let users_raw = cast_result_required::<User>(&after_result, "user")?;
 
-    //Create a mapping of message ids to their sequence number (for display). This seems VERY compute intensive
-    //for how little its doing, especially since you have to do all the lookups and helpers to get the value OUT of this.
-    //Although all this code might compile to almost nothing, and the hash could overshadow everything. I don't knoowwww
-    //let sequence : HashMap<String, usize> = messages_raw.iter()
-    //    .map(|m| m.id.ok_or(Error::Other(String::from("No id on messages!")))).collect::<Result<Vec<i64>,_>>()? //filter errors on message ids
-    //    .iter().enumerate()
-    //    .map(|(i,m)| (format!("{}", m), i + sequence_start as usize + 1))
-    //    .collect();
     //Construct before borrowing 
     let path = vec![ForumPathItem::root(), ForumPathItem::from_category(&category.category), ForumPathItem::from_thread(&thread)];
     Ok(Response::Render(render(
@@ -142,26 +133,10 @@ async fn render_thread(data: MainLayoutData, context: &ApiContext, bbcode: &BBCo
         &users_raw.into_iter().map(|u| (u.id, u)).collect::<HashMap<i64, User>>(),
         path,
         get_pagelist(comment_count as i32, per_page, page),
-        //get_pagelist(comment_count as i32, context.config.default_display_posts, page),
         1 + per_page * page,
         selected_post.and_then(|m| m.id)
     )))
-//pub fn render(data: MainLayoutData, bbcode: &BBCode, thread: ForumThread, users: &HashMap<i64,User>, path: Vec<ForumPathItem>,
-//    pages: Vec<ForumPagelistItem>, start_num: i32, selected_post_id: Option<i64>) -> String 
-//
-//    Ok(basic_template!("forumthread", context, {
-//        forumpath: vec![ForumPathItem::root(), ForumPathItem::from_category(&category.category), ForumPathItem::from_thread(&thread)],
-//        category: category.category,
-//        selected_post: selected_post,
-//        sequence : sequence, //Kinda stupid... idk
-//        thread: ForumThread::from_content(thread, &messages_raw, &category.stickies)?,
-//        users: users_raw.into_iter().map(|u| (format!("{}", u.id), u)).collect::<HashMap<String, User>>(),
-//        pagelist: get_pagelist(comment_count as i32, context.config.default_display_posts, page)
-//    }))
 }
-
-//async fn render_thread(data: MainLayoutData, context: &ApiContext, bbcode: &BBCode, pre_request: FullRequest, per_page: i32, 
-//    page: Option<i32>) -> Result<Response, Error> 
 
 //#[get("/forum/thread/<hash>/<post_id>")]
 

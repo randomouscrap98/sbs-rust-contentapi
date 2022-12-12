@@ -181,17 +181,6 @@ async fn main()
         })
         .boxed();
 
-    //TODO: this has to be multiplexed!
-    //let get_forum_main_route = warp_get_async!(warp::path!("forum"),
-    //    |context:RequestContext| {
-    //        async move {
-    //            handle_response(
-    //                errwrap!(pages::forum_main::get_render(context.layout_data, &context.api_context, &context.global_state.config.forum_category_order ,context.global_state.config.default_category_threads).await)?,
-    //                &context.global_state.link_config
-    //            )
-    //        }
-    //    }); 
-
 
     #[derive(Deserialize, Debug)]
     struct SimplePage { page: Option<i32> }
@@ -360,8 +349,8 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
         }); 
     
     //struct doesn't need to escape this function!
-    #[derive(Deserialize, Debug)]
     #[allow(dead_code)]
+    #[derive(Deserialize, Debug)]
     struct FcidPage { 
         fcid: i64,
         page: Option<i32> 
@@ -384,22 +373,58 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
             }
         }); 
     
-    ////Don't forget to add the other stuff!
-    //#[derive(Deserialize, Debug)]
-    //struct FtidPage { 
-    //    ftid: i32,
-    //    page: Option<i32> 
-    //}
+    //Don't forget to add the other stuff!
+    #[allow(dead_code)]
+    #[derive(Deserialize, Debug)]
+    struct FtidPage { 
+        ftid: i64,
+        page: Option<i32> 
+    }
 
-    //#[derive(Deserialize, Debug)]
-    //struct FpidPage { 
-    //    fpid: i32,
-    //    page: Option<i32> 
-    //}
+    let forum_ftid = warp::any()
+        .and(warp::query::<FtidPage>())
+        .and(state_filter.clone())
+        .and_then(|ftid_page: FtidPage, context:RequestContext| {
+            async move {
+                handle_response(
+                    errwrap!(pages::forum_thread::get_ftid_render(
+                        context.layout_data, 
+                        &context.api_context, 
+                        &context.global_state.bbcode,
+                        ftid_page.ftid,
+                        context.global_state.config.default_display_posts, 
+                        ftid_page.page).await)?,
+                    &context.global_state.link_config
+                )
+            }
+        }); 
+
+    #[allow(dead_code)]
+    #[derive(Deserialize, Debug)]
+    struct Fpid { 
+        fpid: i64, 
+    }
+
+    let forum_fpid = warp::any()
+        .and(warp::query::<Fpid>())
+        .and(state_filter.clone())
+        .and_then(|fpid: Fpid, context:RequestContext| {
+            async move {
+                handle_response(
+                    errwrap!(pages::forum_thread::get_fpid_render(
+                        context.layout_data, 
+                        &context.api_context, 
+                        &context.global_state.bbcode,
+                        fpid.fpid,
+                        context.global_state.config.default_display_posts).await)?,
+                    &context.global_state.link_config
+                )
+            }
+        }); 
 
     warp::get()
         .and(warp::path!("forum"))
-        .and(forum_fcid.or(forum_main))
+        .and(forum_fcid.or(forum_ftid).or(forum_fpid).or(forum_main))
         .boxed()
 }
 

@@ -3,8 +3,6 @@ use std::collections::HashMap;
 use super::*;
 use contentapi::conversion::*;
 use contentapi::*;
-//use contentapi::endpoints::ApiContext; //{SpecialCount, FullRequest, add_value};
-//use contentapi::{Content, Message, User, RequestResult};
 
 
 //Not sure if we need values, but I NEED permissions to know if the thread is locked
