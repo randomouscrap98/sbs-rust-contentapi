@@ -305,7 +305,7 @@ pub fn forum_path(config: &LinkConfig, path: &Vec<ForumPathItem>) -> Markup {
                     @else { (segment.title) }
                 }
                 @if !last {
-                    span."pathseparator" { "/" }
+                    span."pathseparator" { " / " }
                 }
             }
         }

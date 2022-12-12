@@ -99,6 +99,10 @@
  *       GENERAL      *
  *  ----------------- */
 
+ .forumpath > * {
+    margin-right: 0.15em;
+ }
+
 .foruminfo {
     display: flex;
     align-items: center;

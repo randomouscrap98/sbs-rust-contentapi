@@ -12,6 +12,7 @@ use super::*;
 
 pub fn render(data: MainLayoutData, category: ForumCategory, path: Vec<ForumPathItem>, pages: Vec<ForumPagelistItem>) -> String {
     layout(&data, html!{
+        (style(&data.config, "/forpage/forum.css"))
         section {
             h1 { (s(&category.category.name)) }
             (forum_path(&data.config, &path))
@@ -46,14 +47,14 @@ pub fn thread_item(config: &LinkConfig, thread: &ForumThread, users: &HashMap<i6
             }
             div."foruminfo aside mediumseparate" {
                 (threadicon(config, thread))
-                div { b { "Posts:" } (i(&thread.thread.commentCount.into())) } //{{thread.commentCount}}</div>
+                div { b { "Posts: " } (i(&thread.thread.commentCount.into())) } //{{thread.commentCount}}</div>
                 div {
-                    b { "Created:" }
+                    b { "Created: " }
                     time datetime=(d(&thread.thread.createDate)) { (timeago_o(&thread.thread.createDate)) }
                 }
                 @if let Some(post) = thread.posts.get(0) {
                     div {
-                        b { "Last:" }
+                        b { "Last: " }
                         a."flatlink" href=(forum_post_link(config, post, &thread.thread)) {
                             time datetime=(d(&post.createDate)) { (timeago_o(&post.createDate)) }
                         }
