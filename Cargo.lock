@@ -610,11 +610,13 @@ name = "pages"
 version = "0.1.0"
 dependencies = [
  "bbcode",
+ "chrono",
  "contentapi",
  "maud",
  "serde",
  "serde_json",
  "serde_urlencoded",
+ "timeago",
 ]
 
 [[package]]
@@ -947,6 +949,12 @@ dependencies = [
  "wasi 0.10.0+wasi-snapshot-preview1",
  "winapi",
 ]
+
+[[package]]
+name = "timeago"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cbaac8bad0b5ce0c4b100fad45474ee142a70bd562cdf5fe0d671c79b54fe72f"
 
 [[package]]
 name = "tokio"

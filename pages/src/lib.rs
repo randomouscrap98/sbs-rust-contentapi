@@ -106,6 +106,18 @@ pub fn image_link(config: &LinkConfig, hash: &str, size: i64, crop: bool) -> Str
     }
 }
 
+pub fn timeago(time: chrono::DateTime<chrono::Utc>) -> String {
+    let duration = chrono::Utc::now().signed_duration_since(time); //timeago::format()
+    match duration.to_std() {
+        Ok(stdur) => {
+            timeago::format(stdur, timeago::Style::HUMAN)
+        },
+        Err(error) => {
+            format!("PARSE-ERR({}):{}", duration, error)
+        }
+    }
+}
+
 pub fn is_empty(string: &Option<String>) -> bool {
     if let Some(s) = string { s.is_empty() }
     else { true }
