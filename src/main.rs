@@ -1,5 +1,6 @@
 use std::{net::SocketAddr, sync::Arc};
 
+use bbcode::BBCode;
 use chrono::SecondsFormat;
 use pages::LinkConfig;
 
@@ -34,20 +35,30 @@ macro_rules! qflag {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() 
+{
+    let config = {
+        //Our env is passed on the command line. If none is, we pass "None" so only the base config is read
+        let args: Vec<String> = std::env::args().collect();
+        let environment = args.get(1).map(|x| &**x); //The compiler told me to do this
 
-    //Our env is passed on the command line. If none is, we pass "None" so only the base config is read
-    let args: Vec<String> = std::env::args().collect();
-    let environment = args.get(1).map(|x| &**x); //The compiler told me to do this
+        let config = Config::read_with_environment_toml(CONFIGNAME, environment);
+        println!("Environment: {}\n{:#?}", environment.unwrap_or(""), config);
+        config
+    };
 
-    let config = Config::read_with_environment_toml(CONFIGNAME, environment);
-
-    println!("{:#?}", config);
+    let bbcode = {
+        let mut matchers = BBCode::basics().unwrap(); //this better not fail! It'll fail very early though
+        let mut extras = BBCode::extras().unwrap();
+        matchers.append(&mut extras);
+        BBCode { matchers } 
+    };
 
     //Set up the SINGULAR global state, which will be passed around with a counting reference.
     //So when you see "clone" on this, it's not actually cloning all the data, it's just making
     //a new pointer and incrementing a count.
     let global_state = Arc::new(GlobalState {
+        bbcode,
         link_config : {
             let root = config.http_root.clone();
             LinkConfig {
@@ -135,6 +146,16 @@ async fn main() {
     let get_search_route = warp_get!(warp::path!("search"),
         |context:RequestContext| warp::reply::html(pages::search::render(context.layout_data)));
 
+    let get_user_route = warp_get_async!(warp::path!("user" / String),
+        |username: String, context:RequestContext| {
+            async move {
+                handle_response(
+                    errwrap!(pages::user::get_render(context.layout_data, &context.api_context, &context.global_state.bbcode, username).await)?,
+                    &context.global_state.link_config
+                )
+            }
+        }); 
+
     let get_userhome_route = warp_get_async!(warp::path!("userhome"),
         |context:RequestContext| {
             async move {
@@ -192,6 +213,8 @@ async fn main() {
         .or(get_activity_route)
         .or(get_search_route)
         .or(get_about_route)
+        .or(get_user_route)
+        .or(get_userhome_route)
         .or(get_login_route)
         .or(post_login_multi_route(&state_filter, &form_filter)) //Multiplexed! Login OR send recovery!
         .or(get_logout_route)
@@ -202,7 +225,6 @@ async fn main() {
         .or(get_recover_route)
         .or(post_recover_route)
         .or(get_imagebrowser_route)
-        .or(get_userhome_route)
         .recover(handle_rejection)
     ).run(address).await;
 }

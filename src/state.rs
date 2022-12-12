@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use bbcode::BBCode;
 use contentapi::endpoints::{ApiContext, ApiError};
 use pages::{LinkConfig, MainLayoutData, UserConfig};
 use warp::path::FullPath;
@@ -31,9 +32,9 @@ config::create_config!{
 
 /// The unchanging configuration for the current runtime. Mostly values read from 
 /// config, but some other constructed data too
-#[derive(Clone)]
 pub struct GlobalState {
     pub link_config: LinkConfig,
+    pub bbcode: BBCode,
     pub config: Config
 }
 
