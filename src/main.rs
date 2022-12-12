@@ -168,6 +168,16 @@ async fn main()
     let get_search_route = warp_get!(warp::path!("search"),
         |context:RequestContext| warp::reply::html(pages::search::render(context.layout_data)));
 
+    let get_forum_main_route = warp_get_async!(warp::path!("forum"),
+        |context:RequestContext| {
+            async move {
+                handle_response(
+                    errwrap!(pages::forum_main::get_render(context.layout_data, &context.api_context, &context.global_state.config.forum_category_order ,context.global_state.config.default_category_threads).await)?,
+                    &context.global_state.link_config
+                )
+            }
+        }); 
+
     let get_user_route = warp_get_async!(warp::path!("user" / String),
         |username: String, context:RequestContext| {
             async move {
@@ -234,6 +244,7 @@ async fn main()
         .or(get_index_route)
         .or(get_activity_route)
         .or(get_search_route)
+        .or(get_forum_main_route)
         .or(get_about_route)
         .or(get_user_route)
         .or(get_userhome_route)

@@ -158,7 +158,6 @@ impl ForumCategory {
                 .ok_or(ApiError::Usage(format!("Didn't get specialCount for category {}", category.id), format!("{:?}", thread_result)))?.specialCount
         })
     }
-
 }
 
 

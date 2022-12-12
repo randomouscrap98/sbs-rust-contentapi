@@ -10,6 +10,7 @@ pub mod recover;
 pub mod register;
 pub mod registerconfirm;
 pub mod user;
+pub mod _forumsys; //non-page mod
 pub mod forum_main;
 
 use chrono::{SecondsFormat, Utc};
@@ -74,6 +75,7 @@ pub enum Response {
 #[derive(Debug)]
 pub enum Error {
     Api(contentapi::endpoints::ApiError),
+    Data(String, String), //First string is error to output, second is the data itself (don't print for user)
     Other(String) //Something "general" happened, who the heck knows?
 }
 
@@ -100,7 +102,8 @@ impl Error {
     pub fn to_user_string(&self) -> String {
         match self {
             Self::Api(error) => error.to_user_string(),
-            Self::Other(error) => error.clone()
+            Self::Other(error) => error.clone(),
+            Self::Data(error, _data) => error.clone()
         }
     }
 }

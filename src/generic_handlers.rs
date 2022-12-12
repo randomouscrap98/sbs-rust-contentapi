@@ -16,10 +16,15 @@ pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> 
             pages::Error::Api(apierr) => { 
                 code = StatusCode::from_u16(apierr.to_status()).unwrap();
                 message = apierr.to_verbose_string();
-            }
+            },
             pages::Error::Other(otherr) => {
                 code = StatusCode::INTERNAL_SERVER_ERROR;
                 message = otherr.clone();
+            }
+            pages::Error::Data(derr,data) => {
+                code = StatusCode::INTERNAL_SERVER_ERROR;
+                message = derr.clone();
+                println!("DATA ERROR: {}\n{}", derr, data);
             }
         }
     }

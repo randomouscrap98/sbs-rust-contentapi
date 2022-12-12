@@ -1,64 +1,10 @@
-use std::collections::HashMap;
 
-use contentapi::User;
+use contentapi::conversion::*;
+use contentapi::endpoints::ApiContext;
+
+use crate::_forumsys::*;
 
 use super::*;
-
-//Not sure if we need values, but I NEED permissions to know if the thread is locked
-static THREADFIELDS : &str = "id,name,lastCommentId,literalType,hash,parentId,commentCount,createDate,createUserId,values,permissions";
-//Need values to know the stickies
-static CATEGORYFIELDS: &str = "id,hash,name,description,literalType,values";
-static THREADKEY: &str = "thread";
-static CATEGORYKEY: &str = "category";
-static PREMESSAGEKEY: &str = "premessage";
-static PREMESSAGEINDEXKEY: &str = "premessage_index";
-
-struct Keygen();
-
-impl Keygen {
-    fn threadcount(id: i64) -> String { format!("threadcount_{id}") }
-    fn threads(id: i64) -> String { format!("threads_{id}") }
-    fn stickythreads(id: i64) -> String { format!("stickythreads_{id}") }
-    fn stickies(id: i64) -> String { format!("stickies_{id}")}
-}
-
-#[derive(Clone, Debug)]
-pub struct ForumThread {
-    thread: Content,
-    sticky: bool,
-    locked: bool,
-    neutral: bool, //Used by the frontend
-    posts: Vec<Message>
-}
-
-impl ForumThread {
-    fn from_content(thread: Content, messages_raw: &Vec<Message>, stickies: &Vec<i64>) -> Result<Self, Error> {
-        let thread_id = thread.id;
-        let permissions = match thread.permissions {
-            Some(ref p) => Ok(p),
-            None => Err(Error::Other(String::from("Thread didn't have permissions in resultset!")))
-        }?;
-        //"get" luckily already gets the thing as a reference
-        let global_perms = permissions.get("0").ok_or(Error::Other(String::from("Thread didn't have global permissions!")))?;
-        let locked = !global_perms.contains('C'); //Right... the order matters. need to finish using it before you give up thread
-        let sticky = stickies.contains(&thread_id.unwrap_or(0));
-        Ok(ForumThread { 
-            locked, sticky, thread,
-            neutral: !locked && !sticky,
-            posts: messages_raw.iter().filter(|m| m.contentId == thread_id).map(|m| m.clone()).collect()
-        })
-    }
-}
-
-//Structs JUST for building data for the forum templates (so no need to be public)
-#[derive(Clone, Debug)]
-pub struct ForumCategory {
-    category: Content,
-    threads: Vec<ForumThread>,
-    stickies: Vec<ForumThread>,
-    threads_count: i32,
-    users: HashMap<String, User>
-}
 
 
 pub fn render(data: MainLayoutData, categories: Vec<ForumCategory>) -> String {
@@ -91,4 +37,48 @@ pub fn render(data: MainLayoutData, categories: Vec<ForumCategory>) -> String {
             }
         }
     }).into_string()
+}
+
+async fn build_categories_with_threads(context: &ApiContext, categories_cleaned: Vec<CleanedPreCategory>, limit: i32, skip: i32) -> 
+    Result<Vec<ForumCategory>, Error> 
+{
+    //Next request: get the complicated dataset for each category (this somehow includes comments???)
+    let thread_request = get_thread_request(&categories_cleaned, limit, skip, false); //context.config.default_category_threads, 0);
+    let thread_result = context.post_request( &thread_request).await?;
+
+    let messages_raw = cast_result_required::<Message>(&thread_result, "message")?;
+
+    let mut categories = Vec::new();
+
+    for category in categories_cleaned {
+        categories.push(ForumCategory::from_result(category, &thread_result, &messages_raw)?);
+    }
+
+    Ok(categories)
+}
+
+pub async fn get_render(data: MainLayoutData, context: &ApiContext, order: &Vec<String>, show_threads: i32) -> Result<Response, Error> 
+{
+    //First request: just get categories
+    let request = get_category_request(None, None);
+    let category_result = context.post_request(&request).await?;
+    let mut categories_cleaned = CleanedPreCategory::from_many(cast_result_required::<Content>(&category_result, CATEGORYKEY)?)?;
+
+    //Sort the categories by their name AGAINST the default list in the config. So, it should sort the categories
+    //by the order defined in the config, with stuff not present going at the end. Tiebreakers are resolved alphabetically
+    categories_cleaned.sort_by_key(|category| {
+        //Nicole made this a tuple so tiebreakers are sorted alphabetically, which is coool
+        (order.iter().position(
+            |prefix| category.name.starts_with(prefix)).unwrap_or(usize::MAX), category.name.clone())
+    });
+
+    let categories = build_categories_with_threads(&context, categories_cleaned, show_threads, 0).await?;
+
+    //println!("Template categories: {:?}", &categories);
+
+    Ok(Response::Render(render(data, categories)))
+    //Ok(basic_template!("forumroot", context, {
+    //    categories: categories,
+    //    forumpath: vec![ForumPathItem::root()]
+    //}))
 }
