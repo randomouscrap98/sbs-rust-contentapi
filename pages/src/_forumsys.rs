@@ -60,7 +60,7 @@ pub struct ForumCategory {
     pub threads: Vec<ForumThread>,
     pub stickies: Vec<ForumThread>,
     pub threads_count: i32,
-    pub users: HashMap<String, User>
+    pub users: HashMap<i64, User>
 }
 
 impl ForumCategory {
@@ -79,7 +79,7 @@ impl ForumCategory {
             category: category.category, //partial move
             threads: threads_raw.into_iter().map(|thread| ForumThread::from_content(thread, messages_raw, &category.stickies)).collect::<Result<Vec<_>,_>>()?,
             stickies: stickies_raw.into_iter().map(|thread| ForumThread::from_content(thread, messages_raw, &category.stickies)).collect::<Result<Vec<_>,_>>()?,
-            users: users_raw.into_iter().map(|u| (format!("{}", u.id), u)).collect(),
+            users: users_raw.into_iter().map(|u| (u.id, u)).collect(),
             threads_count: special_counts.get(0)
                 .ok_or(Error::Data(format!("Didn't get specialCount for category {}", category.id), format!("{:?}", thread_result)))?.specialCount
         })
@@ -240,3 +240,69 @@ pub fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip
 // --------------------------
 // *    FORUM FUNCTIONS     *
 // --------------------------
+
+
+// ----------------------------
+// *     TEMPLATING PLUS      *
+// ----------------------------
+
+pub struct ForumPagelistItem {
+    pub text: String,
+    pub current: bool,
+    pub page: i32
+}
+
+
+//To build the forum path at the top
+pub struct ForumPathItem {
+    pub link: String,
+    pub title: String
+}
+
+impl ForumPathItem {
+    pub fn from_category(category: &Content) -> Self {
+        Self {
+            link: format!("/forum/category/{}", if let Some(ref hash) = category.hash { hash } else { "" }),
+            title: if let Some(ref name) = category.name { name.clone() } else { String::from("NOTFOUND") }
+        }
+    }
+    pub fn from_thread(thread: &Content) -> Self {
+        Self {
+            link: format!("/forum/thread/{}", if let Some(ref hash) = thread.hash { hash } else { "" }),
+            title: if let Some(ref name) = thread.name { name.clone() } else { String::from("NOTFOUND") }
+        }
+    }
+    pub fn root() -> Self {
+        Self {
+            link: String::from("/forum"),
+            title: String::from("Root")
+        }
+    }
+}
+
+pub fn forum_path(config: &LinkConfig, path: &Vec<ForumPathItem>) -> Markup {
+    html!{
+        p."forumpath" {
+            @for (index, segment) in path.iter().enumerate() {
+                @let last = index == path.len() - 1;
+                a."flatlink" href={(config.http_root)(segment.link)} {
+                    @if last { "[.]" }
+                    @else { (segment.title) }
+                }
+                @if !last {
+                    span."pathseparator" { "/" }
+                }
+            }
+        }
+    }
+}
+
+pub fn threadicon(config: &LinkConfig, thread: &ForumThread) -> Markup { //neutral: bool, sticky: bool, locked: bool) -> Markup {
+    html! {
+        div."threadicon" {
+            @if thread.neutral { img src={(config.resource_root)"/sb-page.png"}; }
+            @if thread.sticky { span{"📌"} }
+            @if thread.locked { span{"🔒"} }
+        }
+    }
+}

@@ -25,6 +25,7 @@ pub fn render(data: MainLayoutData, categories: Vec<ForumCategory>) -> String {
                             div {
                                 @if let Some(post) = thread.posts.get(0) {
                                     b { time datetime=(d(&post.createDate)) { (timeago_o(&post.createDate)) } }
+                                    ": "
                                     a."flatlink" href=(forum_post_link(&data.config, post, &thread.thread)) { (s(&thread.thread.name)) } 
                                 }
                             }

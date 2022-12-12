@@ -134,7 +134,7 @@ struct ForumCategory {
     threads: Vec<ForumThread>,
     stickies: Vec<ForumThread>,
     threads_count: i32,
-    users: HashMap<String, User>
+    users: HashMap<i64, User>
 }
 
 impl ForumCategory {

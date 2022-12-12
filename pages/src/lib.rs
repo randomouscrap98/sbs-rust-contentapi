@@ -12,9 +12,10 @@ pub mod registerconfirm;
 pub mod user;
 pub mod _forumsys; //non-page mod
 pub mod forum_main;
+pub mod forum_category;
 
 use chrono::{SecondsFormat, Utc};
-use contentapi::{self, endpoints::ApiError, Content, Message};
+use contentapi::{self, endpoints::ApiError, Content, Message, User};
 use serde::{Serialize, Deserialize};
 use serde_urlencoded;
 use maud::{Markup, html, PreEscaped, DOCTYPE};
@@ -131,12 +132,24 @@ pub fn image_link(config: &LinkConfig, hash: &str, size: i64, crop: bool) -> Str
     }
 }
 
+pub fn user_link(config: &LinkConfig, user: &User) -> String {
+    format!("{}/user/{}", config.http_root, user.username)
+}
+
 pub fn forum_category_link(config: &LinkConfig, category: &Content) -> String {
     let hash = match &category.hash {
         Some(hash) => hash.clone(),
         None => String::from("")
     };
     format!("{}/forum/category/{}", config.http_root, hash)
+}
+
+pub fn forum_thread_link(config: &LinkConfig, thread: &Content) -> String {
+    let hash = match &thread.hash {
+        Some(hash) => hash.clone(),
+        None => String::from("")
+    };
+    format!("{}/forum/thread/{}", config.http_root, hash) //}"{{@root.http_root}}/forum/thread/{{thread.hash}}" class="flatlink">{{thread.name}}</a> }
 }
 
 pub fn forum_post_link(config: &LinkConfig, post: &Message, thread: &Content) -> String {
@@ -189,12 +202,13 @@ pub fn b(boolean: bool) -> &'static str {
 }
 
 pub fn d(date: &Option<chrono::DateTime<Utc>>) -> String {
-    if let Some(date) = date {
-        date.to_rfc3339_opts(SecondsFormat::Secs, true)
-    }
-    else {
-        String::from("NODATE")
-    }
+    if let Some(date) = date { date.to_rfc3339_opts(SecondsFormat::Secs, true) }
+    else { String::from("NODATE") }
+}
+
+pub fn i(int: &Option<i64>) -> String {
+    if let Some(int) = int { format!("{}", int) }
+    else { String::from("??") }
 }
 
 //Email errors are weird with their true/false return. 
@@ -317,16 +331,6 @@ pub fn errorlist(errors: Option<Vec<String>>) -> Markup {
                     div."error" {(error)}
                 }
             }
-        }
-    }
-}
-
-pub fn threadicon(config: &LinkConfig, neutral: bool, sticky: bool, locked: bool) -> Markup {
-    html! {
-        div."threadicon" {
-            @if neutral { img src={(config.resource_root)"/sb-page.png"}; }
-            @if sticky { span{"📌"} }
-            @if locked { span{"🔒"} }
         }
     }
 }
