@@ -14,9 +14,10 @@ pub mod user;
 pub mod _forumsys; //non-page mod
 pub mod forum_main;
 pub mod forum_category;
+pub mod forum_thread;
 
 use chrono::{SecondsFormat, Utc};
-use contentapi::{self, endpoints::ApiError, Content, Message, User};
+use contentapi::{self, endpoints::ApiError, Content, Message, User, UserType};
 use serde::{Serialize, Deserialize};
 use serde_urlencoded;
 use maud::{Markup, html, PreEscaped, DOCTYPE};
@@ -243,6 +244,23 @@ macro_rules! email_errors {
     };
 }
 pub(crate) use email_errors;
+
+pub fn user_or_default(user: Option<&User>) -> User {
+    if let Some(u) = user {
+        u.clone()
+    }
+    else {
+        User {
+            username: String::from("???"),
+            id: 0,
+            avatar: String::from("0"),
+            r#type: UserType::USER,
+            admin: false,
+            special: None,
+            createDate: chrono::Utc::now()
+        }
+    }
+}
 
 
 // ---------------------

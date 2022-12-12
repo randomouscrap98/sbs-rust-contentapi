@@ -6,7 +6,6 @@ use crate::_forumsys::*;
 
 use super::*;
 
-
 pub fn render(data: MainLayoutData, categories: Vec<ForumCategory>) -> String {
     layout(&data, html!{
         (style(&data.config, "/forum.css"))

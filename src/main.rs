@@ -107,7 +107,7 @@ async fn main()
         .and(warp::method())
         .and(warp::cookie::optional::<String>(SESSIONCOOKIE))
         .and_then(move |path, method, token| {  //Create a closure that takes ownership of map_state to let it infinitely clone
-            println!("[{}] {:>4} - {:?}", chrono::Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true), &method, &path);
+            println!("[{}] {:>5} - {:?}", chrono::Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true), &method, &path);
             let this_state = global_for_state.clone();
             async move { 
                 errwrap!(RequestContext::generate(this_state, path, token).await)
@@ -182,15 +182,15 @@ async fn main()
         .boxed();
 
     //TODO: this has to be multiplexed!
-    let get_forum_main_route = warp_get_async!(warp::path!("forum"),
-        |context:RequestContext| {
-            async move {
-                handle_response(
-                    errwrap!(pages::forum_main::get_render(context.layout_data, &context.api_context, &context.global_state.config.forum_category_order ,context.global_state.config.default_category_threads).await)?,
-                    &context.global_state.link_config
-                )
-            }
-        }); 
+    //let get_forum_main_route = warp_get_async!(warp::path!("forum"),
+    //    |context:RequestContext| {
+    //        async move {
+    //            handle_response(
+    //                errwrap!(pages::forum_main::get_render(context.layout_data, &context.api_context, &context.global_state.config.forum_category_order ,context.global_state.config.default_category_threads).await)?,
+    //                &context.global_state.link_config
+    //            )
+    //        }
+    //    }); 
 
 
     #[derive(Deserialize, Debug)]
@@ -202,7 +202,12 @@ async fn main()
         |hash: String, page_struct: SimplePage, context:RequestContext| {
             async move {
                 handle_response(
-                    errwrap!(pages::forum_category::get_hash_render(context.layout_data, &context.api_context, hash, context.global_state.config.default_display_threads, page_struct.page).await)?,
+                    errwrap!(pages::forum_category::get_hash_render(
+                        context.layout_data, 
+                        &context.api_context, 
+                        hash, 
+                        context.global_state.config.default_display_threads, 
+                        page_struct.page).await)?,
                     &context.global_state.link_config
                 )
             }
@@ -274,7 +279,7 @@ async fn main()
         .or(get_index_route)
         .or(get_activity_route)
         .or(get_search_route)
-        .or(get_forum_main_route)
+        .or(get_forum_route(&state_filter)) //HEAVILY multiplexed! Lots of legacy forum paths!
         .or(get_forum_category_route)
         .or(get_about_route)
         .or(get_user_route)
@@ -296,6 +301,69 @@ async fn main()
     ).run(address).await;
 }
 
+
+/// 'GET':/forum is a heavily multiplexed route, since it could either be the root, the old fcid
+/// threadlist, the old ftid post list, or the old fpid direct link to post
+fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter<(impl Reply,)> 
+{
+    let forum_main = warp::any()
+        .and(state_filter.clone())
+        .and_then(|context:RequestContext| {
+            async move {
+                handle_response(
+                    errwrap!(pages::forum_main::get_render(
+                        context.layout_data, 
+                        &context.api_context, 
+                        &context.global_state.config.forum_category_order,
+                        context.global_state.config.default_category_threads).await)?,
+                    &context.global_state.link_config
+                )
+            }
+        }); 
+    
+    //struct doesn't need to escape this function!
+    #[derive(Deserialize, Debug)]
+    #[allow(dead_code)]
+    struct FcidPage { 
+        fcid: i64,
+        page: Option<i32> 
+    }
+
+    let forum_fcid = warp::any()
+        .and(warp::query::<FcidPage>())
+        .and(state_filter.clone())
+        .and_then(|fcid_page: FcidPage, context:RequestContext| {
+            async move {
+                handle_response(
+                    errwrap!(pages::forum_category::get_fcid_render(
+                        context.layout_data, 
+                        &context.api_context, 
+                        fcid_page.fcid,
+                        context.global_state.config.default_display_threads, 
+                        fcid_page.page).await)?,
+                    &context.global_state.link_config
+                )
+            }
+        }); 
+    
+    ////Don't forget to add the other stuff!
+    //#[derive(Deserialize, Debug)]
+    //struct FtidPage { 
+    //    ftid: i32,
+    //    page: Option<i32> 
+    //}
+
+    //#[derive(Deserialize, Debug)]
+    //struct FpidPage { 
+    //    fpid: i32,
+    //    page: Option<i32> 
+    //}
+
+    warp::get()
+        .and(warp::path!("forum"))
+        .and(forum_fcid.or(forum_main))
+        .boxed()
+}
 
 /// 'POST:/login' is a multiplexed route, where multiple forms can be posted to it. We determine
 /// which route to take based on the query parameter
