@@ -43,7 +43,7 @@ pub fn render(data: MainLayoutData, private: Option<contentapi::UserPrivate>, us
                 }
                 hr;
                 h3 #"update-userbio" {"Update bio:"}
-                form method="POST" action={(data.current_path)"?bio=1#update-userbio"} {
+                form method="POST" action={(data.config.http_root)"/userhome?bio=1#update-userbio"} {
                     (errorlist(bio_errors))
                     input type="hidden" name="id" value=(bio_id);
                     textarea #"update_userbio" type="text" name="text"{(bio_text)}
@@ -51,7 +51,7 @@ pub fn render(data: MainLayoutData, private: Option<contentapi::UserPrivate>, us
                 }
                 hr;
                 h3 #"update-user"{"Update info:"}
-                form method="POST" action={(data.current_path)"#update-user"} { 
+                form method="POST" action={(data.config.http_root)"/userhome#update-user"} { 
                     (errorlist(update_errors))
                     label for="update_username"{"Username:"}
                     input #"update_username" type="text" name="username" value=(user.username);
@@ -67,7 +67,7 @@ pub fn render(data: MainLayoutData, private: Option<contentapi::UserPrivate>, us
             section {
                 h3 #"update-sensitive"{"Update sensitive info"}
                 p{"Only set the fields you want to change, except 'current password', which is required"}
-                form method="POST" action={(data.current_path)"?sensitive=1#update-sensitive"} autocomplete="off" {
+                form method="POST" action={(data.config.http_root)"/userhome?sensitive=1#update-sensitive"} autocomplete="off" {
                     (errorlist(private_errors))
                     //<label for="sensitive_username">New Username:</label>
                     //<input id="sensitve_username" type="text" autocomplete="new-password" name="username" value="">

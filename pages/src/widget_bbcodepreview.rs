@@ -20,7 +20,7 @@ pub fn render(data: MainLayoutData, bbcode: &BBCode, text: Option<String>) -> St
                     div."content bbcode" { (PreEscaped(bbcode.parse(&text))) }
                 }
                 @else {
-                    form method="POST" action=(data.current_path) {
+                    form method="POST" action={(data.config.http_root)"/widget/bbcodepreview"} {
                         textarea placeholder="Enter text to test here" name="text"{}
                         input type="submit" value="Test";
                     }

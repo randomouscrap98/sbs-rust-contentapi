@@ -103,7 +103,7 @@ fn image_list(config: &LinkConfig, images: Vec<Image>, size: i64) -> Markup {
     }
 }
 
-fn image_navigation(config: &MainLayoutData, search: Search) -> Markup {
+fn image_navigation(data: &MainLayoutData, search: Search) -> Markup {
     let mut searchprev = search.clone();
     let mut searchnext = search.clone();
     searchprev.page = searchprev.page - 1;
@@ -111,10 +111,10 @@ fn image_navigation(config: &MainLayoutData, search: Search) -> Markup {
     html! {
         div."smallseparate browsepagenav" {
             @if let Ok(prevlink) = serde_urlencoded::to_string(searchprev) {
-                a."coolbutton" href={(config.current_path)"?"(prevlink)} {"Previous"}
+                a."coolbutton" href={(data.config.http_root)"/widget/imagebrowser?"(prevlink)} {"Previous"}
             }
             @if let Ok(nextlink) = serde_urlencoded::to_string(searchnext) {
-                a."coolbutton" href={(config.current_path)"?"(nextlink)} {"Next"}
+                a."coolbutton" href={(data.config.http_root)"/widget/imagebrowser?"(nextlink)} {"Next"}
             }
         }
     }
