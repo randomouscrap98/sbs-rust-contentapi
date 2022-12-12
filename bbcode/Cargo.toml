@@ -8,3 +8,8 @@ edition = "2021"
 [dependencies]
 regex = { version = "1.0", default-features = false, features = ["std"] }
 html-escape = "0.2.12"
+
+basic-profiler = { path = "../basic-profiler", optional = true }
+
+[features]
+profiling = ["dep:basic-profiler"]

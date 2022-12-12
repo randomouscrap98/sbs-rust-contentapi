@@ -12,3 +12,8 @@ chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde-aux = "4.1.2"
 serde_json = "1.0"
+
+basic-profiler = { path = "../basic-profiler", optional = true }
+
+[features]
+profiling = ["dep:basic-profiler"]

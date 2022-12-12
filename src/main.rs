@@ -69,11 +69,16 @@ async fn main()
         config
     };
 
+    let root_profiler = basic_profiler::Profiler::new();
+
     let bbcode = {
         let mut matchers = BBCode::basics().unwrap(); //this better not fail! It'll fail very early though
         let mut extras = BBCode::extras().unwrap();
         matchers.append(&mut extras);
-        BBCode { matchers } 
+        BBCode { 
+            matchers,
+            profiler: root_profiler.clone()
+        } 
     };
 
     //Set up the SINGULAR global state, which will be passed around with a counting reference.

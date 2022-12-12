@@ -209,15 +209,22 @@ impl<'a> BBScoper<'a>
 /// The main bbcode system. You create this to parse bbcode!
 pub struct BBCode {
     /// Supply this!
-    pub matchers: Vec<MatchInfo> //These are SOMETIMES processed (based on context)
+    pub matchers: Vec<MatchInfo>, //These are SOMETIMES processed (based on context)
+
+    #[cfg(feature = "profiling")]
+    pub profiler: basic_profiler::Profiler
 }
 
 impl BBCode 
 {
     /// Get a default bbcode parser. Should hopefully have reasonable defaults!
-    #[allow(dead_code)]
+    //#[allow(dead_code)]
     pub fn default() -> Result<Self, Error> {
-        Ok(Self { matchers: Self::basics()? })
+        Ok(Self { 
+            matchers: Self::basics()?,
+            #[cfg(feature = "profiling")]
+            profiler: basic_profiler::Profiler::new()
+        })
     }
 
     /// The basic direct replacement escapes for HTML. You don't need these if you're using 'basics()'
@@ -600,6 +607,16 @@ impl BBCode
 
         result
     }
+
+    #[cfg(feature = "profiling")]
+    pub fn parse_named(&mut self, input: &str, name: String) -> String {
+        let mut profile = basic_profiler::TimerProfile::new(name);
+        let result = self.parse(input);
+        profile.complete();
+        self.profiler.add(profile);
+        result
+    }
+
 }
 
 
@@ -617,7 +634,11 @@ mod tests {
         $(
             #[test]
             fn $name() {
-                let bbcode = BBCode { matchers: BBCode::basics().unwrap() };
+                let bbcode = BBCode { 
+                    matchers: BBCode::basics().unwrap(),
+                    #[cfg(feature = "profiling")]
+                    profiler: basic_profiler::Profiler::new()
+                };
                 let (input, expected) = $value;
                 assert_eq!(bbcode.parse(input), expected);
             }
@@ -633,7 +654,11 @@ mod tests {
                 let mut matchers = BBCode::basics().unwrap();
                 let mut extras = BBCode::extras().unwrap();
                 matchers.append(&mut extras);
-                let bbcode = BBCode { matchers };
+                let bbcode = BBCode { 
+                    #[cfg(feature = "profiling")]
+                    profiler: basic_profiler::Profiler::new(),
+                    matchers 
+                };
                 let (input, expected) = $value;
                 assert_eq!(bbcode.parse(input), expected);
             }
@@ -644,13 +669,21 @@ mod tests {
     #[test]
     fn build_init() {
         //This shouldn't fail?
-        let _bbcode = BBCode { matchers: BBCode::basics().unwrap() };
+        let _bbcode = BBCode { 
+            matchers: BBCode::basics().unwrap(),
+            #[cfg(feature = "profiling")]
+            profiler: basic_profiler::Profiler::new()
+        };
     }
 
     #[test]
     fn build_add_lt() {
         //This shouldn't fail?
-        let bbcode = BBCode { matchers: BBCode::basics().unwrap() };
+        let bbcode = BBCode { 
+            matchers: BBCode::basics().unwrap(),
+            #[cfg(feature = "profiling")]
+            profiler: basic_profiler::Profiler::new()
+        };
         let found = bbcode.matchers.iter().find(|x| matches!(x.match_type, MatchType::DirectReplace(_))).unwrap();
         assert_eq!(found.regex.as_str(), "^<");
         if let MatchType::DirectReplace(repl) = found.match_type {

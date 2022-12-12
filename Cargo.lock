@@ -31,6 +31,7 @@ version = "0.1.0"
 name = "bbcode"
 version = "0.1.0"
 dependencies = [
+ "basic-profiler",
  "html-escape",
  "regex",
 ]
@@ -114,6 +115,7 @@ dependencies = [
 name = "contentapi"
 version = "0.1.0"
 dependencies = [
+ "basic-profiler",
  "chrono",
  "hyper",
  "serde",
@@ -803,6 +805,7 @@ checksum = "ef703b7cb59335eae2eb93ceb664c0eb7ea6bf567079d843e09420219668e072"
 name = "sbs-rust-contentapi"
 version = "0.3.0"
 dependencies = [
+ "basic-profiler",
  "bbcode",
  "chrono",
  "contentapi",

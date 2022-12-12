@@ -100,14 +100,29 @@ macro_rules! parseerr {
 pub struct ApiContext {
     api_url: String,
     client: hyper::client::Client<hyper::client::HttpConnector>,
-    user_token: Option<String>
+    user_token: Option<String>,
+
+    #[cfg(feature = "profiling")]
+    pub profiler: basic_profiler::Profiler
 }
 
 impl ApiContext {
     pub fn new(api_url: String, user_token: Option<String>) -> Self {
         Self {
             api_url, user_token,
-            client : hyper::client::Client::new()
+            client : hyper::client::Client::new(),
+
+            #[cfg(feature = "profiling")]
+            profiler: basic_profiler::Profiler::new()
+        }
+    }
+
+    #[cfg(feature = "profiling")]
+    pub fn new_with_profiler(api_url: String, user_token: Option<String>, profiler: basic_profiler::Profiler) -> Self {
+        Self {
+            api_url, user_token,
+            client : hyper::client::Client::new(),
+            profiler
         }
     }
 
