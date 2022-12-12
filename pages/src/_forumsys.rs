@@ -35,7 +35,7 @@ pub struct ForumThread {
 }
 
 impl ForumThread {
-    fn from_content(thread: Content, messages_raw: &Vec<Message>, stickies: &Vec<i64>) -> Result<Self, Error> {
+    pub fn from_content(thread: Content, messages_raw: &Vec<Message>, stickies: &Vec<i64>) -> Result<Self, Error> {
         let thread_id = thread.id;
         let permissions = match thread.permissions {
             Some(ref p) => Ok(p),
@@ -232,6 +232,119 @@ pub fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip
     request.requests.push(user_request);
 
     //println!("Threads request: {:?}", &request);
+
+    request
+}
+
+//"prepost" means the main query before finding the main data before gathering the posts. The post offset
+//often depends on the prepost
+pub fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option<i64>, thread_hash: Option<String>) -> FullRequest 
+{
+    let mut request = FullRequest::new();
+    add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
+    add_value!(request, "category_literal", SBSContentType::forumcategory.to_string());
+
+    let mut post_limited = false;
+    let mut post_query = String::from("!basiccomments()");
+    let mut thread_query = format!("literalType = @thread_literal and !notdeleted()");
+
+    //If you call it with both, it will limit to both (chances are that's not what you want)
+    if let Some(fpid) = fpid {
+        add_value!(request, "fpid", fpid);
+        add_value!(request, "fpidkey", "fpid");
+        post_query = format!("{} and !valuelike(@fpidkey, @fpid)", post_query);
+        post_limited = true;
+    }
+    if let Some(post_id) = post_id{
+        add_value!(request, "postId", post_id);
+        post_query = format!("{} and id = @postId", post_query);
+        post_limited = true;
+    }
+
+    //Add the pre-lookup post get so we can limit the thread by it. This will prevent users
+    //from sending random hashes but with valid post ids, since the thread won't be found
+    if post_limited {
+        let mut message_request = build_request!(
+            RequestType::message,
+            //Dont' need values for fpid, you already know it was there if it exists
+            String::from("id,contentId"),
+            post_query
+        );
+        message_request.limit = 1; //Just in case
+        message_request.name = Some(String::from(PREMESSAGEKEY));
+        request.requests.push(message_request);
+        thread_query = format!("{} and id in @{}.contentId", thread_query, PREMESSAGEKEY);
+    }
+
+    //Limit thread lookup based on given params. You probably don't want both of these limits course
+    if let Some(ftid) = ftid {
+        add_value!(request, "ftid", ftid);
+        add_value!(request, "ftidkey", "ftid");
+        thread_query = format!("{} and !valuelike(@ftidkey, @ftid)", thread_query);
+    }
+    if let Some(thread_hash) = thread_hash {
+        add_value!(request, "hash", thread_hash);
+        thread_query = format!("{} and hash = @hash", thread_query);
+    }
+
+    let mut thread_request = build_request!(
+        RequestType::content,
+        String::from(THREADFIELDS),
+        thread_query
+    );
+    thread_request.name = Some(String::from(THREADKEY));
+    request.requests.push(thread_request);
+
+    //And one last thing: you still need the category of course
+    let mut category_request = build_request!(
+        RequestType::content, 
+        String::from(CATEGORYFIELDS),
+        format!("literalType = @category_literal and !notdeleted() and id in @{}.parentId", THREADKEY)
+    );
+    category_request.name = Some(String::from(CATEGORYKEY));
+    request.requests.push(category_request);
+
+    //OK one last ACTUAL thing: need to get the premessage index if it was there
+    if post_limited {
+        let mut index_request = build_request!(
+            RequestType::message,
+            String::from("specialCount,id,contentId"),
+            //This query DOES NOT fail if no premessage is found (like on user error). It needs to be LESS THAN
+            //while ordered by id (default) to produce a proper index. The first message will be 0, and the second
+            //will have one message with id lower than it.
+            format!("!basiccomments() and contentId in @{}.id and id < @{}.id", THREADKEY, PREMESSAGEKEY)
+        );
+        index_request.name = Some(String::from(PREMESSAGEINDEXKEY));
+        request.requests.push(index_request);
+    }
+
+    request
+}
+
+//Apparently can't decide on transfered ownership or not
+pub fn get_finishpost_request(thread_id: i64, extra_uids: Vec<i64>, limit: i32, skip: i32) -> FullRequest 
+{
+    let mut request = FullRequest::new();
+    add_value!(request, "thread_id", thread_id);
+    add_value!(request, "uids", extra_uids);
+
+    let message_request = build_request!(
+        RequestType::message,
+        String::from("*"),
+        String::from("!basiccomments() and contentId = @thread_id"),
+        String::from("id"),
+        limit,
+        skip
+    );
+    request.requests.push(message_request);
+
+    //users in messages OR in extra_uids
+    let user_request = build_request!(
+        RequestType::user,
+        String::from("*"),
+        String::from("id in @message.createUserId or id in @message.editUserId or id in @uids")
+    );
+    request.requests.push(user_request);
 
     request
 }
