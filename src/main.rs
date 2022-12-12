@@ -213,6 +213,42 @@ async fn main()
             }
         }); 
 
+    let get_forum_thread_route = warp_get_async!(
+        warp::path!("forum" / "thread" / String)
+            .and(warp::query::<SimplePage>()),
+        |hash: String, page_struct: SimplePage, context:RequestContext| {
+            async move {
+                handle_response(
+                    errwrap!(pages::forum_thread::get_hash_render(
+                        context.layout_data, 
+                        &context.api_context, 
+                        &context.global_state.bbcode,
+                        hash, 
+                        context.global_state.config.default_display_posts, 
+                        page_struct.page).await)?,
+                    &context.global_state.link_config
+                )
+            }
+        }); 
+
+    let get_forum_post_route = warp_get_async!(
+        warp::path!("forum" / "thread" / String / i64),
+        |hash: String, post_id: i64, context:RequestContext| {
+            async move {
+                handle_response(
+                    errwrap!(pages::forum_thread::get_hash_postid_render(
+                        context.layout_data, 
+                        &context.api_context, 
+                        &context.global_state.bbcode,
+                        hash, 
+                        post_id,
+                        context.global_state.config.default_display_posts).await)?,
+                    &context.global_state.link_config
+                )
+            }
+        }); 
+
+
     let get_user_route = warp_get_async!(warp::path!("user" / String),
         |username: String, context:RequestContext| {
             async move {
@@ -281,6 +317,8 @@ async fn main()
         .or(get_search_route)
         .or(get_forum_route(&state_filter)) //HEAVILY multiplexed! Lots of legacy forum paths!
         .or(get_forum_category_route)
+        .or(get_forum_thread_route)
+        .or(get_forum_post_route)
         .or(get_about_route)
         .or(get_user_route)
         .or(get_userhome_route)

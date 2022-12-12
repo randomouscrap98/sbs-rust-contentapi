@@ -371,9 +371,9 @@ pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
                 meta name="description" content="A community for sharing programs and getting advice on SmileBASIC applications on the Nintendo DSi, 3DS, and Switch";
                 (style(&main_data.config, "/base.css"))
                 (style(&main_data.config, "/layout.css"))
-                (script(&main_data.config, "/layout.js"))
-                (script(&main_data.config, "/base.js"))
                 (script(&main_data.config, "/sb-highlight.js"))
+                (script(&main_data.config, "/base.js"))
+                (script(&main_data.config, "/layout.js"))
                 style { (PreEscaped(r#"
                     body {
                         background-repeat: repeat;

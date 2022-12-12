@@ -164,7 +164,19 @@ async fn render_thread(data: MainLayoutData, context: &ApiContext, bbcode: &BBCo
 //    page: Option<i32>) -> Result<Response, Error> 
 
 //#[get("/forum/thread/<hash>/<post_id>")]
-pub async fn forum_threadhash_postid_get(data: MainLayoutData, context: &ApiContext, bbcode: &BBCode, hash: String, post_id: i64,
+
+/// The normal endpoint for listing a thread
+pub async fn get_hash_render(data: MainLayoutData, context: &ApiContext, bbcode: &BBCode, hash: String, 
+    per_page: i32, page: Option<i32>) -> Result<Response, Error> 
+{
+    render_thread(
+        data, context, bbcode, 
+        get_prepost_request(None, None, None, Some(hash)), 
+        per_page, page).await
+}
+
+/// The normal endpoint for pinpointing a post
+pub async fn get_hash_postid_render(data: MainLayoutData, context: &ApiContext, bbcode: &BBCode, hash: String, post_id: i64,
     per_page: i32) -> Result<Response, Error> 
 {
     render_thread(
@@ -174,7 +186,7 @@ pub async fn forum_threadhash_postid_get(data: MainLayoutData, context: &ApiCont
 }
 
 //#[get("/forum?<ftid>&<page>", rank=5)] //, rank=3)]
-pub async fn forum_thread_ftid_get(data: MainLayoutData, context: &ApiContext, bbcode: &BBCode, ftid: i64, 
+pub async fn get_ftid_render(data: MainLayoutData, context: &ApiContext, bbcode: &BBCode, ftid: i64, 
     per_page: i32, page: Option<i32>) -> Result<Response, Error> 
 {
     render_thread(
@@ -185,7 +197,7 @@ pub async fn forum_thread_ftid_get(data: MainLayoutData, context: &ApiContext, b
 
 //Most old links may be to posts directly? idk
 //#[get("/forum?<fpid>", rank=3)] //, rank=4)]
-pub async fn forum_thread_fpid_get(data: MainLayoutData, context: &ApiContext, bbcode: &BBCode, fpid: i64,
+pub async fn get_fpid_render(data: MainLayoutData, context: &ApiContext, bbcode: &BBCode, fpid: i64,
     per_page: i32) -> Result<Response, Error> 
 {
     render_thread(
