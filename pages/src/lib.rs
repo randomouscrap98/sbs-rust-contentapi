@@ -5,6 +5,7 @@ pub mod login;
 pub mod activity;
 pub mod search;
 pub mod widget_imagebrowser;
+pub mod widget_bbcodepreview;
 pub mod userhome;
 pub mod recover;
 pub mod register;
@@ -62,6 +63,11 @@ pub struct EmailGeneric
     pub email: String
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BasicText
+{
+    pub text: String
+}
 
 // -------------------------------------
 // *     Response/Error from pages     *

@@ -168,6 +168,19 @@ async fn main()
     let get_search_route = warp_get!(warp::path!("search"),
         |context:RequestContext| warp::reply::html(pages::search::render(context.layout_data)));
 
+    let get_bbcodepreview_route = warp_get!(warp::path!("widget" / "bbcodepreview"),
+        |context:RequestContext| warp::reply::html(pages::widget_bbcodepreview::render(context.layout_data, &context.global_state.bbcode, None)));
+
+    let post_bbcodepreview_route = warp::post()
+        .and(warp::path!("widget" / "bbcodepreview"))
+        .and(form_filter.clone())
+        .and(warp::body::form::<pages::BasicText>())
+        .and(state_filter.clone())
+        .map(|form: pages::BasicText, context: RequestContext| {
+            warp::reply::html(pages::widget_bbcodepreview::render(context.layout_data, &context.global_state.bbcode, Some(form.text)))
+        })
+        .boxed();
+
     //TODO: this has to be multiplexed!
     let get_forum_main_route = warp_get_async!(warp::path!("forum"),
         |context:RequestContext| {
@@ -178,6 +191,7 @@ async fn main()
                 )
             }
         }); 
+
 
     #[derive(Deserialize, Debug)]
     struct SimplePage { page: Option<i32> }
@@ -276,6 +290,8 @@ async fn main()
         .or(get_recover_route)
         .or(post_recover_route)
         .or(get_imagebrowser_route)
+        .or(get_bbcodepreview_route)
+        .or(post_bbcodepreview_route)
         .recover(handle_rejection)
     ).run(address).await;
 }
