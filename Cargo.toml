@@ -4,7 +4,7 @@ version = "0.3.0"
 edition = "2021"
 
 [workspace]
-members = [ "bbcode", "contentapi", "pages" ]
+members = [ "bbcode", "contentapi", "pages", "basic-profiler" ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
