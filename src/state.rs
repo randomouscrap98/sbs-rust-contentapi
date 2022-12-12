@@ -5,29 +5,7 @@ use contentapi::endpoints::{ApiContext, ApiError};
 use pages::{LinkConfig, MainLayoutData, UserConfig};
 use warp::path::FullPath;
 
-use crate::config;
-
-
-//The standard config we want here in this application. This macro is ugly but 
-//it produces a config object that can load from a chain of json files
-config::create_config!{
-    Config, OptConfig => {
-        api_endpoint: String,
-        http_root: String,
-        api_fileraw : String,
-        //token_cookie_key: String,
-        default_cookie_expire: i32,
-        long_cookie_expire: i32,
-        default_imagebrowser_count: i32,
-        default_category_threads : i32,
-        default_display_threads : i32,
-        default_display_posts : i32,
-        forum_category_order: Vec<String>,
-        //file_maxsize: i32,
-        body_maxsize: i32, //this can be used for a lot of things, I don't really care
-        host_address: String,
-    }
-}
+use crate::Config;
 
 
 /// The unchanging configuration for the current runtime. Mostly values read from 

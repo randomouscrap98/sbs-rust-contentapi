@@ -10,8 +10,10 @@ pub mod recover;
 pub mod register;
 pub mod registerconfirm;
 pub mod user;
+pub mod forum_main;
 
-use contentapi::{self, endpoints::ApiError};
+use chrono::{SecondsFormat, Utc};
+use contentapi::{self, endpoints::ApiError, Content, Message};
 use serde::{Serialize, Deserialize};
 use serde_urlencoded;
 use maud::{Markup, html, PreEscaped, DOCTYPE};
@@ -37,7 +39,6 @@ impl Default for UserConfig {
         }
     }
 }
-
 
 #[derive(Debug)]
 pub struct MainLayoutData {
@@ -95,6 +96,7 @@ impl From<Box<dyn std::error::Error>> for Error {
 }
 
 impl Error {
+    //pub fn other(message: &str)
     pub fn to_user_string(&self) -> String {
         match self {
             Self::Api(error) => error.to_user_string(),
@@ -102,6 +104,11 @@ impl Error {
         }
     }
 }
+
+
+// ------------------------
+// *    LINK FUNCTIONS    *
+// ------------------------
 
 pub fn base_image_link(config: &LinkConfig, hash: &str) -> String { 
     image_link(config, hash, 0, false)
@@ -121,8 +128,29 @@ pub fn image_link(config: &LinkConfig, hash: &str, size: i64, crop: bool) -> Str
     }
 }
 
-pub fn timeago(time: chrono::DateTime<chrono::Utc>) -> String {
-    let duration = chrono::Utc::now().signed_duration_since(time); //timeago::format()
+pub fn forum_category_link(config: &LinkConfig, category: &Content) -> String {
+    let hash = match &category.hash {
+        Some(hash) => hash.clone(),
+        None => String::from("")
+    };
+    format!("{}/forum/category/{}", config.http_root, hash)
+}
+
+pub fn forum_post_link(config: &LinkConfig, post: &Message, thread: &Content) -> String {
+    let post_id = post.id.unwrap_or(0);
+    let hash = match &thread.hash {
+        Some(hash) => hash.clone(),
+        None => String::from("")
+    };
+    format!("{}/forum/thread/{}/{}#post_{}", config.http_root, hash, post_id, post_id)
+}
+
+// ----------------------------
+// *     FORMAT FUNCTIONS     *
+// ----------------------------
+
+pub fn timeago(time: &chrono::DateTime<chrono::Utc>) -> String {
+    let duration = chrono::Utc::now().signed_duration_since(*time); //timeago::format()
     match duration.to_std() {
         Ok(stdur) => {
             timeago::format(stdur, timeago::Style::HUMAN)
@@ -130,6 +158,15 @@ pub fn timeago(time: chrono::DateTime<chrono::Utc>) -> String {
         Err(error) => {
             format!("PARSE-ERR({}):{}", duration, error)
         }
+    }
+}
+
+pub fn timeago_o(time: &Option<chrono::DateTime<chrono::Utc>>) -> String {
+    if let Some(time) = time {
+        timeago(time)
+    }
+    else {
+        String::from("???")
     }
 }
 
@@ -146,6 +183,15 @@ pub fn s(string: &Option<String>) -> &str {
 pub fn b(boolean: bool) -> &'static str {
     if boolean { "true" }
     else { "false" }
+}
+
+pub fn d(date: &Option<chrono::DateTime<Utc>>) -> String {
+    if let Some(date) = date {
+        date.to_rfc3339_opts(SecondsFormat::Secs, true)
+    }
+    else {
+        String::from("NODATE")
+    }
 }
 
 //Email errors are weird with their true/false return. 
@@ -173,22 +219,10 @@ macro_rules! email_errors {
 }
 pub(crate) use email_errors;
 
-///// A macro to convert an API error into a simple rendered response. The "place"
-///// you pass in is used both for printing an error AND for finding the appropriate render function
-//macro_rules! emit_error_response {
-//    ($place:path,$error:expr,$) => {
-//        {
-//            println!("{} raw error: {}", stringify!(place), error.to_verbose_string());
-//            Response::Render($place::render(data, Some(vec![error.to_user_string()]), None, None))
-//        }
-//    };
-//}
-
 
 // ---------------------
 // *    FRAGMENTS      *
 // ---------------------
-
 
 // Produce some metadata for the header that any page can use (even widgets)
 pub fn basic_meta(config: &LinkConfig) -> Markup{
