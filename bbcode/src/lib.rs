@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use regex::{Regex, Captures, Error};
 
 // Carlos Sanchez - 2022-12-05
@@ -207,9 +209,10 @@ impl<'a> BBScoper<'a>
 // ------------------------------
 
 /// The main bbcode system. You create this to parse bbcode!
+#[derive(Clone)] //All the members implement clone
 pub struct BBCode {
     /// Supply this!
-    pub matchers: Vec<MatchInfo>, //These are SOMETIMES processed (based on context)
+    pub matchers: Arc<Vec<MatchInfo>>, //These are SOMETIMES processed (based on context)
 
     #[cfg(feature = "profiling")]
     pub profiler: basic_profiler::Profiler
@@ -220,11 +223,15 @@ impl BBCode
     /// Get a default bbcode parser. Should hopefully have reasonable defaults!
     //#[allow(dead_code)]
     pub fn default() -> Result<Self, Error> {
-        Ok(Self { 
-            matchers: Self::basics()?,
+        Ok(Self::from_matchers(Self::basics()?))
+    }
+
+    pub fn from_matchers(matchers: Vec<MatchInfo>) -> Self {
+        Self {
+            matchers: Arc::new(matchers),
             #[cfg(feature = "profiling")]
             profiler: basic_profiler::Profiler::new()
-        })
+        }
     }
 
     /// The basic direct replacement escapes for HTML. You don't need these if you're using 'basics()'
@@ -515,7 +522,7 @@ impl BBCode
             //figure out which next element matches (if any). This is the terrible optimization part, but
             //these are such small state machines with nothing too crazy that I think it's fine.... maybe.
             //Especially since they all start at the start of the string
-            for matchinfo in &self.matchers {
+            for matchinfo in self.matchers.iter() {
                 if current_scope.info.is_verbatim() {
                     match &matchinfo.match_type {
                         //If the thing to match is open or close and we're inside a verbatim string, skip the matching if
@@ -619,7 +626,15 @@ impl BBCode
 
 }
 
-
+//impl Clone for BBCode {
+//    fn clone(&self) -> Self {
+//        Self {
+//            matchers: self.matchers.clone(),
+//            #[cfg(feature = "profiling")]
+//            profiler: self.profiler.clone()
+//        }
+//    }
+//}
 
 // ----------------------------
 // *         TESTS           
@@ -634,11 +649,7 @@ mod tests {
         $(
             #[test]
             fn $name() {
-                let bbcode = BBCode { 
-                    matchers: BBCode::basics().unwrap(),
-                    #[cfg(feature = "profiling")]
-                    profiler: basic_profiler::Profiler::new()
-                };
+                let bbcode = BBCode::from_matchers(BBCode::basics().unwrap());
                 let (input, expected) = $value;
                 assert_eq!(bbcode.parse(input), expected);
             }
@@ -654,11 +665,7 @@ mod tests {
                 let mut matchers = BBCode::basics().unwrap();
                 let mut extras = BBCode::extras().unwrap();
                 matchers.append(&mut extras);
-                let bbcode = BBCode { 
-                    #[cfg(feature = "profiling")]
-                    profiler: basic_profiler::Profiler::new(),
-                    matchers 
-                };
+                let bbcode = BBCode::from_matchers(BBCode::basics().unwrap());
                 let (input, expected) = $value;
                 assert_eq!(bbcode.parse(input), expected);
             }
@@ -669,21 +676,13 @@ mod tests {
     #[test]
     fn build_init() {
         //This shouldn't fail?
-        let _bbcode = BBCode { 
-            matchers: BBCode::basics().unwrap(),
-            #[cfg(feature = "profiling")]
-            profiler: basic_profiler::Profiler::new()
-        };
+        let _bbcode = BBCode::from_matchers(BBCode::basics().unwrap());
     }
 
     #[test]
     fn build_add_lt() {
         //This shouldn't fail?
-        let bbcode = BBCode { 
-            matchers: BBCode::basics().unwrap(),
-            #[cfg(feature = "profiling")]
-            profiler: basic_profiler::Profiler::new()
-        };
+        let bbcode = BBCode::from_matchers(BBCode::basics().unwrap());
         let found = bbcode.matchers.iter().find(|x| matches!(x.match_type, MatchType::DirectReplace(_))).unwrap();
         assert_eq!(found.regex.as_str(), "^<");
         if let MatchType::DirectReplace(repl) = found.match_type {

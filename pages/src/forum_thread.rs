@@ -9,7 +9,7 @@ use crate::_forumsys::*;
 
 use super::*;
 
-pub fn render(data: MainLayoutData, bbcode: &BBCode, thread: ForumThread, users: &HashMap<i64,User>, path: Vec<ForumPathItem>,
+pub fn render(data: MainLayoutData, bbcode: &mut BBCode, thread: ForumThread, users: &HashMap<i64,User>, path: Vec<ForumPathItem>,
     pages: Vec<ForumPagelistItem>, start_num: i32, selected_post_id: Option<i64>) -> String 
 {
     layout(&data, html!{
@@ -45,7 +45,7 @@ pub fn render(data: MainLayoutData, bbcode: &BBCode, thread: ForumThread, users:
     }).into_string()
 }
 
-fn post_item(config: &LinkConfig, bbcode: &BBCode, post: &Message, thread: &Content, selected_post_id: Option<i64>, 
+fn post_item(config: &LinkConfig, bbcode: &mut BBCode, post: &Message, thread: &Content, selected_post_id: Option<i64>, 
     users: &HashMap<i64, User>, sequence: i32) -> Markup 
 {
     let user = user_or_default(users.get(&post.createUserId.unwrap_or(0)));
@@ -62,7 +62,7 @@ fn post_item(config: &LinkConfig, bbcode: &BBCode, post: &Message, thread: &Cont
                     a."sequence" href=(forum_post_link(config, post, thread)){ "#" (sequence) } 
                 }
                 @if let Some(text) = &post.text {
-                    div."content bbcode" { (PreEscaped(bbcode.parse(text))) }
+                    div."content bbcode" { (PreEscaped(bbcode.parse_named(text, format!("post-{}",i(&post.id))))) }
                 }
                 div."postfooter" {
                     div."history" {
@@ -82,8 +82,14 @@ fn post_item(config: &LinkConfig, bbcode: &BBCode, post: &Message, thread: &Cont
     }
 }
 
+///// Base data required to render a page of posts
+//pub struct FTPack {
+//    data: MainLayoutData,
+//    bbcode: BBCode,
+//    context: ApiContext
+//}
 
-async fn render_thread(data: MainLayoutData, context: &ApiContext, bbcode: &BBCode, pre_request: FullRequest, per_page: i32, 
+async fn render_thread(data: MainLayoutData, context: &ApiContext, bbcode: &mut BBCode, pre_request: FullRequest, per_page: i32, 
     page: Option<i32>) -> Result<Response, Error> 
 {
     let mut page = page.unwrap_or(1) - 1; //we assume 1-based pages
@@ -141,7 +147,7 @@ async fn render_thread(data: MainLayoutData, context: &ApiContext, bbcode: &BBCo
 //#[get("/forum/thread/<hash>/<post_id>")]
 
 /// The normal endpoint for listing a thread
-pub async fn get_hash_render(data: MainLayoutData, context: &ApiContext, bbcode: &BBCode, hash: String, 
+pub async fn get_hash_render(data: MainLayoutData, context: &ApiContext, bbcode: &mut BBCode, hash: String, 
     per_page: i32, page: Option<i32>) -> Result<Response, Error> 
 {
     render_thread(
@@ -151,7 +157,7 @@ pub async fn get_hash_render(data: MainLayoutData, context: &ApiContext, bbcode:
 }
 
 /// The normal endpoint for pinpointing a post
-pub async fn get_hash_postid_render(data: MainLayoutData, context: &ApiContext, bbcode: &BBCode, hash: String, post_id: i64,
+pub async fn get_hash_postid_render(data: MainLayoutData, context: &ApiContext, bbcode: &mut BBCode, hash: String, post_id: i64,
     per_page: i32) -> Result<Response, Error> 
 {
     render_thread(
@@ -161,7 +167,7 @@ pub async fn get_hash_postid_render(data: MainLayoutData, context: &ApiContext, 
 }
 
 //#[get("/forum?<ftid>&<page>", rank=5)] //, rank=3)]
-pub async fn get_ftid_render(data: MainLayoutData, context: &ApiContext, bbcode: &BBCode, ftid: i64, 
+pub async fn get_ftid_render(data: MainLayoutData, context: &ApiContext, bbcode: &mut BBCode, ftid: i64, 
     per_page: i32, page: Option<i32>) -> Result<Response, Error> 
 {
     render_thread(
@@ -172,7 +178,7 @@ pub async fn get_ftid_render(data: MainLayoutData, context: &ApiContext, bbcode:
 
 //Most old links may be to posts directly? idk
 //#[get("/forum?<fpid>", rank=3)] //, rank=4)]
-pub async fn get_fpid_render(data: MainLayoutData, context: &ApiContext, bbcode: &BBCode, fpid: i64,
+pub async fn get_fpid_render(data: MainLayoutData, context: &ApiContext, bbcode: &mut BBCode, fpid: i64,
     per_page: i32) -> Result<Response, Error> 
 {
     render_thread(

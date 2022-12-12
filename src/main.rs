@@ -76,7 +76,7 @@ async fn main()
         let mut extras = BBCode::extras().unwrap();
         matchers.append(&mut extras);
         BBCode { 
-            matchers,
+            matchers: Arc::new(matchers),
             profiler: root_profiler.clone()
         } 
     };
@@ -86,6 +86,7 @@ async fn main()
     //a new pointer and incrementing a count.
     let global_state = Arc::new(GlobalState {
         bbcode,
+        base_profiler: root_profiler,
         link_config : {
             let root = config.http_root.clone();
             LinkConfig {
@@ -211,13 +212,13 @@ async fn main()
     let get_forum_thread_route = warp_get_async!(
         warp::path!("forum" / "thread" / String)
             .and(warp::query::<SimplePage>()),
-        |hash: String, page_struct: SimplePage, context:RequestContext| {
+        |hash: String, page_struct: SimplePage, mut context:RequestContext| {
             async move {
                 handle_response(
                     errwrap!(pages::forum_thread::get_hash_render(
                         context.layout_data, 
                         &context.api_context, 
-                        &context.global_state.bbcode,
+                        &mut context.bbcode,
                         hash, 
                         context.global_state.config.default_display_posts, 
                         page_struct.page).await)?,
@@ -228,13 +229,13 @@ async fn main()
 
     let get_forum_post_route = warp_get_async!(
         warp::path!("forum" / "thread" / String / i64),
-        |hash: String, post_id: i64, context:RequestContext| {
+        |hash: String, post_id: i64, mut context:RequestContext| {
             async move {
                 handle_response(
                     errwrap!(pages::forum_thread::get_hash_postid_render(
                         context.layout_data, 
                         &context.api_context, 
-                        &context.global_state.bbcode,
+                        &mut context.bbcode,
                         hash, 
                         post_id,
                         context.global_state.config.default_display_posts).await)?,
@@ -390,13 +391,13 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
     let forum_ftid = warp::any()
         .and(warp::query::<FtidPage>())
         .and(state_filter.clone())
-        .and_then(|ftid_page: FtidPage, context:RequestContext| {
+        .and_then(|ftid_page: FtidPage, mut context:RequestContext| {
             async move {
                 handle_response(
                     errwrap!(pages::forum_thread::get_ftid_render(
                         context.layout_data, 
                         &context.api_context, 
-                        &context.global_state.bbcode,
+                        &mut context.bbcode,
                         ftid_page.ftid,
                         context.global_state.config.default_display_posts, 
                         ftid_page.page).await)?,
@@ -414,13 +415,13 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
     let forum_fpid = warp::any()
         .and(warp::query::<Fpid>())
         .and(state_filter.clone())
-        .and_then(|fpid: Fpid, context:RequestContext| {
+        .and_then(|fpid: Fpid, mut context:RequestContext| {
             async move {
                 handle_response(
                     errwrap!(pages::forum_thread::get_fpid_render(
                         context.layout_data, 
                         &context.api_context, 
-                        &context.global_state.bbcode,
+                        &mut context.bbcode,
                         fpid.fpid,
                         context.global_state.config.default_display_posts).await)?,
                     &context.global_state.link_config

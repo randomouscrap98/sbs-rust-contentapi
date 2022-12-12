@@ -12,6 +12,7 @@ use crate::Config;
 /// config, but some other constructed data too
 pub struct GlobalState {
     pub link_config: LinkConfig,
+    pub base_profiler: basic_profiler::Profiler,
     pub bbcode: BBCode,
     pub config: Config
 }
@@ -21,13 +22,18 @@ pub struct GlobalState {
 /// require the api_about in MainLayoutData, which requires the api_context.
 pub struct RequestContext {
     pub global_state: Arc<GlobalState>,
+    pub bbcode: BBCode, //Clones are cheap?
     pub api_context: ApiContext,
     pub layout_data: MainLayoutData
 }
 
 impl RequestContext {
     pub async fn generate(state: Arc<GlobalState>, path: FullPath, token: Option<String>) -> Result<Self, ApiError> {
-        let context = ApiContext::new(state.config.api_endpoint.clone(), token.clone());
+        let context = ApiContext::new_with_profiler(
+            state.config.api_endpoint.clone(), 
+            token.clone(),
+            state.base_profiler.clone() // Shouldn't be expensive: clone shares a profiler list
+        );
         let layout_data = MainLayoutData {
             config: state.link_config.clone(),
             user_config: UserConfig::default(),
@@ -37,6 +43,7 @@ impl RequestContext {
             about_api: context.get_about().await?
         };
         Ok(RequestContext {
+            bbcode: state.bbcode.clone(),
             global_state: state,
             api_context: context,
             layout_data
