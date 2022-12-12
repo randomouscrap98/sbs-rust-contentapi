@@ -6,6 +6,10 @@ use maud::DOCTYPE;
 use serde::{Serialize, Deserialize};
 
 
+pub fn self_link(config: &LinkConfig) -> String {
+    format!("{}/widget/imagebrowser", config.http_root)
+}
+
 pub fn render(data: MainLayoutData, search: Search, images: Vec<Image>, previews: Vec<Image>, errors: Option<Vec<String>>) -> String {
     let sizes = vec![(1,"1"),(2,"2"),(3,"3")]; //This may seem stupid but I might want to change the text later
     let imagesize: i64 = 100 * search.size as i64; //Used to have + something, but now...
@@ -24,14 +28,23 @@ pub fn render(data: MainLayoutData, search: Search, images: Vec<Image>, previews
             }
             //This is meant to go in an iframe, so it will use up the whole space
             body data-size=(search.size){
-                h3 { "Upload file:" }
-                //This doesn't need an action since it's self posting but just in case...
-                form method="POST" action="/widget/imagebrowser" enctype="multipart/form-data" {
-                    (errorlist(errors))
-                    input #"fileinput" type="file" name="file" class="largeinput" accept="image/*";
-                    input type="submit" value="Upload";
+                //Might as well not show the upload form if user isn't logged in
+                @if let Some(_user) = &data.user {
+                    h3 { "Upload file:" }
+                    //This doesn't need an action since it's self posting but just in case...
+                    form method="POST" action=(data.config.file_upload_root) enctype="multipart/form-data" {
+                        (errorlist(errors))
+                        @if let Some(error) = &search.error {
+                            (errorlist(Some(vec![error.clone()])))
+                        }
+                        input #"fileinput" type="file" name="file" class="largeinput" accept="image/*";
+                        input type="hidden" name="token" value=[&data.user_token];
+                        input type="hidden" name="errorUrl" value={(self_link(&data.config))"?error={{error}}"};
+                        input type="hidden" name="successUrl" value={(self_link(&data.config))"?preview={{hash}}"};
+                        input type="submit" value="Upload";
+                    }
+                    hr;
                 }
-                hr;
                 h3{ "Browse files:" }
                 div."scrollable" {
                     //Don't include an action so it just posts to the same url but with the form as params...?
@@ -111,10 +124,10 @@ fn image_navigation(data: &MainLayoutData, search: Search) -> Markup {
     html! {
         div."smallseparate browsepagenav" {
             @if let Ok(prevlink) = serde_urlencoded::to_string(searchprev) {
-                a."coolbutton" href={(data.config.http_root)"/widget/imagebrowser?"(prevlink)} {"Previous"}
+                a."coolbutton" href={(self_link(&data.config))"?"(prevlink)} {"Previous"}
             }
             @if let Ok(nextlink) = serde_urlencoded::to_string(searchnext) {
-                a."coolbutton" href={(data.config.http_root)"/widget/imagebrowser?"(nextlink)} {"Next"}
+                a."coolbutton" href={(self_link(&data.config))"?"(nextlink)} {"Next"}
             }
         }
     }
@@ -130,7 +143,8 @@ pub struct Search
     pub global: bool,
     pub oldest: bool,
     pub page: i32,
-    pub preview: Option<String>
+    pub preview: Option<String>,
+    pub error: Option<String>
 }
 
 impl Default for Search {
@@ -140,7 +154,8 @@ impl Default for Search {
             global: false,
             oldest: false,
             page: 0,
-            preview: None
+            preview: None,
+            error: None
         }
     }
 }

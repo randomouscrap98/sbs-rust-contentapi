@@ -28,6 +28,7 @@ pub struct LinkConfig {
     pub static_root: String,
     pub resource_root: String,
     pub file_root: String,
+    pub file_upload_root: String,
     pub cache_bust: String
 }
 
@@ -50,6 +51,7 @@ pub struct MainLayoutData {
     pub user_config: UserConfig,    
     pub current_path: String, 
     pub user: Option<contentapi::User>,
+    pub user_token: Option<String>,
     pub about_api: contentapi::About, 
 }
 

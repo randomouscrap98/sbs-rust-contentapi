@@ -27,12 +27,13 @@ pub struct RequestContext {
 
 impl RequestContext {
     pub async fn generate(state: Arc<GlobalState>, path: FullPath, token: Option<String>) -> Result<Self, ApiError> {
-        let context = ApiContext::new(state.config.api_endpoint.clone(), token);
+        let context = ApiContext::new(state.config.api_endpoint.clone(), token.clone());
         let layout_data = MainLayoutData {
             config: state.link_config.clone(),
             user_config: UserConfig::default(),
             current_path: String::from(path.as_str()),
             user: context.get_me_safe().await,
+            user_token: token,
             about_api: context.get_about().await?
         };
         Ok(RequestContext {

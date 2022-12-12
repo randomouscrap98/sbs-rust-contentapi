@@ -86,7 +86,8 @@ async fn main()
             LinkConfig {
                 static_root: format!("{}/static", &root),
                 resource_root: format!("{}/static/resources", &root),
-                file_root: config.api_fileraw.clone(),
+                file_root: format!("{}/raw", config.api_fileraw),
+                file_upload_root: format!("{}/low", config.api_fileraw),
                 http_root: root,
                 cache_bust : chrono::offset::Utc::now().to_string()
             }
