@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use bbcode::BBCode;
 use contentapi::endpoints::{ApiContext, ApiError};
-use pages::{LinkConfig, MainLayoutData, UserConfig};
+use pages::{LinkConfig, MainLayoutData, UserConfig, PageContext};
 use warp::path::FullPath;
 
 use crate::Config;
@@ -48,5 +48,15 @@ impl RequestContext {
             api_context: context,
             layout_data
         })
+    }
+}
+
+impl From<RequestContext> for PageContext {
+    fn from(context: RequestContext) -> Self {
+        Self {
+            layout_data: context.layout_data,
+            api_context: context.api_context,
+            bbcode: context.bbcode
+        } 
     }
 }

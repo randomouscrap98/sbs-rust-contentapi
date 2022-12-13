@@ -111,18 +111,16 @@ async fn render_threads(data: MainLayoutData, context: &ApiContext, category_req
     Ok(Response::Render(render(data, category, path, pagelist)))
 }
 
-//#[get("/forum/category/<hash>?<page>")]
-pub async fn get_hash_render(data: MainLayoutData, context: &ApiContext, hash: String, per_page: i32, page: Option<i32>) -> 
+
+
+pub async fn get_hash_render(context: PageContext, hash: String, per_page: i32, page: Option<i32>) -> 
     Result<Response, Error> 
 {
-    render_threads(data, &context, get_category_request(Some(hash), None), per_page, page).await
+    render_threads(context.layout_data, &context.api_context, get_category_request(Some(hash), None), per_page, page).await
 }
 
-//Almost nobody will be visiting by fcid, so rank this poorly
-//#[get("/forum?<fcid>&<page>", rank=9)] //, rank=2)]
-
-pub async fn get_fcid_render(data: MainLayoutData, context: &ApiContext, fcid: i64, per_page: i32, page: Option<i32>) -> 
+pub async fn get_fcid_render(context: PageContext, fcid: i64, per_page: i32, page: Option<i32>) -> 
     Result<Response, Error> 
 {
-    render_threads(data, &context, get_category_request(None, Some(fcid)), per_page, page).await
+    render_threads(context.layout_data, &context.api_context, get_category_request(None, Some(fcid)), per_page, page).await
 }

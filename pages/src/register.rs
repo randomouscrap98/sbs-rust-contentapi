@@ -1,4 +1,3 @@
-use contentapi::endpoints::ApiContext;
 
 use super::*;
 
@@ -24,29 +23,31 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, username: Optio
     }).into_string()
 }
 
-pub async fn post_render(data: MainLayoutData, context: &ApiContext, registration: &contentapi::forms::Register) -> Response 
+
+
+pub async fn post_render(context: PageContext, registration: &contentapi::forms::Register) -> Response 
 {
     let email = registration.email.clone(); //make a copy for later
     let username = registration.username.clone();
-    match context.post_register(registration).await //the initial registration
+    match context.api_context.post_register(registration).await //the initial registration
     {
         //On success, we render the confirmation page with the email result baked in (it's more janky because it's
         //the same page data but on the same route but whatever... it's safer).
         Ok(userresult) => {
             //Gotta send out the registration email though, since it's a two step process in the API
-            let errors = email_errors!(context.post_email_sendregistration(&email).await);
+            let errors = email_errors!(context.api_context.post_email_sendregistration(&email).await);
             if errors.len() == 0 { 
                 //On success, we show the user the confirmation page with their information
-                Response::Render(registerconfirm::render(data, None, None, Some(email), Some(userresult), false))
+                Response::Render(registerconfirm::render(context.layout_data, None, None, Some(email), Some(userresult), false))
             }
             else {
                 //Oh but if the email fails, we need to tell them about it. 
-                Response::Render(render(data, Some(errors), Some(username), Some(email)))
+                Response::Render(render(context.layout_data, Some(errors), Some(username), Some(email)))
             }
         },
         Err(error) => {
             //On failure, we re-render the registration page, show errors
-            Response::Render(render(data, Some(vec![error.to_user_string()]), Some(username), Some(email)))
+            Response::Render(render(context.layout_data, Some(vec![error.to_user_string()]), Some(username), Some(email)))
         } 
     }
 }

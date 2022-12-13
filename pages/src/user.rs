@@ -1,10 +1,10 @@
 
 use bbcode::BBCode;
-use contentapi::{User, Content, endpoints::ApiContext, add_value, build_request, FullRequest, RequestType};
+use contentapi::{User, Content, add_value, build_request, FullRequest, RequestType};
 
 use super::*;
 
-pub fn render(data: MainLayoutData, bbcode: &BBCode, user: Option<User>, userpage: Option<Content>) -> String {
+pub fn render(data: MainLayoutData, mut bbcode: BBCode, user: Option<User>, userpage: Option<Content>) -> String {
     layout(&data, html!{
         (style(&data.config, "/forpage/user.css"))
         section {
@@ -20,7 +20,7 @@ pub fn render(data: MainLayoutData, bbcode: &BBCode, user: Option<User>, userpag
                         }
                         //If the user has no bio, that's ok! 
                         @if let Some(userpage) = userpage {
-                            div."content" #"userbio" { (PreEscaped(bbcode.parse(s(&userpage.text)))) } 
+                            div."content" #"userbio" { (PreEscaped(bbcode.parse_named(s(&userpage.text), format!("userpage-{}", i(&userpage.id))))) } 
                         }
                     }
                 }
@@ -33,8 +33,8 @@ pub fn render(data: MainLayoutData, bbcode: &BBCode, user: Option<User>, userpag
     }).into_string()
 }
 
-pub async fn get_render(data: MainLayoutData, context: &ApiContext, bbcode: &BBCode, username: String) -> 
-    Result<Response, Error>
+
+pub async fn get_render(context: PageContext, username: String) -> Result<Response, Error>
 {
     //Go get the user and their userpage
     let mut request = FullRequest::new();
@@ -52,11 +52,11 @@ pub async fn get_render(data: MainLayoutData, context: &ApiContext, bbcode: &BBC
         String::from("!userpage(@user.id)")
     )); 
 
-    let result = context.post_request(&request).await?;
+    let result = context.api_context.post_request(&request).await?;
 
     //Now try to parse two things out of it
     let mut users_raw = contentapi::conversion::cast_result_required::<User>(&result, "user")?;
     let mut content_raw = contentapi::conversion::cast_result_required::<Content>(&result, "content")?;
 
-    Ok(Response::Render(render(data, bbcode, users_raw.pop(), content_raw.pop())))
+    Ok(Response::Render(render(context.layout_data, context.bbcode, users_raw.pop(), content_raw.pop())))
 }

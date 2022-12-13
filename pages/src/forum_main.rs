@@ -57,11 +57,12 @@ async fn build_categories_with_threads(context: &ApiContext, categories_cleaned:
     Ok(categories)
 }
 
-pub async fn get_render(data: MainLayoutData, context: &ApiContext, order: &Vec<String>, show_threads: i32) -> Result<Response, Error> 
+
+pub async fn get_render(context: PageContext, order: &Vec<String>, show_threads: i32) -> Result<Response, Error> 
 {
     //First request: just get categories
     let request = get_category_request(None, None);
-    let category_result = context.post_request(&request).await?;
+    let category_result = context.api_context.post_request(&request).await?;
     let mut categories_cleaned = CleanedPreCategory::from_many(cast_result_required::<Content>(&category_result, CATEGORYKEY)?)?;
 
     //Sort the categories by their name AGAINST the default list in the config. So, it should sort the categories
@@ -72,13 +73,7 @@ pub async fn get_render(data: MainLayoutData, context: &ApiContext, order: &Vec<
             |prefix| category.name.starts_with(prefix)).unwrap_or(usize::MAX), category.name.clone())
     });
 
-    let categories = build_categories_with_threads(&context, categories_cleaned, show_threads, 0).await?;
+    let categories = build_categories_with_threads(&context.api_context, categories_cleaned, show_threads, 0).await?;
 
-    //println!("Template categories: {:?}", &categories);
-
-    Ok(Response::Render(render(data, categories)))
-    //Ok(basic_template!("forumroot", context, {
-    //    categories: categories,
-    //    forumpath: vec![ForumPathItem::root()]
-    //}))
+    Ok(Response::Render(render(context.layout_data, categories)))
 }

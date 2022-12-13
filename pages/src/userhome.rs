@@ -91,13 +91,13 @@ pub fn render(data: MainLayoutData, private: Option<contentapi::UserPrivate>, us
 }
 
 
-async fn get_render_internal(data: MainLayoutData, context: &ApiContext,
+async fn get_render_internal(context: PageContext, 
     update_errors: Option<Vec<String>>, bio_errors: Option<Vec<String>>, private_errors: Option<Vec<String>>) -> Result<Response,Error> 
 {
-    let private = context.get_user_private_safe().await;
+    let private = context.api_context.get_user_private_safe().await;
     let mut userpage : Option<Content> = None;
 
-    if let Some(ref user) = data.user {
+    if let Some(user) = &context.layout_data.user {
         let mut request = FullRequest::new();
         add_value!(request, "uid", user.id);
         let mut user_request = build_request!(
@@ -108,20 +108,17 @@ async fn get_render_internal(data: MainLayoutData, context: &ApiContext,
         user_request.name = Some(String::from("userpage"));
         request.requests.push(user_request);
 
-        let result = context.post_request(&request).await?;
+        let result = context.api_context.post_request(&request).await?;
 
         let mut userpage_raw = conversion::cast_result_safe::<Content>(&result, "userpage")?;
         userpage = userpage_raw.pop(); //Doesn't matter if it's none
     }
 
-    //pub fn render(data: MainLayoutData, private: contentapi::UserPrivate, userbio: Option<Content>,
-    //update_errors: Option<Vec<String>>, bio_errors: Option<Vec<String>>, private_errors: Option<Vec<String>>) -> String 
-
-    Ok(Response::Render(render(data, private, userpage, update_errors, bio_errors, private_errors)))
+    Ok(Response::Render(render(context.layout_data, private, userpage, update_errors, bio_errors, private_errors)))
 }
 
-pub async fn get_render(data: MainLayoutData, context: &ApiContext) -> Result<Response, Error> {
-    get_render_internal(data, context, None, None, None).await
+pub async fn get_render(context: PageContext) -> Result<Response, Error> {
+    get_render_internal(context, None, None, None).await
 }
 
 
@@ -141,17 +138,17 @@ pub struct UserBio
 
 /// Post to update normal info like username, avatar, etc. Note that although this may return an "Error", this is not from
 /// having a POST error, it's from a render error for userhome
-pub async fn post_info_render(mut data: MainLayoutData, context: &ApiContext, update: UserUpdate) -> Result<Response, Error>
+pub async fn post_info_render(mut context: PageContext, update: UserUpdate) -> Result<Response, Error>
 {
     let mut errors = Vec::new();
     //If the user is there, get a copy of it so we can modify and post it
-    if let Some(mut current_user) = data.user.clone() {
+    if let Some(mut current_user) = context.layout_data.user.clone() {
         //Modify
         current_user.username = String::from(update.username);
         current_user.avatar = String::from(update.avatar);
         //Either update the context user or set an error
-        match context.post_userupdate(&current_user).await { 
-            Ok(new_user) => data.user = Some(new_user), //Update user for rendering
+        match context.api_context.post_userupdate(&current_user).await { 
+            Ok(new_user) => context.layout_data.user = Some(new_user), //Update user for rendering
             Err(error) => errors.push(error.to_user_string())
         }
     }
@@ -159,7 +156,7 @@ pub async fn post_info_render(mut data: MainLayoutData, context: &ApiContext, up
         errors.push(String::from("Couldn't pull user data, are you still logged in?"));
     }
 
-    get_render_internal(data, context, Some(errors), None, None).await //userhome_base!(context, {updateerrors:errors}))
+    get_render_internal(context, Some(errors), None, None).await 
 }
 
 /// Complicated function for posting a simple user bio yeesh
@@ -207,26 +204,26 @@ pub async fn post_userbio(data: &MainLayoutData, context: &ApiContext, form: &Us
 
 /// Post to update user bio. It's a bit of a complicated process, but you call this function to perform
 /// everything and render the resulting page afterwards, error or not
-pub async fn post_bio_render(data: MainLayoutData, context: &ApiContext, bio: UserBio) -> Result<Response, Error>
+pub async fn post_bio_render(context: PageContext, bio: UserBio) -> Result<Response, Error>
 {
     //Both go to the same place, AND the userhome renderer reads the data after this write anyway,
     //so you just have to handle the errors
     let mut errors = Vec::new();
-    match post_userbio(&data, context, &bio).await {
+    match post_userbio(&context.layout_data, &context.api_context, &bio).await {
         Ok(_content) => {},
         Err(error) => { errors.push(error.to_user_string()) }
     };
 
-    get_render_internal(data, context, None, Some(errors), None).await 
+    get_render_internal(context, None, Some(errors), None).await 
 }
 
-pub async fn post_sensitive_render(data: MainLayoutData, context: &ApiContext, sensitive: UserSensitive) -> Result<Response, Error>
+pub async fn post_sensitive_render(context: PageContext, sensitive: UserSensitive) -> Result<Response, Error>
 {
     let mut errors = Vec::new();
-    match context.post_usersensitive(&sensitive).await {
+    match context.api_context.post_usersensitive(&sensitive).await {
         Ok(_token) => {} //Don't need the token
         Err(error) => { errors.push(error.to_user_string()) }
     };
 
-    get_render_internal(data, context, None, None, Some(errors)).await 
+    get_render_internal(context, None, None, Some(errors)).await 
 }

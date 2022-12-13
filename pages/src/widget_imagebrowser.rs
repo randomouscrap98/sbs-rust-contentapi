@@ -175,8 +175,6 @@ impl From<Content> for Image {
     }
 }
 
-
-
 async fn imagebrowser_request(context: &ApiContext, search: &Search, per_page: i32) -> Result<RequestResult, ApiError>
 {
     //The request which we will spend the entire function building
@@ -225,12 +223,12 @@ async fn imagebrowser_request(context: &ApiContext, search: &Search, per_page: i
 }
 
 
-pub async fn query_render(data: MainLayoutData, context: &ApiContext, search: Search, per_page: i32) -> Result<Response,Error> {
-    let result = imagebrowser_request(context, &search, per_page).await?;
+pub async fn query_render(context: PageContext, search: Search, per_page: i32) -> Result<Response,Error> {
+    let result = imagebrowser_request(&context.api_context, &search, per_page).await?;
     let images = conversion::cast_result_safe::<Content>(&result, "content")?;
     let previews = conversion::cast_result_safe::<Content>(&result, "preview")?;
 
-    Ok(Response::Render(render(data, search, 
+    Ok(Response::Render(render(context.layout_data, search, 
         images.into_iter().map(|i| i.into()).collect(), 
         previews.into_iter().map(|i| i.into()).collect(), None)))
 }

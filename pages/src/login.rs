@@ -64,32 +64,32 @@ impl Login {
     }
 }
 
+
 /// Rendering for posting a user login. But, may redirect instead! You have to inspect the Response! On success,
 /// the Ok result has a string as well, that's the token. There's no way for this to fail, as one way or another,
 /// you're going to get a response
-pub async fn post_login_render(data: MainLayoutData, context: &contentapi::endpoints::ApiContext, login: &contentapi::forms::Login) -> 
+pub async fn post_login_render(context: PageContext, login: &contentapi::forms::Login) -> 
     (Response, Option<String>)
 {
-    match context.post_login(login).await {
+    match context.api_context.post_login(login).await {
         Ok(token) => (Response::Redirect(String::from("/userhome")), Some(token)),
         Err(error) => {
             println!("Login raw error: {}", error.to_verbose_string());
-            (Response::Render(render(data, Some(vec![error.to_user_string()]), None, None)), None)
+            (Response::Render(render(context.layout_data, Some(vec![error.to_user_string()]), None, None)), None)
         }
     }
 }
 
 /// Account recovery just requires an email, which we will try to send the recovery code to. On 
 /// success, we render the recovery page. Otherwise, we render the login page again (all on same url)
-pub async fn post_login_recover(data: MainLayoutData, context: &contentapi::endpoints::ApiContext, 
-    recover: &EmailGeneric) -> Response
+pub async fn post_login_recover(context: PageContext, recover: &EmailGeneric) -> Response
 {
     let email = recover.email.clone(); //make a copy for later
-    let errors = email_errors!(context.post_email_recover(&recover.email).await);
+    let errors = email_errors!(context.api_context.post_email_recover(&recover.email).await);
     if errors.len() == 0 { //Success!
-        Response::Render(recover::render(data, None, Some(email)))
+        Response::Render(recover::render(context.layout_data, None, Some(email)))
     }
     else { //Failure! Re-render page with errors
-        Response::Render(render(data, None, Some(errors), Some(email)))
+        Response::Render(render(context.layout_data, None, Some(errors), Some(email)))
     }
 }

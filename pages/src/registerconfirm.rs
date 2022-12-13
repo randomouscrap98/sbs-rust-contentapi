@@ -1,4 +1,4 @@
-use contentapi::{User, endpoints::ApiContext};
+use contentapi::User;
 
 use super::*;
 
@@ -48,13 +48,14 @@ pub fn render(data: MainLayoutData, confirm_errors: Option<Vec<String>>, email_e
     }).into_string()
 }
 
+
+
 /// Regular confirmation acceptance. On success, we redirect you to your userhome while returning the token (presumably
 /// to log you in on whatever routing you have). On failure, we re-render the confirmation page with the errors.
-pub async fn post_render(data: MainLayoutData, context: &ApiContext, confirm: &contentapi::forms::RegisterConfirm) -> 
-    (Response, Option<String>)
+pub async fn post_render(context: PageContext, confirm: &contentapi::forms::RegisterConfirm) -> (Response, Option<String>)
 {
     let email = confirm.email.clone(); //For use later
-    match context.post_register_confirm(confirm).await
+    match context.api_context.post_register_confirm(confirm).await
     {
         //If confirmation is successful, we get a token back. We login and redirect to the userhome page
         Ok(token) => {
@@ -62,23 +63,23 @@ pub async fn post_render(data: MainLayoutData, context: &ApiContext, confirm: &c
         },
         //If there's an error, we re-render the confirmation page with the errors.
         Err(error) => {
-            (Response::Render(render(data, Some(vec![error.to_user_string()]), None, Some(email), None, false)), None)
+            (Response::Render(render(context.layout_data, Some(vec![error.to_user_string()]), None, Some(email), None, false)), None)
         }
     }
 }
 
 /// Resend the confirmation email. On both success and failure, it re-renders the page, just with different elements
 /// in the resend form for success or failure.
-pub async fn post_email_render(data: MainLayoutData, context: &ApiContext, resend: &EmailGeneric) -> Response 
+pub async fn post_email_render(context: PageContext, resend: &EmailGeneric) -> Response 
 {
     let email = resend.email.clone(); //make a copy for later
-    let errors = email_errors!(context.post_email_sendregistration(&email).await);
+    let errors = email_errors!(context.api_context.post_email_sendregistration(&email).await);
     if errors.len() == 0 { 
         //Success! Rerender the current page with success set (no errors)
-        Response::Render(render(data, None, None, Some(email), None, true))
+        Response::Render(render(context.layout_data, None, None, Some(email), None, true))
     }
     else { 
         //Failure! Re-render page with errors
-        Response::Render(render(data, None, Some(errors), Some(email), None, false))
+        Response::Render(render(context.layout_data, None, Some(errors), Some(email), None, false))
     }
 }

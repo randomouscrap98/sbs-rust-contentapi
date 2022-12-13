@@ -30,15 +30,14 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, email: Option<S
 }
 
 
-pub async fn post_render(data: MainLayoutData, context: &contentapi::endpoints::ApiContext, sensitive: &UserSensitive) -> 
-    (Response, Option<String>)
+pub async fn post_render(context: PageContext, sensitive: &UserSensitive) -> (Response, Option<String>)
 {
-    match context.post_usersensitive(sensitive).await {
+    match context.api_context.post_usersensitive(sensitive).await {
         Ok(token) => {
             (Response::Redirect(String::from("/userhome")), Some(token))
         },
         Err(error) => {
-            (Response::Render(render(data, Some(vec![error.to_user_string()]), Some(sensitive.currentEmail.clone()))), None)
+            (Response::Render(render(context.layout_data, Some(vec![error.to_user_string()]), Some(sensitive.currentEmail.clone()))), None)
         }
     }
 }

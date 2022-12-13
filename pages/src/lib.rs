@@ -16,8 +16,9 @@ pub mod forum_main;
 pub mod forum_category;
 pub mod forum_thread;
 
+use bbcode::BBCode;
 use chrono::{SecondsFormat, Utc};
-use contentapi::{self, endpoints::ApiError, Content, Message, User, UserType};
+use contentapi::{self, endpoints::{ApiError, ApiContext}, Content, Message, User, UserType};
 use serde::{Serialize, Deserialize};
 use serde_urlencoded;
 use maud::{Markup, html, PreEscaped, DOCTYPE};
@@ -55,6 +56,14 @@ pub struct MainLayoutData {
     pub about_api: contentapi::About, 
 }
 
+/// A basic context for use in page rendering. Even if a page doesn't strictly need all
+/// the items inside this context, it just makes it easier to pass them all to every page
+/// render consistently. However, do NOT use this on the baseline rendering functions!
+pub struct PageContext {
+    pub layout_data: MainLayoutData,
+    pub api_context: ApiContext,
+    pub bbcode: BBCode
+}
 
 // ------------------------
 // *     GENERIC FORMS    *

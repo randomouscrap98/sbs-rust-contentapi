@@ -197,14 +197,14 @@ async fn main()
             .and(warp::query::<SimplePage>()),
         |hash: String, page_struct: SimplePage, context:RequestContext| {
             async move {
+                let gc = context.global_state.clone();
                 handle_response(
                     errwrap!(pages::forum_category::get_hash_render(
-                        context.layout_data, 
-                        &context.api_context, 
+                        context.into(),
                         hash, 
-                        context.global_state.config.default_display_threads, 
+                        gc.config.default_display_threads, 
                         page_struct.page).await)?,
-                    &context.global_state.link_config
+                    &gc.link_config
                 )
             }
         }); 
@@ -212,34 +212,32 @@ async fn main()
     let get_forum_thread_route = warp_get_async!(
         warp::path!("forum" / "thread" / String)
             .and(warp::query::<SimplePage>()),
-        |hash: String, page_struct: SimplePage, mut context:RequestContext| {
+        |hash: String, page_struct: SimplePage, context:RequestContext| {
             async move {
+                let gc = context.global_state.clone();
                 handle_response(
                     errwrap!(pages::forum_thread::get_hash_render(
-                        context.layout_data, 
-                        &context.api_context, 
-                        &mut context.bbcode,
+                        context.into(),
                         hash, 
-                        context.global_state.config.default_display_posts, 
+                        gc.config.default_display_posts, 
                         page_struct.page).await)?,
-                    &context.global_state.link_config
+                    &gc.link_config
                 )
             }
         }); 
 
     let get_forum_post_route = warp_get_async!(
         warp::path!("forum" / "thread" / String / i64),
-        |hash: String, post_id: i64, mut context:RequestContext| {
+        |hash: String, post_id: i64, context:RequestContext| {
             async move {
+                let gc = context.global_state.clone();
                 handle_response(
                     errwrap!(pages::forum_thread::get_hash_postid_render(
-                        context.layout_data, 
-                        &context.api_context, 
-                        &mut context.bbcode,
+                        context.into(),
                         hash, 
                         post_id,
-                        context.global_state.config.default_display_posts).await)?,
-                    &context.global_state.link_config
+                        gc.config.default_display_posts).await)?,
+                    &gc.link_config
                 )
             }
         }); 
@@ -248,9 +246,10 @@ async fn main()
     let get_user_route = warp_get_async!(warp::path!("user" / String),
         |username: String, context:RequestContext| {
             async move {
+                let gc = context.global_state.clone();
                 handle_response(
-                    errwrap!(pages::user::get_render(context.layout_data, &context.api_context, &context.global_state.bbcode, username).await)?,
-                    &context.global_state.link_config
+                    errwrap!(pages::user::get_render(context.into(), username).await)?,
+                    &gc.link_config
                 )
             }
         }); 
@@ -258,9 +257,10 @@ async fn main()
     let get_userhome_route = warp_get_async!(warp::path!("userhome"),
         |context:RequestContext| {
             async move {
+                let gc = context.global_state.clone();
                 handle_response(
-                    errwrap!(pages::userhome::get_render(context.layout_data, &context.api_context).await)?,
-                    &context.global_state.link_config
+                    errwrap!(pages::userhome::get_render(context.into()).await)?,
+                    &gc.link_config
                 )
             }
         }); 
@@ -272,10 +272,13 @@ async fn main()
                 .unify()),
         |search:pages::widget_imagebrowser::Search, context:RequestContext| {
             async move {
+                let gc = context.global_state.clone();
                 handle_response(
-                    errwrap!(pages::widget_imagebrowser::query_render(context.layout_data, 
-                        &context.api_context, search, context.global_state.config.default_imagebrowser_count).await)?,
-                        &context.global_state.link_config)
+                    errwrap!(pages::widget_imagebrowser::query_render(
+                        context.into(),
+                        search, 
+                        gc.config.default_imagebrowser_count).await)?,
+                    &gc.link_config)
             }
         });
 
@@ -286,8 +289,9 @@ async fn main()
         .and(state_filter.clone())
         .and_then(|form: contentapi::forms::UserSensitive, context: RequestContext| {
             async move {
-                let (response, token) = pages::recover::post_render(context.layout_data, &context.api_context, &form).await;
-                handle_response_with_token(response, &context.global_state.link_config, token, context.global_state.config.default_cookie_expire as i64)
+                let gc = context.global_state.clone();
+                let (response, token) = pages::recover::post_render(context.into(), &form).await;
+                handle_response_with_token(response, &gc.link_config, token, gc.config.default_cookie_expire as i64)
             }
         })
         .boxed();
@@ -299,8 +303,9 @@ async fn main()
         .and(state_filter.clone())
         .and_then(|form: contentapi::forms::Register, context: RequestContext| {
             async move {
-                let response = pages::register::post_render(context.layout_data, &context.api_context, &form).await;
-                handle_response(response, &context.global_state.link_config)
+                let gc = context.global_state.clone();
+                let response = pages::register::post_render(context.into(), &form).await;
+                handle_response(response, &gc.link_config)
             }
         })
         .boxed();
@@ -344,13 +349,13 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
         .and(state_filter.clone())
         .and_then(|context:RequestContext| {
             async move {
+                let gc = context.global_state.clone();
                 handle_response(
                     errwrap!(pages::forum_main::get_render(
-                        context.layout_data, 
-                        &context.api_context, 
-                        &context.global_state.config.forum_category_order,
-                        context.global_state.config.default_category_threads).await)?,
-                    &context.global_state.link_config
+                        context.into(),
+                        &gc.config.forum_category_order,
+                        gc.config.default_category_threads).await)?,
+                    &gc.link_config
                 )
             }
         }); 
@@ -368,14 +373,14 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
         .and(state_filter.clone())
         .and_then(|fcid_page: FcidPage, context:RequestContext| {
             async move {
+                let gc = context.global_state.clone();
                 handle_response(
                     errwrap!(pages::forum_category::get_fcid_render(
-                        context.layout_data, 
-                        &context.api_context, 
+                        context.into(),
                         fcid_page.fcid,
-                        context.global_state.config.default_display_threads, 
+                        gc.config.default_display_threads, 
                         fcid_page.page).await)?,
-                    &context.global_state.link_config
+                    &gc.link_config
                 )
             }
         }); 
@@ -391,17 +396,16 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
     let forum_ftid = warp::any()
         .and(warp::query::<FtidPage>())
         .and(state_filter.clone())
-        .and_then(|ftid_page: FtidPage, mut context:RequestContext| {
+        .and_then(|ftid_page: FtidPage, context:RequestContext| {
             async move {
+                let gc = context.global_state.clone();
                 handle_response(
                     errwrap!(pages::forum_thread::get_ftid_render(
-                        context.layout_data, 
-                        &context.api_context, 
-                        &mut context.bbcode,
+                        context.into(),
                         ftid_page.ftid,
-                        context.global_state.config.default_display_posts, 
+                        gc.config.default_display_posts, 
                         ftid_page.page).await)?,
-                    &context.global_state.link_config
+                    &gc.link_config
                 )
             }
         }); 
@@ -415,16 +419,15 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
     let forum_fpid = warp::any()
         .and(warp::query::<Fpid>())
         .and(state_filter.clone())
-        .and_then(|fpid: Fpid, mut context:RequestContext| {
+        .and_then(|fpid: Fpid, context:RequestContext| {
             async move {
+                let gc = context.global_state.clone();
                 handle_response(
                     errwrap!(pages::forum_thread::get_fpid_render(
-                        context.layout_data, 
-                        &context.api_context, 
-                        &mut context.bbcode,
+                        context.into(),
                         fpid.fpid,
-                        context.global_state.config.default_display_posts).await)?,
-                    &context.global_state.link_config
+                        gc.config.default_display_posts).await)?,
+                    &gc.link_config
                 )
             }
         }); 
@@ -445,12 +448,13 @@ fn post_login_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_fi
         .and(warp::body::form::<pages::login::Login>())
         .and(state_filter.clone())
         .and_then(|form: pages::login::Login, context: RequestContext| {
+            let gc = context.global_state.clone();
             let login = form.to_api_login(
-                context.global_state.config.default_cookie_expire, 
-                context.global_state.config.long_cookie_expire);
+                gc.config.default_cookie_expire, 
+                gc.config.long_cookie_expire);
             async move {
-                let (response,token) = pages::login::post_login_render(context.layout_data, &context.api_context, &login).await;
-                handle_response_with_token(response, &context.global_state.link_config, token, login.expireSeconds)
+                let (response,token) = pages::login::post_login_render(context.into(), &login).await;
+                handle_response_with_token(response, &gc.link_config, token, login.expireSeconds)
             }
         }).boxed();
     
@@ -461,8 +465,9 @@ fn post_login_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_fi
         .and(state_filter.clone())
         .and_then(|_query, form: pages::EmailGeneric, context: RequestContext| {
             async move {
-                let response = pages::login::post_login_recover(context.layout_data, &context.api_context, &form).await;
-                handle_response(response, &context.global_state.link_config)
+                let gc = context.global_state.clone();
+                let response = pages::login::post_login_recover(context.into(), &form).await;
+                handle_response(response, &gc.link_config)
             }
         }).boxed();
 
@@ -485,8 +490,9 @@ fn post_registerconfirm_multi_route(state_filter: &BoxedFilter<(RequestContext,)
         .and(state_filter.clone())
         .and_then(|form: contentapi::forms::RegisterConfirm, context: RequestContext| {
             async move {
-                let (response,token) = pages::registerconfirm::post_render(context.layout_data, &context.api_context, &form).await;
-                handle_response_with_token(response, &context.global_state.link_config, token, context.global_state.config.default_cookie_expire as i64)
+                let gc = context.global_state.clone();
+                let (response,token) = pages::registerconfirm::post_render(context.into(), &form).await;
+                handle_response_with_token(response, &gc.link_config, token, gc.config.default_cookie_expire as i64)
             }
         })
         .boxed();
@@ -498,8 +504,9 @@ fn post_registerconfirm_multi_route(state_filter: &BoxedFilter<(RequestContext,)
         .and(state_filter.clone())
         .and_then(|_query, form: pages::EmailGeneric, context: RequestContext| {
             async move {
-                let response = pages::registerconfirm::post_email_render(context.layout_data, &context.api_context, &form).await;
-                handle_response(response, &context.global_state.link_config)
+                let gc = context.global_state.clone();
+                let response = pages::registerconfirm::post_email_render(context.into(), &form).await;
+                handle_response(response, &gc.link_config)
             }
         }).boxed();
 
@@ -522,8 +529,9 @@ fn post_userhome_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form
         .and(state_filter.clone())
         .and_then(|form: pages::userhome::UserUpdate, context: RequestContext| {
             async move {
-                let response = errwrap!(pages::userhome::post_info_render(context.layout_data, &context.api_context, form).await)?;
-                handle_response(response, &context.global_state.link_config)
+                let gc = context.global_state.clone();
+                let response = errwrap!(pages::userhome::post_info_render(context.into(), form).await)?;
+                handle_response(response, &gc.link_config)
             }
         })
         .boxed();
@@ -535,8 +543,9 @@ fn post_userhome_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form
         .and(state_filter.clone())
         .and_then(|_query, form: pages::userhome::UserBio, context: RequestContext| {
             async move {
-                let response = errwrap!(pages::userhome::post_bio_render(context.layout_data, &context.api_context, form).await)?;
-                handle_response(response, &context.global_state.link_config)
+                let gc = context.global_state.clone();
+                let response = errwrap!(pages::userhome::post_bio_render(context.into(), form).await)?;
+                handle_response(response, &gc.link_config)
             }
         }).boxed();
 
@@ -547,8 +556,9 @@ fn post_userhome_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form
         .and(state_filter.clone())
         .and_then(|_query, form: contentapi::forms::UserSensitive, context: RequestContext| {
             async move {
-                let response = errwrap!(pages::userhome::post_sensitive_render(context.layout_data, &context.api_context, form).await)?;
-                handle_response(response, &context.global_state.link_config)
+                let gc = context.global_state.clone();
+                let response = errwrap!(pages::userhome::post_sensitive_render(context.into(), form).await)?;
+                handle_response(response, &gc.link_config)
             }
         }).boxed();
 

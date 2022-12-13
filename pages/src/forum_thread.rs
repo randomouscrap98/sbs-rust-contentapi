@@ -2,9 +2,9 @@
 use std::collections::HashMap;
 
 use bbcode::BBCode;
-use contentapi::{endpoints::ApiContext, FullRequest};
+use contentapi::conversion::*;
+use contentapi::{FullRequest, SpecialCount};
 
-use contentapi::{conversion::*, SpecialCount};
 use crate::_forumsys::*;
 
 use super::*;
@@ -82,20 +82,14 @@ fn post_item(config: &LinkConfig, bbcode: &mut BBCode, post: &Message, thread: &
     }
 }
 
-///// Base data required to render a page of posts
-//pub struct FTPack {
-//    data: MainLayoutData,
-//    bbcode: BBCode,
-//    context: ApiContext
-//}
 
-async fn render_thread(data: MainLayoutData, context: &ApiContext, bbcode: &mut BBCode, pre_request: FullRequest, per_page: i32, 
+async fn render_thread(mut context: PageContext, pre_request: FullRequest, per_page: i32, 
     page: Option<i32>) -> Result<Response, Error> 
 {
     let mut page = page.unwrap_or(1) - 1; //we assume 1-based pages
 
     //Go lookup all the 'initial' data, which everything except posts and users
-    let pre_result = context.post_request(&pre_request).await?;
+    let pre_result = context.api_context.post_request(&pre_request).await?;
 
     //Pull out and parse all that stupid data. It's fun using strongly typed languages!! maybe...
     let mut categories_cleaned = CleanedPreCategory::from_many(cast_result_required::<Content>(&pre_result, CATEGORYKEY)?)?;
@@ -124,7 +118,7 @@ async fn render_thread(data: MainLayoutData, context: &ApiContext, bbcode: &mut 
     let after_request = get_finishpost_request(thread_id, vec![thread_create_uid], 
         per_page, sequence_start);
         //context.config.default_display_posts, sequence_start);
-    let after_result = context.post_request(&after_request).await?;
+    let after_result = context.api_context.post_request(&after_request).await?;
 
     //Pull the data out of THAT request
     let messages_raw = cast_result_required::<Message>(&after_result, "message")?;
@@ -133,8 +127,8 @@ async fn render_thread(data: MainLayoutData, context: &ApiContext, bbcode: &mut 
     //Construct before borrowing 
     let path = vec![ForumPathItem::root(), ForumPathItem::from_category(&category.category), ForumPathItem::from_thread(&thread)];
     Ok(Response::Render(render(
-        data, 
-        bbcode, 
+        context.layout_data, 
+        &mut context.bbcode, 
         ForumThread::from_content(thread, &messages_raw, &category.stickies)?, 
         &users_raw.into_iter().map(|u| (u.id, u)).collect::<HashMap<i64, User>>(),
         path,
@@ -144,45 +138,35 @@ async fn render_thread(data: MainLayoutData, context: &ApiContext, bbcode: &mut 
     )))
 }
 
-//#[get("/forum/thread/<hash>/<post_id>")]
+
 
 /// The normal endpoint for listing a thread
-pub async fn get_hash_render(data: MainLayoutData, context: &ApiContext, bbcode: &mut BBCode, hash: String, 
-    per_page: i32, page: Option<i32>) -> Result<Response, Error> 
+pub async fn get_hash_render(context: PageContext, hash: String, per_page: i32, page: Option<i32>) -> Result<Response, Error> 
 {
-    render_thread(
-        data, context, bbcode, 
+    render_thread(context,
         get_prepost_request(None, None, None, Some(hash)), 
         per_page, page).await
 }
 
 /// The normal endpoint for pinpointing a post
-pub async fn get_hash_postid_render(data: MainLayoutData, context: &ApiContext, bbcode: &mut BBCode, hash: String, post_id: i64,
-    per_page: i32) -> Result<Response, Error> 
+pub async fn get_hash_postid_render(context: PageContext, hash: String, post_id: i64, per_page: i32) -> Result<Response, Error> 
 {
-    render_thread(
-        data, context, bbcode, 
+    render_thread(context,
         get_prepost_request(None, Some(post_id), None, Some(hash)), 
         per_page, None).await
 }
 
-//#[get("/forum?<ftid>&<page>", rank=5)] //, rank=3)]
-pub async fn get_ftid_render(data: MainLayoutData, context: &ApiContext, bbcode: &mut BBCode, ftid: i64, 
-    per_page: i32, page: Option<i32>) -> Result<Response, Error> 
+pub async fn get_ftid_render(context: PageContext, ftid: i64, per_page: i32, page: Option<i32>) -> Result<Response, Error> 
 {
-    render_thread(
-        data, context, bbcode, 
+    render_thread(context,
         get_prepost_request(None, None, Some(ftid), None), 
         per_page, page).await
 }
 
 //Most old links may be to posts directly? idk
-//#[get("/forum?<fpid>", rank=3)] //, rank=4)]
-pub async fn get_fpid_render(data: MainLayoutData, context: &ApiContext, bbcode: &mut BBCode, fpid: i64,
-    per_page: i32) -> Result<Response, Error> 
+pub async fn get_fpid_render(context: PageContext, fpid: i64, per_page: i32) -> Result<Response, Error> 
 {
-    render_thread(
-        data, context, bbcode, 
+    render_thread(context,
         get_prepost_request(Some(fpid), None, None, None), 
         per_page, None).await
 }
