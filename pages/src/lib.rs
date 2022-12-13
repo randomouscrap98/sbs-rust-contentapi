@@ -16,6 +16,8 @@ pub mod forum_main;
 pub mod forum_category;
 pub mod forum_thread;
 
+use std::collections::HashMap;
+
 use bbcode::BBCode;
 use chrono::{SecondsFormat, Utc};
 use contentapi::{self, endpoints::{ApiError, ApiContext}, Content, Message, User, UserType};
@@ -54,6 +56,9 @@ pub struct MainLayoutData {
     pub user: Option<contentapi::User>,
     pub user_token: Option<String>,
     pub about_api: contentapi::About, 
+
+    #[cfg(feature = "profiling")]
+    pub profiler: basic_profiler::Profiler
 }
 
 /// A basic context for use in page rendering. Even if a page doesn't strictly need all
@@ -373,6 +378,16 @@ pub fn errorlist(errors: Option<Vec<String>>) -> Markup {
 }
 
 pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
+    //If available, this is MILLISECONDS
+    #[allow(unused_assignments, dead_code)]
+    let mut profile_data: Option<HashMap<String,f64>> = None;
+
+    #[cfg(feature = "profiling")]
+    {
+        profile_data = Some(main_data.profiler.list_copy().into_iter()
+            .map(|pd| (pd.name, pd.duration.as_secs_f64() * 1000f64)).collect());
+    }
+
     html! {
         (DOCTYPE)
         html lang=(main_data.user_config.language) {
@@ -398,6 +413,13 @@ pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
             (header(&main_data.config, &main_data.current_path, &main_data.user))
             main { (page) }
             (footer(&main_data.config, &main_data.about_api, &main_data.current_path ))
+            //Gotta do it HERE so everything has already run!
+            @if let Some(profile_data) = profile_data {
+                script {
+                    "var profile_data = "(PreEscaped(serde_json::to_string(&profile_data).unwrap_or(String::from("{} /* COULD NOT SERIALIZE */"))))";"
+                    (PreEscaped(r#"console.log("Profiling data:", profile_data);"#))
+                }
+            }
         }
     }
 }

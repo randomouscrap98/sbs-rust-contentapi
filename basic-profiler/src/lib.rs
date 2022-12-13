@@ -48,7 +48,9 @@ impl TimerProfile {
 }
 
 /// A profiler which tracks a list of timed sections of code. Threadsafe
+#[derive(Debug, Clone)]
 pub struct Profiler {
+    //Can do auto-clone because it's just arc?
     pub profiles: Arc<Mutex<Vec<TimerProfile>>>
 }
 
@@ -73,13 +75,13 @@ impl Profiler {
     }
 }
 
-impl Clone for Profiler {
-    fn clone(&self) -> Self {
-        Self {
-            profiles: self.profiles.clone()
-        }
-    }
-}
+//impl Clone for Profiler {
+//    fn clone(&self) -> Self {
+//        Self {
+//            profiles: self.profiles.clone()
+//        }
+//    }
+//}
 
 #[cfg(test)]
 mod tests {

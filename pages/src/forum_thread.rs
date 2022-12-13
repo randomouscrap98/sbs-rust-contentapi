@@ -59,7 +59,7 @@ fn post_item(config: &LinkConfig, bbcode: &mut BBCode, post: &Message, thread: &
             div."postright" {
                 div."postheader" {
                     a."flatlink username" href=(user_link(config, &user)) { (&user.username) } 
-                    a."sequence" href=(forum_post_link(config, post, thread)){ "#" (sequence) } 
+                    a."sequence" title=(i(&post.id)) href=(forum_post_link(config, post, thread)){ "#" (sequence) } 
                 }
                 @if let Some(text) = &post.text {
                     div."content bbcode" { (PreEscaped(bbcode.parse_maybeprofiled(text, format!("post-{}",i(&post.id))))) }
@@ -89,7 +89,7 @@ async fn render_thread(mut context: PageContext, pre_request: FullRequest, per_p
     let mut page = page.unwrap_or(1) - 1; //we assume 1-based pages
 
     //Go lookup all the 'initial' data, which everything except posts and users
-    let pre_result = context.api_context.post_request(&pre_request).await?;
+    let pre_result = context.api_context.post_request_maybeprofiled(&pre_request, "prepost").await?;
 
     //Pull out and parse all that stupid data. It's fun using strongly typed languages!! maybe...
     let mut categories_cleaned = CleanedPreCategory::from_many(cast_result_required::<Content>(&pre_result, CATEGORYKEY)?)?;
@@ -117,8 +117,7 @@ async fn render_thread(mut context: PageContext, pre_request: FullRequest, per_p
     //OK NOW you can go lookup the posts, since we are sure about where in the postlist we want
     let after_request = get_finishpost_request(thread_id, vec![thread_create_uid], 
         per_page, sequence_start);
-        //context.config.default_display_posts, sequence_start);
-    let after_result = context.api_context.post_request(&after_request).await?;
+    let after_result = context.api_context.post_request_maybeprofiled(&after_request, "finishpost").await?;
 
     //Pull the data out of THAT request
     let messages_raw = cast_result_required::<Message>(&after_result, "message")?;

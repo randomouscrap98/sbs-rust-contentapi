@@ -250,9 +250,10 @@ impl ApiContext {
         use basic_profiler::TimerProfile;
 
         let result = self.post_request(request).await?;
-        self.profiler.add(TimerProfile::from_existing(format!("{}-total", name), Duration::from_nanos((result.totalTime * 1000f64) as u64))) ;
+        //milli = 10^-3, micro = 10^-6, expanding milliseconds to micro before truncating
+        self.profiler.add(TimerProfile::from_existing(format!("{}-total", name), Duration::from_micros((result.totalTime * 1000f64) as u64))) ;
         for (time_name, time) in &result.databaseTimes {
-            self.profiler.add(TimerProfile::from_existing(format!("{}-{}", name, time_name), Duration::from_nanos((time * 1000f64) as u64))) ;
+            self.profiler.add(TimerProfile::from_existing(format!("{}-{}", name, time_name), Duration::from_micros((time * 1000f64) as u64))) ;
         }
         Ok(result)
     }

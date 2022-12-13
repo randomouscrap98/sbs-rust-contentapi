@@ -15,6 +15,11 @@ serde_json = "1.0"
 
 contentapi = { path = "../contentapi" }
 bbcode = { path = "../bbcode" }
+basic-profiler = { path = "../basic-profiler", optional = true }
 
 [features]
-profiling = ["contentapi/profiling", "bbcode/profiling"]
+profiling = [
+    "contentapi/profiling", 
+    "bbcode/profiling",
+    "dep:basic-profiler"
+]

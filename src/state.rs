@@ -41,7 +41,8 @@ impl RequestContext {
             current_path: String::from(path.as_str()),
             user: context.get_me_safe().await,
             user_token: token,
-            about_api: context.get_about().await?
+            about_api: context.get_about().await?,
+            profiler: profiler.clone()
         };
         Ok(RequestContext {
             //Custom construct bbcode so we copy the matchers but NOT the profiler!
