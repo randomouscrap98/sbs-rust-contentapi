@@ -1,4 +1,4 @@
-use bbcode::BBCode;
+use bbscope::BBCode;
 
 use super::*;
 

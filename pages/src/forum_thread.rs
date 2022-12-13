@@ -1,7 +1,7 @@
 
 use std::collections::HashMap;
 
-use bbcode::BBCode;
+use bbscope::BBCode;
 use contentapi::conversion::*;
 use contentapi::{FullRequest, SpecialCount};
 

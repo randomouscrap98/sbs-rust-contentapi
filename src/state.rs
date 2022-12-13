@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use bbcode::BBCode;
+use bbscope::BBCode;
 use contentapi::endpoints::{ApiContext, ApiError};
 use pages::{LinkConfig, MainLayoutData, UserConfig, PageContext};
 use warp::path::FullPath;
@@ -26,7 +26,7 @@ pub struct RequestContext {
     pub layout_data: MainLayoutData,
 
     #[cfg(feature = "profiling")]
-    pub profiler: basic_profiler::Profiler,
+    pub profiler: onestop::OneList<onestop::OneDuration>,
 }
 
 impl RequestContext {

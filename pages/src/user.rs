@@ -1,5 +1,5 @@
 
-use bbcode::BBCode;
+use bbscope::BBCode;
 use contentapi::{User, Content, add_value, build_request, FullRequest, RequestType};
 
 use super::*;

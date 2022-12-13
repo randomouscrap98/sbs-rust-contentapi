@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, sync::Arc};
 
-use bbcode::BBCode;
+use bbscope::BBCode;
 use chrono::SecondsFormat;
 use pages::LinkConfig;
 

@@ -18,7 +18,7 @@ pub mod forum_thread;
 
 use std::collections::HashMap;
 
-use bbcode::BBCode;
+use bbscope::BBCode;
 use chrono::{SecondsFormat, Utc};
 use contentapi::{self, endpoints::{ApiError, ApiContext}, Content, Message, User, UserType};
 use serde::{Serialize, Deserialize};
@@ -58,7 +58,7 @@ pub struct MainLayoutData {
     pub about_api: contentapi::About, 
 
     #[cfg(feature = "profiling")]
-    pub profiler: basic_profiler::Profiler
+    pub profiler: onestop::OneList<onestop::OneDuration>
 }
 
 /// A basic context for use in page rendering. Even if a page doesn't strictly need all
