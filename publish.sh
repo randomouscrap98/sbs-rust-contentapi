@@ -21,7 +21,7 @@ fi
 # This is ridiculous. cargo is... ugh (see the dual variables)
 if [ "$INSTALLCOMPILE" = "release" ]; then
    BUILDTYPE="release"
-   BUILDPARAM="--release"
+   BUILDPARAM="--release --features \"perf\""
 else
    BUILDTYPE="debug"
    BUILDPARAM=""
@@ -46,7 +46,9 @@ rsync -rvhz -e "ssh -p ${INSTALLPORT}" ./ --exclude 'target' --exclude '.git' ${
 
 # We have to build ON the server itself because glibc (I don't want to use docker)
 echo "Building ${NAME} on remote server ${INSTALLHOST}"
-SSHCMD=". /home/${INSTALLUSER}/.cargo/env; cd ${INSTALLDIR}; cargo build ${BUILDPARAM}"
+BUILDCMD="cargo build ${BUILDPARAM}"
+echo "* Build command: ${BUILDCMD}"
+SSHCMD=". /home/${INSTALLUSER}/.cargo/env; cd ${INSTALLDIR}; ${BUILDCMD}"
 
 if [ "$1" = "run" ]
 then

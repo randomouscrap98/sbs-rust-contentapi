@@ -57,6 +57,10 @@ h1 {
     margin: 0.5em 0; /* reduce the margins on h1 a bit */
 }
 
+p { /* Not sure about this one? */
+    line-height: 1.4;
+}
+
 /* Inside a section, let the parent determine the distance to the top and bottom edges */
 section > *:first-child { margin-top: 0; }
 section > *:last-child { margin-bottom: 0; }

@@ -411,7 +411,15 @@ pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
         }
         body {
             (header(&main_data.config, &main_data.current_path, &main_data.user))
-            main { (page) }
+            main { 
+                section {
+                    p { 
+                        span."error" { "This is a preview website! Changes will not carry over or be saved in the end! " }
+                        "Original website still up at " a href="https://old.smilebasicsource.com" { "https://old.smilebasicsource.com" }
+                    }
+                }
+                (page) 
+            }
             (footer(&main_data.config, &main_data.about_api, &main_data.current_path ))
             //Gotta do it HERE so everything has already run!
             @if let Some(profile_data) = profile_data {
