@@ -340,7 +340,9 @@ impl BBCode
         //Don't forget about autolinking! This is a crappy autolinker and it doesn't matter too much!
         matches.push(MatchInfo { 
             //characters taken from google's page https://developers.google.com/maps/url-encoding
-            regex: Regex::new(r#"^(https?://[a-zA-Z0-9\-_.~!*()';:@&=+$,/?%#\[\]]+)"#)?, 
+            //NOTE: removed certain characters from autolinking because they SUCK
+              regex: Regex::new(r#"^(https?://[a-zA-Z0-9\-_.~!*(';:@&=+$/?%#\[\]]+)"#)?, 
+            //regex: Regex::new(r#"^(https?://[a-zA-Z0-9\-_.~!*()';:@&=+$,/?%#\[\]]+)"#)?, 
             match_type: MatchType::BlockTransform(r#"<a target="_blank" href="$0">$0</a>"#) 
         });
 
@@ -692,32 +694,76 @@ mod tests {
         }
     }
 
-    //#[test] //Not really a unit test but whatever
-    //fn benchmark_10000() {
-    //    let mut matchers = BBCode::basics().unwrap();
-    //    let mut extras = BBCode::extras().unwrap();
-    //    matchers.append(&mut extras);
-    //    let bbcode = BBCode { matchers };
-    //    let parselem = vec![
-    //        ("it's a %CRAZY% <world> 💙=\"yeah\" 👨‍👨‍👧‍👦>>done", 
-    //         "it&#39;s a %CRAZY% &lt;world&gt; 💙=&quot;yeah&quot; 👨‍👨‍👧‍👦&gt;&gt;done"),
-    //        ("[][[][6][a[ab]c[i]italic[but][][* not] 8[]]][", "[][[][6][a[ab]c<i>italic[but][][* not] 8[]]][</i>"),
-    //        ("[url]this[b]is[/b]a no-no[i][/url]", r#"<a target="_blank" href="this[b]is[/b]a no-no[i]">this[b]is[/b]a no-no[i]</a>"#),
-    //        ("[img=https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png]abc 123[/img]", r#"<img src="https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png">abc 123"#),
-    //        ("[spoiler]this[b]is empty[/spoiler]", r#"<details class="spoiler"><summary>Spoiler</summary>this<b>is empty</b></details>"#)
-    //    ];
+    //This isn't really a unit test but whatever
+    #[cfg(feature = "bigtest")]
+    #[test]
+    fn performance_issues() 
+    {
+        use pretty_assertions::{assert_eq}; //, assert_ne};
 
-    //    for i in 0..10000 {
-    //        if let Some((input, output)) = parselem.get(i % parselem.len()) {
-    //            if bbcode.parse(*input) != *output {
-    //                panic!("Hang on, bbcode isn't working!");
-    //            }
-    //        }
-    //        else {
-    //            panic!("WHAT? INDEX OUT OF BOUNDS??");
-    //        }
-    //    }
-    //}
+        let mut matchers = BBCode::basics().unwrap();
+        let mut extras = BBCode::extras().unwrap();
+        matchers.append(&mut extras);
+        let bbcode = BBCode::from_matchers(matchers);
+
+        let testdir = "bigtests";
+        let entries = std::fs::read_dir(testdir).unwrap();
+        let mut checks: Vec<(String,String,String)> = Vec::new();
+        for entry in entries 
+        {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            let metadata = std::fs::metadata(&path).unwrap();
+
+            //Only look for files
+            if metadata.is_file() {
+                let base_text = std::fs::read_to_string(&path).unwrap();
+                let parse_path = std::path::Path::new(testdir).join("parsed").join(path.file_name().unwrap()); //std::fs//format!("path.file_name()
+                let parse_text = std::fs::read_to_string(&parse_path).unwrap();
+                checks.push((base_text, parse_text, String::from(path.file_name().unwrap().to_str().unwrap())));//String::from(path.to_str().unwrap())));
+                println!("Found test file: {:?}", path);
+            }
+        }
+        println!("Total tests: {}", checks.len());
+        let start = std::time::Instant::now();
+        for (raw, parsed, path) in checks {
+            let test_start = start.elapsed();
+            let result = bbcode.parse(&raw);
+            let test_end = start.elapsed();
+            assert_eq!(result, parsed);
+            println!(" Test '{}' : {:?}", path, test_end - test_start);
+        }
+        let elapsed = start.elapsed();
+        println!("Parse total: {:?}", elapsed);
+    }
+
+    #[cfg(feature = "bigtest")]
+    #[test] //Not really a unit test but whatever
+    fn benchmark_10000() {
+        let mut matchers = BBCode::basics().unwrap();
+        let mut extras = BBCode::extras().unwrap();
+        matchers.append(&mut extras);
+        let bbcode = BBCode::from_matchers(matchers);
+        let parselem = vec![
+            ("it's a %CRAZY% <world> 💙=\"yeah\" 👨‍👨‍👧‍👦>>done", 
+             "it&#39;s a %CRAZY% &lt;world&gt; 💙=&quot;yeah&quot; 👨‍👨‍👧‍👦&gt;&gt;done"),
+            ("[][[][6][a[ab]c[i]italic[but][][* not] 8[]]][", "[][[][6][a[ab]c<i>italic[but][][* not] 8[]]][</i>"),
+            ("[url]this[b]is[/b]a no-no[i][/url]", r#"<a target="_blank" href="this[b]is[/b]a no-no[i]">this[b]is[/b]a no-no[i]</a>"#),
+            ("[img=https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png]abc 123[/img]", r#"<img src="https://old.smilebasicsource.com/user_uploads/avatars/t1647374379.png">abc 123"#),
+            ("[spoiler]this[b]is empty[/spoiler]", r#"<details class="spoiler"><summary>Spoiler</summary>this<b>is empty</b></details>"#)
+        ];
+
+        for i in 0..10000 {
+            if let Some((input, output)) = parselem.get(i % parselem.len()) {
+                if bbcode.parse(*input) != *output {
+                    panic!("Hang on, bbcode isn't working!");
+                }
+            }
+            else {
+                panic!("WHAT? INDEX OUT OF BOUNDS??");
+            }
+        }
+    }
 
     bbtest_basics! {
         no_alter: ("hello", "hello");
