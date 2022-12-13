@@ -69,16 +69,11 @@ async fn main()
         config
     };
 
-    let root_profiler = basic_profiler::Profiler::new();
-
     let bbcode = {
         let mut matchers = BBCode::basics().unwrap(); //this better not fail! It'll fail very early though
         let mut extras = BBCode::extras().unwrap();
         matchers.append(&mut extras);
-        BBCode { 
-            matchers: Arc::new(matchers),
-            profiler: root_profiler.clone()
-        } 
+        BBCode::from_matchers(matchers)
     };
 
     //Set up the SINGULAR global state, which will be passed around with a counting reference.
@@ -86,7 +81,6 @@ async fn main()
     //a new pointer and incrementing a count.
     let global_state = Arc::new(GlobalState {
         bbcode,
-        base_profiler: root_profiler,
         link_config : {
             let root = config.http_root.clone();
             LinkConfig {

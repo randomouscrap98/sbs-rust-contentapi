@@ -242,6 +242,31 @@ impl ApiContext {
     make_post_endpoint!{post_userupdate<User,User>("/write/user")}
     make_post_endpoint!{post_content<Content,Content>("/write/content")}
 
+    #[cfg(feature = "profiling")]
+    pub async fn post_request_profiled(&mut self, request: &FullRequest, name: &str) -> Result<RequestResult, ApiError> 
+    {
+        //put these IN the conditional compilation section
+        use std::time::Duration;
+        use basic_profiler::TimerProfile;
+
+        let result = self.post_request(request).await?;
+        self.profiler.add(TimerProfile::from_existing(format!("{}-total", name), Duration::from_nanos((result.totalTime * 1000f64) as u64))) ;
+        for (time_name, time) in &result.databaseTimes {
+            self.profiler.add(TimerProfile::from_existing(format!("{}-{}", name, time_name), Duration::from_nanos((time * 1000f64) as u64))) ;
+        }
+        Ok(result)
+    }
+
+    /// This MAY OR MAY NOT profile depending on your featureset!
+    pub async fn post_request_maybeprofiled(&mut self, request: &FullRequest, _name: &str) -> Result<RequestResult, ApiError> 
+    {
+        #[cfg(feature = "profiling")]
+        return self.post_request_profiled(request, _name).await;
+
+        #[cfg(not(feature = "profiling"))]
+        return self.post_request(request).await;
+    }
+
     //Some special wrappers
 
     //This consumes the error and returns "None", since it could just be that the token is stupid. In the future,

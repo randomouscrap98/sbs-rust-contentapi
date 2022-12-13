@@ -71,12 +71,12 @@ pub fn thread_item(config: &LinkConfig, thread: &ForumThread, users: &HashMap<i6
     }
 }
 
-async fn build_categories_with_threads(context: &ApiContext, categories_cleaned: Vec<CleanedPreCategory>, limit: i32, skip: i32) -> 
+async fn build_categories_with_threads(context: &mut ApiContext, categories_cleaned: Vec<CleanedPreCategory>, limit: i32, skip: i32) -> 
     Result<Vec<ForumCategory>, Error> 
 {
     //Next request: get the complicated dataset for each category (this somehow includes comments???)
     let thread_request = get_thread_request(&categories_cleaned, limit, skip, true); //context.config.default_category_threads, 0);
-    let thread_result = context.post_request(&thread_request).await?;
+    let thread_result = context.post_request_maybeprofiled(&thread_request, "getthreads").await?;
 
     let messages_raw = cast_result_required::<Message>(&thread_result, "message")?;
 
@@ -89,14 +89,14 @@ async fn build_categories_with_threads(context: &ApiContext, categories_cleaned:
     Ok(categories)
 }
 
-async fn render_threads(data: MainLayoutData, context: &ApiContext, category_request: FullRequest, per_page: i32, page: Option<i32>) ->
+async fn render_threads(mut context: PageContext, category_request: FullRequest, per_page: i32, page: Option<i32>) ->
     Result<Response, Error>
 {
     let page = page.unwrap_or(1) - 1;
 
-    let category_result = context.post_request(&category_request).await?;
+    let category_result = context.api_context.post_request_maybeprofiled(&category_request, "getcategory").await?;
     let categories_cleaned = CleanedPreCategory::from_many(cast_result_required::<Content>(&category_result, CATEGORYKEY)?)?;
-    let mut categories = build_categories_with_threads(&context, categories_cleaned, 
+    let mut categories = build_categories_with_threads(&mut context.api_context, categories_cleaned, 
         per_page,
         page * per_page
     ).await?;
@@ -108,7 +108,7 @@ async fn render_threads(data: MainLayoutData, context: &ApiContext, category_req
     //println!("Please: {:?}", category);
 
     let path = vec![ForumPathItem::root(), ForumPathItem::from_category(&category.category)];
-    Ok(Response::Render(render(data, category, path, pagelist)))
+    Ok(Response::Render(render(context.layout_data, category, path, pagelist)))
 }
 
 
@@ -116,11 +116,11 @@ async fn render_threads(data: MainLayoutData, context: &ApiContext, category_req
 pub async fn get_hash_render(context: PageContext, hash: String, per_page: i32, page: Option<i32>) -> 
     Result<Response, Error> 
 {
-    render_threads(context.layout_data, &context.api_context, get_category_request(Some(hash), None), per_page, page).await
+    render_threads(context, get_category_request(Some(hash), None), per_page, page).await
 }
 
 pub async fn get_fcid_render(context: PageContext, fcid: i64, per_page: i32, page: Option<i32>) -> 
     Result<Response, Error> 
 {
-    render_threads(context.layout_data, &context.api_context, get_category_request(None, Some(fcid)), per_page, page).await
+    render_threads(context, get_category_request(None, Some(fcid)), per_page, page).await
 }

@@ -62,7 +62,7 @@ fn post_item(config: &LinkConfig, bbcode: &mut BBCode, post: &Message, thread: &
                     a."sequence" href=(forum_post_link(config, post, thread)){ "#" (sequence) } 
                 }
                 @if let Some(text) = &post.text {
-                    div."content bbcode" { (PreEscaped(bbcode.parse_named(text, format!("post-{}",i(&post.id))))) }
+                    div."content bbcode" { (PreEscaped(bbcode.parse_maybeprofiled(text, format!("post-{}",i(&post.id))))) }
                 }
                 div."postfooter" {
                     div."history" {

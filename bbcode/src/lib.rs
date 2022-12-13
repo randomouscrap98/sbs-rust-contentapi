@@ -616,12 +616,23 @@ impl BBCode
     }
 
     #[cfg(feature = "profiling")]
-    pub fn parse_named(&mut self, input: &str, name: String) -> String {
+    pub fn parse_profiled(&mut self, input: &str, name: String) -> String 
+    {
         let mut profile = basic_profiler::TimerProfile::new(name);
         let result = self.parse(input);
         profile.complete();
         self.profiler.add(profile);
         result
+    }
+
+    /// This MAY OR MAY NOT profile, depending on your featureset!
+    pub fn parse_maybeprofiled(&mut self, input: &str, _name: String) -> String 
+    {
+        #[cfg(feature = "profiling")]
+        return self.parse_profiled(input, _name);
+
+        #[cfg(not(feature = "profiling"))]
+        return self.parse(input);
     }
 
 }
@@ -665,7 +676,7 @@ mod tests {
                 let mut matchers = BBCode::basics().unwrap();
                 let mut extras = BBCode::extras().unwrap();
                 matchers.append(&mut extras);
-                let bbcode = BBCode::from_matchers(BBCode::basics().unwrap());
+                let bbcode = BBCode::from_matchers(matchers);
                 let (input, expected) = $value;
                 assert_eq!(bbcode.parse(input), expected);
             }
