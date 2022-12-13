@@ -33,16 +33,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
-name = "basic-profiler"
-version = "0.1.0"
-
-[[package]]
-name = "bbcode"
-version = "0.1.1"
+name = "bbscope"
+version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7521eeba8db3e3cb7c44f144921eac3a468845447a487d67035bed87d4e1eae0"
 dependencies = [
- "basic-profiler",
  "html-escape",
- "pretty_assertions",
+ "onestop",
  "regex",
 ]
 
@@ -125,9 +122,9 @@ dependencies = [
 name = "contentapi"
 version = "0.1.0"
 dependencies = [
- "basic-profiler",
  "chrono",
  "hyper",
+ "onestop",
  "serde",
  "serde-aux",
  "serde_json",
@@ -156,16 +153,6 @@ checksum = "1bfb12502f3fc46cca1bb51ac28df9d618d813cdc3d2f25b9fe775a34af26bb3"
 dependencies = [
  "generic-array",
  "typenum",
-]
-
-[[package]]
-name = "ctor"
-version = "0.1.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d2301688392eb071b0bf1a37be05c469d3cc4dbbd95df672fe28ab021e6a096"
-dependencies = [
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -211,12 +198,6 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[package]]
-name = "diff"
-version = "0.1.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
 
 [[package]]
 name = "digest"
@@ -638,23 +619,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "86f0b0d4bf799edbc74508c1e8bf170ff5f41238e5f8225603ca7caaae2b7860"
 
 [[package]]
-name = "output_vt100"
-version = "0.1.3"
+name = "onestop"
+version = "0.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "628223faebab4e3e40667ee0b2336d34a5b960ff60ea743ddfdbcf7770bcfb66"
-dependencies = [
- "winapi",
-]
+checksum = "4d9de1d4cfbf95bd9bec0f6b84d8fb72384d54d82b805cfaa2c047d39426f42d"
 
 [[package]]
 name = "pages"
 version = "0.1.0"
 dependencies = [
- "basic-profiler",
- "bbcode",
+ "bbscope",
  "chrono",
  "contentapi",
  "maud",
+ "onestop",
  "serde",
  "serde_json",
  "serde_urlencoded",
@@ -704,18 +682,6 @@ name = "ppv-lite86"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
-
-[[package]]
-name = "pretty_assertions"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a25e9bcb20aa780fd0bb16b72403a9064d6b3f22f026946029acb941a50af755"
-dependencies = [
- "ctor",
- "diff",
- "output_vt100",
- "yansi",
-]
 
 [[package]]
 name = "proc-macro-error"
@@ -855,10 +821,10 @@ checksum = "ef703b7cb59335eae2eb93ceb664c0eb7ea6bf567079d843e09420219668e072"
 name = "sbs-rust-contentapi"
 version = "0.3.0"
 dependencies = [
- "basic-profiler",
- "bbcode",
+ "bbscope",
  "chrono",
  "contentapi",
+ "onestop",
  "pages",
  "serde",
  "tokio",
@@ -1350,9 +1316,3 @@ name = "windows_x86_64_msvc"
 version = "0.42.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40009d85759725a34da6d89a94e63d7bdc50a862acf0dbc7c8e488f1edcb6f5"
-
-[[package]]
-name = "yansi"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09041cd90cf85f7f8b2df60c646f853b7f535ce68f85244eb6731cf89fa498ec"

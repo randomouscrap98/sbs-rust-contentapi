@@ -103,7 +103,7 @@ pub struct ApiContext {
     user_token: Option<String>,
 
     #[cfg(feature = "profiling")]
-    pub profiler: basic_profiler::Profiler
+    pub profiler: onestop::OneList<onestop::OneDuration>
 }
 
 impl ApiContext {
@@ -113,12 +113,12 @@ impl ApiContext {
             client : hyper::client::Client::new(),
 
             #[cfg(feature = "profiling")]
-            profiler: basic_profiler::Profiler::new()
+            profiler: onestop::OneList::<onestop::OneDuration>::new()
         }
     }
 
     #[cfg(feature = "profiling")]
-    pub fn new_with_profiler(api_url: String, user_token: Option<String>, profiler: basic_profiler::Profiler) -> Self {
+    pub fn new_with_profiler(api_url: String, user_token: Option<String>, profiler: onestop::OneList<onestop::OneDuration>) -> Self {
         Self {
             api_url, user_token,
             client : hyper::client::Client::new(),
@@ -250,13 +250,13 @@ impl ApiContext {
         {
             //put these IN the conditional compilation section
             use std::time::Duration;
-            use basic_profiler::TimerProfile;
+            use onestop::OneDuration;
 
             let result = self.post_request(request).await?;
             //milli = 10^-3, micro = 10^-6, expanding milliseconds to micro before truncating
-            self.profiler.add(TimerProfile::from_existing(format!("{}-total", _name), Duration::from_micros((result.totalTime * 1000f64) as u64))) ;
+            self.profiler.add(OneDuration::from_duration(Duration::from_micros((result.totalTime * 1000f64) as u64), format!("{}-total", _name)));
             for (time_name, time) in &result.databaseTimes {
-                self.profiler.add(TimerProfile::from_existing(format!("{}-{}", _name, time_name), Duration::from_micros((time * 1000f64) as u64))) ;
+                self.profiler.add(OneDuration::from_duration(Duration::from_micros((time * 1000f64) as u64), format!("{}-{}", _name, time_name)));
             }
             Ok(result)
         }

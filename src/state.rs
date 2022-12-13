@@ -33,7 +33,7 @@ impl RequestContext {
     pub async fn generate(state: Arc<GlobalState>, path: FullPath, token: Option<String>) -> Result<Self, ApiError> 
     {
         #[cfg(feature = "profiling")]
-        let profiler = basic_profiler::Profiler::new(); //One profiler per request
+        let profiler = onestop::OneList::<onestop::OneDuration>::new(); //One profiler per request
 
         #[cfg(feature = "profiling")]
         let context = ApiContext::new_with_profiler(

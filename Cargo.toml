@@ -4,7 +4,7 @@ version = "0.3.0"
 edition = "2021"
 
 [workspace]
-members = [ "bbcode", "contentapi", "pages", "basic-profiler" ]
+members = [ "contentapi", "pages" ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -13,19 +13,18 @@ chrono = { version = "0.4", features = ["serde"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 warp = { version = "0.3", default-features = false, features = ["multipart"]}
 serde = { version = "1", features = ["derive"] }
+onestop = { version = "0.0.1", optional = true }
+bbscope = { version = "0.0.5" }
 toml = "0.5.9"
 
-basic-profiler = { path = "basic-profiler", optional = true }
 contentapi = { path = "contentapi" }
-bbcode = { path = "bbcode" }
 pages = { path = "pages" }
 
 [features]
 default = ["profiling"] # Consider adding perf here someday
-perf = ["bbcode/perf"]
+perf = ["bbscope/perf"]
 profiling = [
-    "dep:basic-profiler",
-    "bbcode/profiling",
+    "dep:onestop",
     "contentapi/profiling",
     "pages/profiling"
 ]
