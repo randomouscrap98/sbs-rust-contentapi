@@ -21,7 +21,8 @@ bbcode = { path = "bbcode" }
 pages = { path = "pages" }
 
 [features]
-default = ["profiling"]
+default = ["profiling"] # Consider adding perf here someday
+perf = ["bbcode/perf"]
 profiling = [
     "dep:basic-profiler",
     "bbcode/profiling",
