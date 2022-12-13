@@ -238,12 +238,15 @@ impl BBCode
     /// The basic direct replacement escapes for HTML. You don't need these if you're using 'basics()'
     pub fn html_escapes() -> Vec<(&'static str, &'static str)> {
         vec![
+            ("'", "&#39;"),
+            ("\"", "&quot;"),
             ("<", "&lt;"),
             (">", "&gt;"),
             ("&", "&amp;"),
-            ("\"", "&quot;"),
-            ("'", "&#39;"),
             ("\r", "") //why are these even here??
+            //NOTE: I have this non-optimization where I remove all \r in messages inside parse 
+            //rather than as an escape, then replace http with \r so I don't have to stop on h.
+            //It was really stupid though
         ]
     }
 
@@ -333,16 +336,20 @@ impl BBCode
         matches.insert(0, MatchInfo {
             //We use h to catch ourselves on https. this unfortunately breaks up large sections of text into much
             //smaller ones, but it should be ok... I don't know. My parser is stupid lol
-            regex: Regex::new(r#"^[^\[\]<>'"&\r\n/h]+"#)?, 
+            regex: Regex::new(r#"^[^\[<>'"&\n\rh]+"#)?, 
             match_type : MatchType::Passthrough
         });
+
+        //This new autolinker is taken from 12 since it works better
+        let url_chars = r#"[-a-zA-Z0-9_/%&=#+~@$*'!?,.;:]*"#;
+        let end_chars = r#"[-a-zA-Z0-9_/%&=#+~@$*']"#;
+        let autolink_regex = format!("^https?://{0}{1}([(]{0}[)]({0}{1})?)?", url_chars, end_chars);
 
         //Don't forget about autolinking! This is a crappy autolinker and it doesn't matter too much!
         matches.push(MatchInfo { 
             //characters taken from google's page https://developers.google.com/maps/url-encoding
             //NOTE: removed certain characters from autolinking because they SUCK
-              regex: Regex::new(r#"^(https?://[a-zA-Z0-9\-_.~!*(';:@&=+$/?%#\[\]]+)"#)?, 
-            //regex: Regex::new(r#"^(https?://[a-zA-Z0-9\-_.~!*()';:@&=+$,/?%#\[\]]+)"#)?, 
+            regex: Regex::new(&autolink_regex)?,
             match_type: MatchType::BlockTransform(r#"<a target="_blank" href="$0">$0</a>"#) 
         });
 
@@ -680,26 +687,12 @@ mod tests {
         let _bbcode = BBCode::from_matchers(BBCode::basics().unwrap());
     }
 
-    #[test]
-    fn build_add_lt() {
-        //This shouldn't fail?
-        let bbcode = BBCode::from_matchers(BBCode::basics().unwrap());
-        let found = bbcode.matchers.iter().find(|x| matches!(x.match_type, MatchType::DirectReplace(_))).unwrap();
-        assert_eq!(found.regex.as_str(), "^<");
-        if let MatchType::DirectReplace(repl) = found.match_type {
-            assert_eq!(repl, "&lt;")
-        }
-        else {
-            panic!("TEST LOGIC ERROR, NOT DIRECTREPLACE TYPE");
-        }
-    }
-
     //This isn't really a unit test but whatever
     #[cfg(feature = "bigtest")]
     #[test]
     fn performance_issues() 
     {
-        use pretty_assertions::{assert_eq}; //, assert_ne};
+        use pretty_assertions::{assert_eq};
 
         let mut matchers = BBCode::basics().unwrap();
         let mut extras = BBCode::extras().unwrap();
@@ -718,9 +711,9 @@ mod tests {
             //Only look for files
             if metadata.is_file() {
                 let base_text = std::fs::read_to_string(&path).unwrap();
-                let parse_path = std::path::Path::new(testdir).join("parsed").join(path.file_name().unwrap()); //std::fs//format!("path.file_name()
+                let parse_path = std::path::Path::new(testdir).join("parsed").join(path.file_name().unwrap()); 
                 let parse_text = std::fs::read_to_string(&parse_path).unwrap();
-                checks.push((base_text, parse_text, String::from(path.file_name().unwrap().to_str().unwrap())));//String::from(path.to_str().unwrap())));
+                checks.push((base_text, parse_text, String::from(path.file_name().unwrap().to_str().unwrap())));
                 println!("Found test file: {:?}", path);
             }
         }
@@ -753,6 +746,7 @@ mod tests {
             ("[spoiler]this[b]is empty[/spoiler]", r#"<details class="spoiler"><summary>Spoiler</summary>this<b>is empty</b></details>"#)
         ];
 
+        let start = std::time::Instant::now();
         for i in 0..10000 {
             if let Some((input, output)) = parselem.get(i % parselem.len()) {
                 if bbcode.parse(*input) != *output {
@@ -763,6 +757,8 @@ mod tests {
                 panic!("WHAT? INDEX OUT OF BOUNDS??");
             }
         }
+        let elapsed = start.elapsed();
+        println!("10000 iterations took: {:?}", elapsed);
     }
 
     bbtest_basics! {
