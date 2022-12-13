@@ -208,7 +208,8 @@ impl<'a> BBScoper<'a>
 // *     MAIN FUNCTIONALITY    *
 // ------------------------------
 
-/// The main bbcode system. You create this to parse bbcode!
+/// The main bbcode system. You create this to parse bbcode! Inexpensive clones,
+/// since fields are all reference counted.
 #[derive(Clone)] //All the members implement clone
 pub struct BBCode {
     /// Supply this!
@@ -615,21 +616,17 @@ impl BBCode
         result
     }
 
-    #[cfg(feature = "profiling")]
-    pub fn parse_profiled(&mut self, input: &str, name: String) -> String 
-    {
-        let mut profile = basic_profiler::TimerProfile::new(name);
-        let result = self.parse(input);
-        profile.complete();
-        self.profiler.add(profile);
-        result
-    }
-
     /// This MAY OR MAY NOT profile, depending on your featureset!
-    pub fn parse_maybeprofiled(&mut self, input: &str, _name: String) -> String 
+    pub fn parse_profiled_opt(&mut self, input: &str, _name: String) -> String 
     {
         #[cfg(feature = "profiling")]
-        return self.parse_profiled(input, _name);
+        {
+            let mut profile = basic_profiler::TimerProfile::new(_name);
+            let result = self.parse(input);
+            profile.complete();
+            self.profiler.add(profile);
+            result
+        }
 
         #[cfg(not(feature = "profiling"))]
         return self.parse(input);
@@ -637,15 +634,6 @@ impl BBCode
 
 }
 
-//impl Clone for BBCode {
-//    fn clone(&self) -> Self {
-//        Self {
-//            matchers: self.matchers.clone(),
-//            #[cfg(feature = "profiling")]
-//            profiler: self.profiler.clone()
-//        }
-//    }
-//}
 
 // ----------------------------
 // *         TESTS           

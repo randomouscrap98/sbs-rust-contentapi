@@ -3,3 +3,4 @@ OLDROCKET/target
 publish*.sh
 plan.txt
 settings.*.toml
+/bbcode/bigtests

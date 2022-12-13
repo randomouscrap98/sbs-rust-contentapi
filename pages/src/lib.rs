@@ -379,7 +379,7 @@ pub fn errorlist(errors: Option<Vec<String>>) -> Markup {
 
 pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
     //If available, this is MILLISECONDS
-    #[allow(unused_assignments, dead_code)]
+    #[allow(unused_assignments, dead_code, unused_mut)]
     let mut profile_data: Option<HashMap<String,f64>> = None;
 
     #[cfg(feature = "profiling")]
@@ -416,8 +416,8 @@ pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
             //Gotta do it HERE so everything has already run!
             @if let Some(profile_data) = profile_data {
                 script {
-                    "var profile_data = "(PreEscaped(serde_json::to_string(&profile_data).unwrap_or(String::from("{} /* COULD NOT SERIALIZE */"))))";"
-                    (PreEscaped(r#"console.log("Profiling data:", profile_data);"#))
+                    "var profiler_data = "(PreEscaped(serde_json::to_string(&profile_data).unwrap_or(String::from("{} /* COULD NOT SERIALIZE */"))))";"
+                    //(PreEscaped(r#"console.log("Profiling data:", profile_data);"#))
                 }
             }
         }

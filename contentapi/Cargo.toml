@@ -17,3 +17,4 @@ basic-profiler = { path = "../basic-profiler", optional = true }
 
 [features]
 profiling = ["dep:basic-profiler"]
+postdump = [] #WARNING: FEATURE WILL PRINT ALL POST DATA, WHICH WILL INCLUDE PASSWORDS!

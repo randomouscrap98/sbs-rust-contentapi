@@ -21,37 +21,65 @@ pub struct GlobalState {
 /// require the api_about in MainLayoutData, which requires the api_context.
 pub struct RequestContext {
     pub global_state: Arc<GlobalState>,
-    pub profiler: basic_profiler::Profiler,
     pub bbcode: BBCode, //Clones are cheap?
     pub api_context: ApiContext,
-    pub layout_data: MainLayoutData
+    pub layout_data: MainLayoutData,
+
+    #[cfg(feature = "profiling")]
+    pub profiler: basic_profiler::Profiler,
 }
 
 impl RequestContext {
-    pub async fn generate(state: Arc<GlobalState>, path: FullPath, token: Option<String>) -> Result<Self, ApiError> {
+    pub async fn generate(state: Arc<GlobalState>, path: FullPath, token: Option<String>) -> Result<Self, ApiError> 
+    {
+        #[cfg(feature = "profiling")]
         let profiler = basic_profiler::Profiler::new(); //One profiler per request
+
+        #[cfg(feature = "profiling")]
         let context = ApiContext::new_with_profiler(
             state.config.api_endpoint.clone(), 
             token.clone(),
             profiler.clone()
         );
-        let layout_data = MainLayoutData {
+
+        #[cfg(not(feature = "profiling"))]
+        let context = ApiContext::new(
+            state.config.api_endpoint.clone(), 
+            token.clone()
+        );
+
+        let layout_data = MainLayoutData 
+        {
             config: state.link_config.clone(),
-            user_config: UserConfig::default(),
+            user_config: UserConfig::default(), //Settings and stuff, but there are none right now
             current_path: String::from(path.as_str()),
             user: context.get_me_safe().await,
             user_token: token,
             about_api: context.get_about().await?,
+
+            #[cfg(feature = "profiling")]
             profiler: profiler.clone()
         };
-        Ok(RequestContext {
+
+        #[cfg(feature = "profiling")]
+        return Ok(RequestContext 
+        {
             //Custom construct bbcode so we copy the matchers but NOT the profiler!
             bbcode: BBCode { matchers: state.bbcode.matchers.clone(), profiler: profiler.clone() },
             global_state: state,
             api_context: context,
             layout_data,
             profiler
-        })
+        });
+
+        #[cfg(not(feature = "profiling"))]
+        return Ok(RequestContext 
+        {
+            bbcode: state.bbcode.clone(), 
+            global_state: state,
+            api_context: context,
+            layout_data,
+        });
     }
 }
 

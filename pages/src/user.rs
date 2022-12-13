@@ -20,7 +20,7 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user: Option<User>, user
                         }
                         //If the user has no bio, that's ok! 
                         @if let Some(userpage) = userpage {
-                            div."content" #"userbio" { (PreEscaped(bbcode.parse_maybeprofiled(s(&userpage.text), format!("userpage-{}", i(&userpage.id))))) } 
+                            div."content" #"userbio" { (PreEscaped(bbcode.parse_profiled_opt(s(&userpage.text), format!("userpage-{}", i(&userpage.id))))) } 
                         }
                     }
                 }

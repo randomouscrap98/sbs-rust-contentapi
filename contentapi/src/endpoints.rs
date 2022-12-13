@@ -193,7 +193,8 @@ impl ApiContext {
         let json = noreqerr!(serde_json::ser::to_string(data), request)?; //Even though this is serde, it's not a parse error because it's before the request
         let req = noreqerr!(reqbuilder.body(hyper::Body::from(json)), request)?; 
 
-        //println!("Request: {:?}", &req);
+        #[cfg(feature = "postdump")]
+        println!("Request: {:?}", &req);
 
         let response = self.client.request(req).await
             .map_err(|e| ApiError::Network(request.clone(), e.to_string()))?;
@@ -242,27 +243,23 @@ impl ApiContext {
     make_post_endpoint!{post_userupdate<User,User>("/write/user")}
     make_post_endpoint!{post_content<Content,Content>("/write/content")}
 
-    #[cfg(feature = "profiling")]
-    pub async fn post_request_profiled(&mut self, request: &FullRequest, name: &str) -> Result<RequestResult, ApiError> 
-    {
-        //put these IN the conditional compilation section
-        use std::time::Duration;
-        use basic_profiler::TimerProfile;
-
-        let result = self.post_request(request).await?;
-        //milli = 10^-3, micro = 10^-6, expanding milliseconds to micro before truncating
-        self.profiler.add(TimerProfile::from_existing(format!("{}-total", name), Duration::from_micros((result.totalTime * 1000f64) as u64))) ;
-        for (time_name, time) in &result.databaseTimes {
-            self.profiler.add(TimerProfile::from_existing(format!("{}-{}", name, time_name), Duration::from_micros((time * 1000f64) as u64))) ;
-        }
-        Ok(result)
-    }
-
     /// This MAY OR MAY NOT profile depending on your featureset!
-    pub async fn post_request_maybeprofiled(&mut self, request: &FullRequest, _name: &str) -> Result<RequestResult, ApiError> 
+    pub async fn post_request_profiled_opt(&mut self, request: &FullRequest, _name: &str) -> Result<RequestResult, ApiError> 
     {
         #[cfg(feature = "profiling")]
-        return self.post_request_profiled(request, _name).await;
+        {
+            //put these IN the conditional compilation section
+            use std::time::Duration;
+            use basic_profiler::TimerProfile;
+
+            let result = self.post_request(request).await?;
+            //milli = 10^-3, micro = 10^-6, expanding milliseconds to micro before truncating
+            self.profiler.add(TimerProfile::from_existing(format!("{}-total", _name), Duration::from_micros((result.totalTime * 1000f64) as u64))) ;
+            for (time_name, time) in &result.databaseTimes {
+                self.profiler.add(TimerProfile::from_existing(format!("{}-{}", _name, time_name), Duration::from_micros((time * 1000f64) as u64))) ;
+            }
+            Ok(result)
+        }
 
         #[cfg(not(feature = "profiling"))]
         return self.post_request(request).await;

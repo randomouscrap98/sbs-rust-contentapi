@@ -15,7 +15,7 @@ pub fn render(data: MainLayoutData, categories: Vec<ForumCategory>) -> String {
                 @let category = &category_container.category;
                 div."category" {
                     div."categoryinfo" {
-                        h1 { a."flatlink" href=(forum_category_link(&data.config, &category)) {(s(&category.name))} }
+                        h1 { a."flatlink" title={"ID: "(i(&category.id))} href=(forum_category_link(&data.config, &category)) {(s(&category.name))} }
                         p."aside" {(s(&category.description))}
                     }
                     div."foruminfo aside mediumseparate" {
@@ -25,7 +25,7 @@ pub fn render(data: MainLayoutData, categories: Vec<ForumCategory>) -> String {
                                 @if let Some(post) = thread.posts.get(0) {
                                     b { time datetime=(d(&post.createDate)) { (timeago_o(&post.createDate)) } }
                                     ": "
-                                    a."flatlink" href=(forum_post_link(&data.config, post, &thread.thread)) { (s(&thread.thread.name)) } 
+                                    a."flatlink" title={"ID: "(i(&thread.thread.id))} href=(forum_post_link(&data.config, post, &thread.thread)) { (s(&thread.thread.name)) } 
                                 }
                             }
                         }
@@ -39,12 +39,12 @@ pub fn render(data: MainLayoutData, categories: Vec<ForumCategory>) -> String {
     }).into_string()
 }
 
-async fn build_categories_with_threads(context: &ApiContext, categories_cleaned: Vec<CleanedPreCategory>, limit: i32, skip: i32) -> 
+async fn build_categories_with_threads(mut context: ApiContext, categories_cleaned: Vec<CleanedPreCategory>, limit: i32, skip: i32) -> 
     Result<Vec<ForumCategory>, Error> 
 {
     //Next request: get the complicated dataset for each category (this somehow includes comments???)
     let thread_request = get_thread_request(&categories_cleaned, limit, skip, false); //context.config.default_category_threads, 0);
-    let thread_result = context.post_request( &thread_request).await?;
+    let thread_result = context.post_request_profiled_opt(&thread_request, "threads").await?;
 
     let messages_raw = cast_result_required::<Message>(&thread_result, "message")?;
 
@@ -58,11 +58,11 @@ async fn build_categories_with_threads(context: &ApiContext, categories_cleaned:
 }
 
 
-pub async fn get_render(context: PageContext, order: &Vec<String>, show_threads: i32) -> Result<Response, Error> 
+pub async fn get_render(mut context: PageContext, order: &Vec<String>, show_threads: i32) -> Result<Response, Error> 
 {
     //First request: just get categories
     let request = get_category_request(None, None);
-    let category_result = context.api_context.post_request(&request).await?;
+    let category_result = context.api_context.post_request_profiled_opt(&request, "categories").await?;
     let mut categories_cleaned = CleanedPreCategory::from_many(cast_result_required::<Content>(&category_result, CATEGORYKEY)?)?;
 
     //Sort the categories by their name AGAINST the default list in the config. So, it should sort the categories
@@ -73,7 +73,7 @@ pub async fn get_render(context: PageContext, order: &Vec<String>, show_threads:
             |prefix| category.name.starts_with(prefix)).unwrap_or(usize::MAX), category.name.clone())
     });
 
-    let categories = build_categories_with_threads(&context.api_context, categories_cleaned, show_threads, 0).await?;
+    let categories = build_categories_with_threads(context.api_context, categories_cleaned, show_threads, 0).await?;
 
     Ok(Response::Render(render(context.layout_data, categories)))
 }
