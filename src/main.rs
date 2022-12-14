@@ -1,5 +1,5 @@
 use std::{net::SocketAddr, sync::Arc};
-use std::collections::HashMap;
+//use std::collections::HashMap;
 
 use bbscope::BBCode;
 use chrono::SecondsFormat;
@@ -182,8 +182,8 @@ async fn main()
 
     let get_search_route = warp_get_async!(
             warp::path!("search")
-                .and(warp::query::<HashMap<String, String>>()),
-        |search: HashMap<String, String>, context:RequestContext| {
+                .and(warp::query::<pages::search::Search>()),
+        |search: pages::search::Search, context:RequestContext| {
             async move {
                 let gc = context.global_state.clone();
                 handle_response(
