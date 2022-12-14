@@ -77,7 +77,7 @@ impl ForumCategory {
             category: category.category, //partial move
             threads: threads_raw.into_iter().map(|thread| ForumThread::from_content(thread, messages_raw, &category.stickies)).collect::<Result<Vec<_>,_>>()?,
             stickies: stickies_raw.into_iter().map(|thread| ForumThread::from_content(thread, messages_raw, &category.stickies)).collect::<Result<Vec<_>,_>>()?,
-            users: users_raw.into_iter().map(|u| (u.id, u)).collect(),
+            users: map_users(users_raw),
             threads_count: special_counts.get(0)
                 .ok_or(Error::Data(format!("Didn't get specialCount for category {}", category.id), format!("{:?}", thread_result)))?.specialCount
         })

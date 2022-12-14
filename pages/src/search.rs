@@ -1,3 +1,5 @@
+use contentapi::{*, conversion::map_users};
+
 use super::*;
 
 //use serde_json::Value;
@@ -7,19 +9,22 @@ use super::*;
 //static RESOURCETYPE: &str = "resource";
 static DOWNLOADKEYKEY: &str = "dlkey";
 static SYSTEMSKEY: &str = "systems";
+static PROGRAMTYPE: &str = "program";
+static RESOURCETYPE: &str = "resource";
 
 pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, User>, search: Search) -> String {
     layout(&data, html!{
+        (style(&data.config, "/forpage/search.css"))
         section {
             //Don't include an action so it just posts to the same url but with the form as params...?
-            form method="GET" id="searchform" {
+            form."smallseparate" method="GET" id="searchform" {
                 label."inline" for="search-text" {
                     span { "Search: " }
                     input."" #"search-text" type="text" name="search" value=[&search.search];
                 }
                 label."inline" for="search-type" {
-                    span{"Type:"}
-                    select #"search-type" name="type" {
+                    span{"Type: "}
+                    select #"search-type" name="subtype" {
                         @for (value,text) in SubmissionType::list() {
                             option value=(value) selected[value == search.subtype] { (text) }
                         }
@@ -35,8 +40,22 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                 //        }
                 //    }
                 //}
+                label."inline" for="search-order" {
+                    span{"Order: "}
+                    select #"search-order" name="order" {
+                        @for (value,text) in SubmissionOrder::list() {
+                            option value=(value) selected[value == search.order] { (text) }
+                        }
+                    }
+                }
+                @if search.subtype == PROGRAMTYPE {
+                    label."inline" for="search-removed" {
+                        span { "Show removed: " }
+                        input."" #"search-text" type="checkbox" name="removed" value=[&search.search];
+                    }
+                }
                 label."inline" for="search-page" {
-                    span {"Page:"}
+                    span {"Page: "}
                     input."smallinput" #"search-page" type="text" name="page" value=(search.page); 
                 }
 
@@ -70,11 +89,18 @@ pub fn page_card(config: &LinkConfig, page: &Content, users: &HashMap<i64, User>
     html!{
         a.{"pagecard "(s(&page.literalType))} {
             div."cardmain" {
-                h3 { (s(&page.name)) }
-                div."description" { (s(&page.description)) }
+                div."cardtext" {
+                    h3 { (s(&page.name)) }
+                    div."description" { (s(&page.description)) }
+                }
+                //Conditionally render the "cardimage" container
+                div."cardimage" {
+                    //Dang, where do we get the images from? What do we do if there IS none?
+                    img src="";
+                }
             }
             div."smallseparate cardbottom" {
-                a."user plainlink" href=(user_link(config, &user)) { (user.username) }
+                a."user flatlink" href=(user_link(config, &user)) { (user.username) }
                 //This may have conditional display? I don't know, depends on how much room there is!
                 time."aside" datetime=(d(&page.createDate)) { (timeago_o(&page.createDate)) } 
                 @if let Some(key) = values.get(DOWNLOADKEYKEY).and_then(|k| k.as_str()) {
@@ -86,7 +112,7 @@ pub fn page_card(config: &LinkConfig, page: &Content, users: &HashMap<i64, User>
                         @for system in systems {
                             @if let Some(system) = system.as_str() {
                                 @if let Some(title) = systems_map.get(system) {
-                                    img title=(title) src={(config.resource_root)"/"(system)"svg"};
+                                    img title=(title) src={(config.resource_root)"/"(system)".svg"};
                                 }
                             }
                         }
@@ -145,8 +171,8 @@ impl SubmissionType {
     pub fn list() -> HashMap<&'static str, &'static str> {
         //Idk, whatever
         vec![
-            ("program", "Programs"), 
-            ("resource", "Resources")
+            (PROGRAMTYPE, "Programs"), 
+            (RESOURCETYPE, "Resources")
         ].into_iter().collect()
     }
 }
@@ -181,7 +207,8 @@ pub struct Search {
     pub search: Option<String>,
     pub order: String, //SubmissionOrder,
     pub subtype: String, //SubmissionType,
-    pub category: Option<String>,
+    pub category: Option<i64>,
+    pub removed: bool,
     pub page: i32
 }
 
@@ -192,16 +219,63 @@ impl Default for Search {
             order: String::from("id_desc"), //SubmissionOrder::id_desc, //Some(String::from("id_desc")), //Inverse create time
             subtype: String::from("program"), ////SubmissionType::Program,   //Show programs first!
             category: None,
+            removed: false, //By default, DON'T show removed!
             page: 0
         }
     }
 }
 
-pub async fn get_render(context: PageContext, search: Search) -> Result<Response, Error> 
+pub async fn get_render(context: PageContext, search: Search, per_page: i32) -> Result<Response, Error> 
 {
     //Build up the request based on the search, then render
-    
+    let mut request = FullRequest::new();
+    add_value!(request, "type", ContentType::PAGE);
+    add_value!(request, "subtype", search.subtype.clone());
+
+    let mut query = String::from("contentType = @type and !notdeleted() and literalType = @subtype"); 
+    // !valuekeynotlike({{system}}) and !notdeleted()";
+
+    if let Some(stext) = &search.search {
+        add_value!(request, "text", format!("%{}%", stext));
+        query.push_str(" and (name like @text or !keywordlike(@text))");
+    }
+
+    if let Some(category) = &search.category {
+        add_value!(request, "categoryTag", vec![format!("tag:{}", category)]);
+        query.push_str(" and !valuekeyin(@categoryTag)");
+    }
+
+    if search.removed {
+        query.push_str(" and !valuelike({{");
+        query.push_str(DOWNLOADKEYKEY);
+        query.push_str("}},{{%REMOVE%}})");
+    }
+
+    //let fields = "id,hash,contentType,createUserId";
+    //let order = String::from(if search.oldest { "id" } else { "id_desc" });
+    let main_request = build_request!(
+        RequestType::content, 
+        String::from("id,hash,contentType,literalType,values,name,description,createUserId,createDate,lastRevisionId,"), 
+        query, 
+        search.order.clone(), 
+        per_page,
+        search.page * per_page
+    ); 
+    request.requests.push(main_request);
+
+    let user_request = build_request!(
+        RequestType::user,
+        String::from("*"),
+        String::from("id in @content.createUserId")
+    );
+    request.requests.push(user_request);
+
+    let result = context.api_context.post_request(&request).await?;
+    let pages = conversion::cast_result_safe::<Content>(&result, "content")?;
+    let users = conversion::cast_result_safe::<User>(&result, "user")?;
+    let users = map_users(users);
 
     //Manually parse the search, because of the tag magic (no javascript)
-    Err(Error::Other(String::from("wow")))
+    //Err(Error::Other(String::from("wow")))
+    Ok(Response::Render(render(context.layout_data, pages,  users, search)))
 }

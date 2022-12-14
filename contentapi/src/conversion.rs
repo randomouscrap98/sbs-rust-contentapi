@@ -35,7 +35,9 @@ pub fn cast_result_required<T>(result: &RequestResult, name: &str) -> Result<Vec
     cast_result(result, name)?.ok_or(format!("Couldn't find key {}", name).into())
 }
 
-
+pub fn map_users(users: Vec<User>) -> HashMap<i64, User> {
+    users.into_iter().map(|u| (u.id, u)).collect::<HashMap<i64, User>>()
+}
 
 //This gets rid of our dependency on serde_qs
 //pub fn list_to_querystring(list: Vec<(String, Option<impl Display>)>) -> String {

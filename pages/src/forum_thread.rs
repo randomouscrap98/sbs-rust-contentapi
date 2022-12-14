@@ -129,7 +129,7 @@ async fn render_thread(mut context: PageContext, pre_request: FullRequest, per_p
         context.layout_data, 
         &mut context.bbcode, 
         ForumThread::from_content(thread, &messages_raw, &category.stickies)?, 
-        &users_raw.into_iter().map(|u| (u.id, u)).collect::<HashMap<i64, User>>(),
+        &map_users(users_raw),
         path,
         get_pagelist(comment_count as i32, per_page, page),
         1 + per_page * page,

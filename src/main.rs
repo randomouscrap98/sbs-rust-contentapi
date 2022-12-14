@@ -49,6 +49,7 @@ config::create_config!{
         default_category_threads : i32,
         default_display_threads : i32,
         default_display_posts : i32,
+        default_display_pages : i32,
         forum_category_order: Vec<String>,
         //file_maxsize: i32,
         body_maxsize: i32, //this can be used for a lot of things, I don't really care
@@ -189,7 +190,8 @@ async fn main()
                 handle_response(
                     errwrap!(pages::search::get_render(
                         context.into(),
-                        search
+                        search,
+                        gc.config.default_display_pages
                         ).await)?,
                     &gc.link_config
                 )
