@@ -157,6 +157,11 @@ pub fn image_link(config: &LinkConfig, hash: &str, size: i64, crop: bool) -> Str
     }
 }
 
+/// This SHOULD work anywhere...
+pub fn self_link(data: &MainLayoutData) -> String {
+    format!("{}{}", data.config.http_root, data.current_path)
+}
+
 pub fn user_link(config: &LinkConfig, user: &User) -> String {
     format!("{}/user/{}", config.http_root, user.username)
 }

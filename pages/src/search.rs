@@ -52,9 +52,7 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                 }
             }
             //Generic pagelist generation (just need data)
-            div."smallseparate pagelist" {
-
-            }
+            (page_navigation(&data, &search))
             //h1 { "Browse is search"}
             //p { "Search may be simultaneously more powerful and less powerful than before"}
         }
@@ -63,6 +61,8 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
 
 pub fn page_card(config: &LinkConfig, page: &Content, users: &HashMap<i64, User>) -> Markup {
     let user = user_or_default(users.get(&page.createUserId.unwrap_or(0)));
+    //very wasteful allocations but whatever
+    let systems_map = SubmissionSystem::list();
     let values = match &page.values {
         Some(values) => values.clone(),
         None => HashMap::new()
@@ -85,13 +85,52 @@ pub fn page_card(config: &LinkConfig, page: &Content, users: &HashMap<i64, User>
                     @if let Some(systems) = values.get(SYSTEMSKEY).and_then(|k| k.as_array()) {
                         @for system in systems {
                             @if let Some(system) = system.as_str() {
-                                span."system" { (system) }
+                                @if let Some(title) = systems_map.get(system) {
+                                    img title=(title) src={(config.resource_root)"/"(system)"svg"};
+                                }
                             }
                         }
+                    }
+                    @else {
+                        //This must be a resource!
+                        img title="Resource" src={(config.resource_root)"/sb-page.png"};
                     }
                 }
             }
         }
+    }
+}
+
+// TODO: Make this generic across imagebrowse and here? Search has to impl some trait with get/set 
+// page functions and clone, and .browsepagenav might need to go in base.css
+fn page_navigation(data: &MainLayoutData, search: &Search) -> Markup {
+    let mut searchprev = search.clone();
+    let mut searchnext = search.clone();
+    searchprev.page = searchprev.page - 1;
+    searchnext.page = searchnext.page + 1;
+    html! {
+        div."smallseparate browsepagenav" {
+            @if let Ok(prevlink) = serde_urlencoded::to_string(searchprev) {
+                a."coolbutton" href={(self_link(&data))"?"(prevlink)} {"Previous"}
+            }
+            @if let Ok(nextlink) = serde_urlencoded::to_string(searchnext) {
+                a."coolbutton" href={(self_link(&data))"?"(nextlink)} {"Next"}
+            }
+        }
+    }
+}
+
+
+pub enum SubmissionSystem { }
+
+impl SubmissionSystem {
+    pub fn list() -> HashMap<&'static str, &'static str> {
+        //Idk, whatever
+        vec![
+            ("3ds", "Nintendo 3DS"), 
+            ("wiiu", "Nintendo WiiU"), 
+            ("switch", "Nintendo Switch")
+        ].into_iter().collect()
     }
 }
 
@@ -104,7 +143,6 @@ pub enum SubmissionType { }
 
 impl SubmissionType {
     pub fn list() -> HashMap<&'static str, &'static str> {
-
         //Idk, whatever
         vec![
             ("program", "Programs"), 
@@ -137,7 +175,7 @@ impl SubmissionOrder {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]
 pub struct Search {
     pub search: Option<String>,
@@ -161,6 +199,9 @@ impl Default for Search {
 
 pub async fn get_render(context: PageContext, search: Search) -> Result<Response, Error> 
 {
+    //Build up the request based on the search, then render
+    
+
     //Manually parse the search, because of the tag magic (no javascript)
     Err(Error::Other(String::from("wow")))
 }

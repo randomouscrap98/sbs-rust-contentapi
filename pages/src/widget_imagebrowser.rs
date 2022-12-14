@@ -6,10 +6,6 @@ use maud::DOCTYPE;
 use serde::{Serialize, Deserialize};
 
 
-pub fn self_link(config: &LinkConfig) -> String {
-    format!("{}/widget/imagebrowser", config.http_root)
-}
-
 pub fn render(data: MainLayoutData, search: Search, images: Vec<Image>, previews: Vec<Image>, errors: Option<Vec<String>>) -> String {
     let sizes = vec![(1,"1"),(2,"2"),(3,"3")]; //This may seem stupid but I might want to change the text later
     let imagesize: i64 = 100 * search.size as i64; //Used to have + something, but now...
@@ -39,8 +35,8 @@ pub fn render(data: MainLayoutData, search: Search, images: Vec<Image>, previews
                         }
                         input #"fileinput" type="file" name="file" class="largeinput" accept="image/*";
                         input type="hidden" name="token" value=[&data.user_token];
-                        input type="hidden" name="errorUrl" value={(self_link(&data.config))"?error={{error}}"};
-                        input type="hidden" name="successUrl" value={(self_link(&data.config))"?preview={{hash}}"};
+                        input type="hidden" name="errorUrl" value={(self_link(&data))"?error={{error}}"};
+                        input type="hidden" name="successUrl" value={(self_link(&data))"?preview={{hash}}"};
                         input type="submit" value="Upload";
                     }
                     hr;
@@ -124,10 +120,10 @@ fn image_navigation(data: &MainLayoutData, search: Search) -> Markup {
     html! {
         div."smallseparate browsepagenav" {
             @if let Ok(prevlink) = serde_urlencoded::to_string(searchprev) {
-                a."coolbutton" href={(self_link(&data.config))"?"(prevlink)} {"Previous"}
+                a."coolbutton" href={(self_link(&data))"?"(prevlink)} {"Previous"}
             }
             @if let Ok(nextlink) = serde_urlencoded::to_string(searchnext) {
-                a."coolbutton" href={(self_link(&data.config))"?"(nextlink)} {"Next"}
+                a."coolbutton" href={(self_link(&data))"?"(nextlink)} {"Next"}
             }
         }
     }
