@@ -30,7 +30,7 @@ pub fn render(data: MainLayoutData, category: ForumCategory, path: Vec<ForumPath
                     hr."smaller";
                 }
             }
-            div."smallseparate" #"pagelist" {
+            div."smallseparate pagelist" {
                 @for page in pages {
                     a."current"[page.current] href={(forum_category_link(&data.config, &category.category))"?page="(page.page)} { (page.text) }
                 }

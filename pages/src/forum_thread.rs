@@ -36,7 +36,7 @@ pub fn render(data: MainLayoutData, bbcode: &mut BBCode, thread: ForumThread, us
                 (post_item(&data.config, bbcode, post, &thread.thread, selected_post_id, users, start_num + index as i32))
                 @if index < thread.posts.len() - 1 { hr."smaller"; }
             }
-            div."smallseparate" #"pagelist" {
+            div."smallseparate pagelist" {
                 @for page in pages {
                     a."current"[page.current] href={(forum_thread_link(&data.config, &thread.thread))"?page="(page.page)} { (page.text) }
                 }

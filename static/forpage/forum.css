@@ -110,18 +110,6 @@
     margin-left: auto;
 }
 
-#pagelist {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-top: 1.5em;
-}
-
-#pagelist .current {
-    font-weight: bold;
-}
-
 
 @media screen and (max-width: 30em)
 {

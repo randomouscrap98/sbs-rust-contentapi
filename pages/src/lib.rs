@@ -161,29 +161,21 @@ pub fn user_link(config: &LinkConfig, user: &User) -> String {
     format!("{}/user/{}", config.http_root, user.username)
 }
 
+pub fn page_link(config: &LinkConfig, page: &Content) -> String {
+    format!("{}/page/{}", config.http_root, s(&page.hash))
+}
+
 pub fn forum_category_link(config: &LinkConfig, category: &Content) -> String {
-    let hash = match &category.hash {
-        Some(hash) => hash.clone(),
-        None => String::from("")
-    };
-    format!("{}/forum/category/{}", config.http_root, hash)
+    format!("{}/forum/category/{}", config.http_root, s(&category.hash))
 }
 
 pub fn forum_thread_link(config: &LinkConfig, thread: &Content) -> String {
-    let hash = match &thread.hash {
-        Some(hash) => hash.clone(),
-        None => String::from("")
-    };
-    format!("{}/forum/thread/{}", config.http_root, hash) //}"{{@root.http_root}}/forum/thread/{{thread.hash}}" class="flatlink">{{thread.name}}</a> }
+    format!("{}/forum/thread/{}", config.http_root, s(&thread.hash)) //}"{{@root.http_root}}/forum/thread/{{thread.hash}}" class="flatlink">{{thread.name}}</a> }
 }
 
 pub fn forum_post_link(config: &LinkConfig, post: &Message, thread: &Content) -> String {
     let post_id = post.id.unwrap_or(0);
-    let hash = match &thread.hash {
-        Some(hash) => hash.clone(),
-        None => String::from("")
-    };
-    format!("{}/forum/thread/{}/{}#post_{}", config.http_root, hash, post_id, post_id)
+    format!("{}/forum/thread/{}/{}#post_{}", config.http_root, s(&thread.hash), post_id, post_id)
 }
 
 // ----------------------------

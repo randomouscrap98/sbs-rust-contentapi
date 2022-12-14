@@ -1,4 +1,5 @@
 use std::{net::SocketAddr, sync::Arc};
+use std::collections::HashMap;
 
 use bbscope::BBCode;
 use chrono::SecondsFormat;
@@ -166,9 +167,6 @@ async fn main()
     let get_activity_route = warp_get!(warp::path!("activity"),
         |context:RequestContext| warp::reply::html(pages::activity::render(context.layout_data)));
 
-    let get_search_route = warp_get!(warp::path!("search"),
-        |context:RequestContext| warp::reply::html(pages::search::render(context.layout_data)));
-
     let get_bbcodepreview_route = warp_get!(warp::path!("widget" / "bbcodepreview"),
         |context:RequestContext| warp::reply::html(pages::widget_bbcodepreview::render(context.layout_data, &context.global_state.bbcode, None)));
 
@@ -181,6 +179,22 @@ async fn main()
             warp::reply::html(pages::widget_bbcodepreview::render(context.layout_data, &context.global_state.bbcode, Some(form.text)))
         })
         .boxed();
+
+    let get_search_route = warp_get_async!(
+            warp::path!("search")
+                .and(warp::query::<HashMap<String, String>>()),
+        |search: HashMap<String, String>, context:RequestContext| {
+            async move {
+                let gc = context.global_state.clone();
+                handle_response(
+                    errwrap!(pages::search::get_render(
+                        context.into(),
+                        search
+                        ).await)?,
+                    &gc.link_config
+                )
+            }
+        });
 
 
     #[derive(Deserialize, Debug)]
