@@ -10,10 +10,14 @@ use super::*;
 static DOWNLOADKEYKEY: &str = "dlkey";
 static SYSTEMSKEY: &str = "systems";
 static IMAGESKEY: &str = "images";
+
 static PROGRAMTYPE: &str = "program";
 static RESOURCETYPE: &str = "resource";
 
+static ANYSYSTEM: &str = "any";
+
 pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, User>, search: Search) -> String {
+    //let search_system = match &search.system { Some(system) => system, None => };
     layout(&data, html!{
         (style(&data.config, "/forpage/search.css"))
         section {
@@ -50,6 +54,14 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                     }
                 }
                 @if search.subtype == PROGRAMTYPE {
+                    label."inline" for="search-system" {
+                        span{"System: "}
+                        select #"search-system" name="system" {
+                            @for (value,text) in SubmissionSystem::list() {
+                                option value=(value) selected[value == search.system] { (text) }
+                            }
+                        }
+                    }
                     label."inline" for="search-removed" {
                         span { "Show removed: " }
                         input."" #"search-text" type="checkbox" name="removed" checked[search.removed] value="true";
@@ -163,6 +175,7 @@ impl SubmissionSystem {
     pub fn list() -> HashMap<&'static str, &'static str> {
         //Idk, whatever
         vec![
+            (ANYSYSTEM, "Any"), 
             ("3ds", "Nintendo 3DS"), 
             ("wiiu", "Nintendo WiiU"), 
             ("switch", "Nintendo Switch")
@@ -186,6 +199,7 @@ impl SubmissionType {
         ].into_iter().collect()
     }
 }
+
 
 //#[allow(non_camel_case_types)]
 //#[derive(Serialize, Deserialize, Debug)]
@@ -217,6 +231,8 @@ pub struct Search {
     pub search: Option<String>,
     pub order: String, //SubmissionOrder,
     pub subtype: String, //SubmissionType,
+    //pub system: Option<String>,
+    pub system: String,
     pub category: Option<i64>,
     pub removed: bool,
     pub page: i32
@@ -228,6 +244,8 @@ impl Default for Search {
             search: None,
             order: String::from("id_desc"), //SubmissionOrder::id_desc, //Some(String::from("id_desc")), //Inverse create time
             subtype: String::from("program"), ////SubmissionType::Program,   //Show programs first!
+            system: String::from(ANYSYSTEM),
+            //system: None,
             category: None,
             removed: false, //By default, DON'T show removed!
             page: 0
@@ -259,6 +277,12 @@ pub async fn get_render(context: PageContext, search: Search, per_page: i32) -> 
     if !search.removed {
         add_value!(request, "dlkeylist", vec![DOWNLOADKEYKEY]);
         query.push_str(" and !valuekeyin(@dlkeylist)");
+    }
+
+    if search.system != ANYSYSTEM {
+        add_value!(request, "systemkey", SYSTEMSKEY);
+        add_value!(request, "system", format!("%{}%", search.system)); //Systems is actually a json list but this should be fine
+        query.push_str(" and !valuelike(@systemkey, @system)");
     }
 
     //let fields = "id,hash,contentType,createUserId";

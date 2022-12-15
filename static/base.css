@@ -183,6 +183,12 @@ hr.smaller {
     font-weight: bold;
 }
 
+.browsepagenav {
+    display: flex;
+    justify-content: center;
+    margin: 0.5em;
+}
+
 
 /*  -------------------------------
     CONTENT STUFF (MARKUP? BBCODE?)

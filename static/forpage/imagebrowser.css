@@ -38,12 +38,6 @@ h3 {
     margin-right: 0.3em;
 }
 
-.browsepagenav {
-    display: flex;
-    justify-content: center;
-    margin: 0.5em;
-}
-
 .imagelist {
     display: flex;
     flex-wrap: wrap;

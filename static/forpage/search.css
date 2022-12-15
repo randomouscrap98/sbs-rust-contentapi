@@ -22,6 +22,8 @@
     flex-basis: 30em;
     margin-right: 0.8em;
     margin-bottom: 0.8em;
+    display: flex;
+    flex-direction: column;
 }
 
 .cardmain {
@@ -68,6 +70,7 @@
 .cardbottom {
     display: flex;
     align-items: center;
+    margin-top: auto;;
 }
 
 .cardbottom .user {
