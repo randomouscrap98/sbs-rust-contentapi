@@ -9,6 +9,7 @@ use super::*;
 //static RESOURCETYPE: &str = "resource";
 static DOWNLOADKEYKEY: &str = "dlkey";
 static SYSTEMSKEY: &str = "systems";
+static IMAGESKEY: &str = "images";
 static PROGRAMTYPE: &str = "program";
 static RESOURCETYPE: &str = "resource";
 
@@ -64,7 +65,7 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
         }
         // All the pages (directly in the section?)
         section."results" {
-            div {
+            div."resultslist" {
                 //Or maybe in here
                 @for page in &pages {
                     (page_card(&data.config, page, &users))
@@ -87,41 +88,47 @@ pub fn page_card(config: &LinkConfig, page: &Content, users: &HashMap<i64, User>
         None => HashMap::new()
     };
     html!{
-        a.{"pagecard "(s(&page.literalType))} {
+        div.{"pagecard "(s(&page.literalType))} {
             div."cardmain" {
                 div."cardtext" {
-                    h3 { (s(&page.name)) }
+                    a."flatlink" href=(page_link(config, page)) { h3 { (s(&page.name)) } }
                     div."description" { (s(&page.description)) }
                 }
                 //Conditionally render the "cardimage" container
                 div."cardimage" {
-                    //Dang, where do we get the images from? What do we do if there IS none?
-                    img src="";
+                    @if let Some(images) = values.get(IMAGESKEY).and_then(|k| k.as_array()) {
+                        //we now have the images: we just need the first one (it's a hash?)
+                        @if let Some(image) = images.get(0).and_then(|i| i.as_str()) {
+                            img src=(image_link(config, image, 200, false));
+                        }
+                    }
                 }
             }
             div."smallseparate cardbottom" {
                 a."user flatlink" href=(user_link(config, &user)) { (user.username) }
                 //This may have conditional display? I don't know, depends on how much room there is!
                 time."aside" datetime=(d(&page.createDate)) { (timeago_o(&page.createDate)) } 
-                @if let Some(key) = values.get(DOWNLOADKEYKEY).and_then(|k| k.as_str()) {
-                    span."key" { (key) }
-                }
-                div."systems" {
-                    //Don't forget the program type! if it exists anyway
-                    @if let Some(systems) = values.get(SYSTEMSKEY).and_then(|k| k.as_array()) {
-                        @for system in systems {
-                            @if let Some(system) = system.as_str() {
-                                @if let Some(title) = systems_map.get(system) {
-                                    img title=(title) src={(config.resource_root)"/"(system)".svg"};
+                //div."keyspec smallseparate" {
+                    @if let Some(key) = values.get(DOWNLOADKEYKEY).and_then(|k| k.as_str()) {
+                        span."key" { (key) }
+                    }
+                    div."systems" {
+                        //Don't forget the program type! if it exists anyway
+                        @if let Some(systems) = values.get(SYSTEMSKEY).and_then(|k| k.as_array()) {
+                            @for system in systems {
+                                @if let Some(system) = system.as_str() {
+                                    @if let Some(title) = systems_map.get(system) {
+                                        img title=(title) src={(config.resource_root)"/"(system)".svg"};
+                                    }
                                 }
                             }
                         }
+                        @else {
+                            //This must be a resource!
+                            img title="Resource" src={(config.resource_root)"/sb-page.png"};
+                        }
                     }
-                    @else {
-                        //This must be a resource!
-                        img title="Resource" src={(config.resource_root)"/sb-page.png"};
-                    }
-                }
+                //}
             }
         }
     }

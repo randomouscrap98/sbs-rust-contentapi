@@ -3,3 +3,104 @@
     display: flex;
     flex-wrap: wrap;
 }
+
+.resultslist {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+/* ------------------------
+   *     PAGE CARDS       *
+   ---------------------- */
+
+/* Pages are special! */
+.pagecard.program {
+    padding: 0.9em;
+    border: 1px solid var(--color_divider);
+    border-radius: 0.5em;
+    flex-basis: 30em;
+    margin-right: 0.8em;
+    margin-bottom: 0.8em;
+}
+
+.cardmain {
+    display: flex;
+    margin-bottom: 0.5em;
+}
+
+.cardtext {
+    margin-right: 0.8em;
+    line-height: 1.4;
+}
+
+.cardtext .description {
+    filter: opacity(0.7);
+    margin-left: 0.05em;
+    font-size: 0.95em;
+}
+
+.cardtext h3 {
+    margin: 0;
+    margin-bottom: 0.25em;
+    font-size: 1.1em;
+}
+
+.cardimage {
+    width: 10em;
+    height: 6em;
+    margin-left: auto;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 0.5em;
+}
+
+.cardimage img {
+    border-radius: 0.5em;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.cardbottom {
+    display: flex;
+    align-items: center;
+}
+
+.cardbottom .user {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cardbottom .key {
+    font-weight: bold;
+    margin-left: auto;
+}
+
+.cardbottom .systems {
+    flex: none;
+}
+
+.cardbottom .systems > * {
+    margin-left: 0.25em;
+}
+
+ @media screen and (max-width: 35em)
+ {
+    .cardimage {
+        width: 7em;
+        height: 4.2em;
+    }
+    .cardtext {
+        font-size: 0.8em;
+    }
+    .cardbottom {
+        font-size: 0.9em;
+    }
+    .cardbottom time {
+        display: none;
+    }
+ }

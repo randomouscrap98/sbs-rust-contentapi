@@ -63,11 +63,11 @@
     width: 100%;
 }
 
-.smallseparate > * {
+.smallseparate > :not(:last-child) {
     margin-right: 0.5em;
 }
 
-.mediumseparate > * {
+.mediumseparate > :not(:last-child) {
     margin-right: 0.8em;
 }
 
