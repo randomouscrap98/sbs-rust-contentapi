@@ -10,16 +10,22 @@ use super::*;
 static DOWNLOADKEYKEY: &str = "dlkey";
 static SYSTEMSKEY: &str = "systems";
 static IMAGESKEY: &str = "images";
+static FORCONTENTKEY: &str = "forcontent";
 
+static CATEGORYTYPE: &str = "category";
 static PROGRAMTYPE: &str = "program";
 static RESOURCETYPE: &str = "resource";
 
 static ANYSYSTEM: &str = "any";
 
-pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, User>, search: Search) -> String {
+pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, User>, search: Search,
+    categories: Vec<Category>) -> String 
+{
+    //Need to split category search into parts 
     //let search_system = match &search.system { Some(system) => system, None => };
     layout(&data, html!{
         (style(&data.config, "/forpage/search.css"))
+        (script(&data.config, "/forpage/search.js"))
         section {
             //Don't include an action so it just posts to the same url but with the form as params...?
             form."smallseparate" method="GET" id="searchform" {
@@ -37,14 +43,18 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                 }
                 //THIS needs to come from parameters! Don't know the categories available unless
                 //we look at the database!
-                //label."inline" for="search-category" {
-                //    span{"Category:"}
-                //    select #"search-category" name="category" {
-                //        @for (value,text) in Submi::list() {
-                //            option value=(value) selected[value == search.category] { (text) }
-                //        }
-                //    }
-                //}
+                label."inline" for="search-category" 
+                {
+                    span{"Category:"}
+                    select #"search-category" name="category" {
+                        option value="0" { "Any" }
+                        @for category in &categories {
+                            option data-for=(category.forcontent) value=(category.id) selected[Some(category.id) == search.category] { 
+                                (category.name) 
+                            }
+                        }
+                    }
+                }
                 label."inline" for="search-order" {
                     span{"Order: "}
                     select #"search-order" name="order" {
@@ -110,7 +120,7 @@ pub fn page_card(config: &LinkConfig, page: &Content, users: &HashMap<i64, User>
                 @if let Some(images) = values.get(IMAGESKEY).and_then(|k| k.as_array()) {
                     //we now have the images: we just need the first one (it's a hash?)
                     @if let Some(image) = images.get(0).and_then(|i| i.as_str()) {
-                        div."cardimage" {
+                        a."cardimage" href=(page_link(config, page)) {
                             img src=(image_link(config, image, 200, false));
                         }
                     }
@@ -124,8 +134,11 @@ pub fn page_card(config: &LinkConfig, page: &Content, users: &HashMap<i64, User>
                     @if let Some(key) = values.get(DOWNLOADKEYKEY).and_then(|k| k.as_str()) {
                         span."key" { (key) }
                     }
-                    @else {
+                    @else if s(&page.literalType) == PROGRAMTYPE {
                         span."key error" { "REMOVED" }
+                    }
+                    @else {
+                        span."key" { /* nothing! just a placeholder! */ }
                     }
                     div."systems" {
                         //Don't forget the program type! if it exists anyway
@@ -183,12 +196,7 @@ impl SubmissionSystem {
     }
 }
 
-//#[derive(Serialize, Deserialize, Debug)]
-//#[serde(rename_all = "camelCase")]
 pub enum SubmissionType { }
-//    Program,
-//    Resource
-//}
 
 impl SubmissionType {
     pub fn list() -> HashMap<&'static str, &'static str> {
@@ -200,17 +208,7 @@ impl SubmissionType {
     }
 }
 
-
-//#[allow(non_camel_case_types)]
-//#[derive(Serialize, Deserialize, Debug)]
 pub enum SubmissionOrder { }
-//    id_desc,
-//    id,
-//    lastRevisionId_desc,
-//    lastRevisionId,
-//    name,
-//    name_desc
-//}
 
 impl SubmissionOrder {
     pub fn list() -> HashMap<&'static str, &'static str> {
@@ -253,12 +251,20 @@ impl Default for Search {
     }
 }
 
+pub struct Category {
+    pub id: i64,
+    pub name: String,
+    pub forcontent: String
+}
+
 pub async fn get_render(context: PageContext, search: Search, per_page: i32) -> Result<Response, Error> 
 {
     //Build up the request based on the search, then render
     let mut request = FullRequest::new();
     add_value!(request, "type", ContentType::PAGE);
+    add_value!(request, "systemtype", ContentType::SYSTEM);
     add_value!(request, "subtype", search.subtype.clone());
+    add_value!(request, "forcontent", FORCONTENTKEY);
 
     let mut query = String::from("contentType = @type and !notdeleted() and literalType = @subtype"); 
     // !valuekeynotlike({{system}}) and !notdeleted()";
@@ -269,20 +275,25 @@ pub async fn get_render(context: PageContext, search: Search, per_page: i32) -> 
     }
 
     if let Some(category) = &search.category {
-        add_value!(request, "categoryTag", vec![format!("tag:{}", category)]);
-        query.push_str(" and !valuekeyin(@categoryTag)");
+        if *category != 0 {
+            add_value!(request, "categoryTag", vec![format!("tag:{}", category)]);
+            query.push_str(" and !valuekeyin(@categoryTag)");
+        }
     }
 
-    //MUST have a key unless the user specifies otherwise
-    if !search.removed {
-        add_value!(request, "dlkeylist", vec![DOWNLOADKEYKEY]);
-        query.push_str(" and !valuekeyin(@dlkeylist)");
-    }
+    //Ignore certain search criteria
+    if search.subtype == PROGRAMTYPE {
+        //MUST have a key unless the user specifies otherwise
+        if !search.removed {
+            add_value!(request, "dlkeylist", vec![DOWNLOADKEYKEY]);
+            query.push_str(" and !valuekeyin(@dlkeylist)");
+        }
 
-    if search.system != ANYSYSTEM {
-        add_value!(request, "systemkey", SYSTEMSKEY);
-        add_value!(request, "system", format!("%{}%", search.system)); //Systems is actually a json list but this should be fine
-        query.push_str(" and !valuelike(@systemkey, @system)");
+        if search.system != ANYSYSTEM {
+            add_value!(request, "systemkey", SYSTEMSKEY);
+            add_value!(request, "system", format!("%{}%", search.system)); //Systems is actually a json list but this should be fine
+            query.push_str(" and !valuelike(@systemkey, @system)");
+        }
     }
 
     //let fields = "id,hash,contentType,createUserId";
@@ -304,12 +315,34 @@ pub async fn get_render(context: PageContext, search: Search, per_page: i32) -> 
     );
     request.requests.push(user_request);
 
+    add_value!(request, "categorytype", CATEGORYTYPE);
+    //add_value!(request, "subtypesearch", format!("%{}%", &search.subtype));
+    let mut category_request = build_request!(
+        RequestType::content,
+        String::from("id,literalType,contentType,values,name"),
+        String::from("contentType = @systemtype and !notdeleted() and literalType = @categorytype") // and !valuelike(@forcontent,@subtypesearch)")
+    );
+    category_request.name = Some(String::from("categories"));
+    request.requests.push(category_request);
+
     let result = context.api_context.post_request(&request).await?;
+    //println!("RESULT: {:#?}", &result);
     let pages = conversion::cast_result_safe::<Content>(&result, "content")?;
     let users = conversion::cast_result_safe::<User>(&result, "user")?;
+    let categories = conversion::cast_result_safe::<Content>(&result, "categories")?;
     let users = map_users(users);
+
+    let categories = categories.into_iter().map(|c| {
+        Category {
+            id: c.id.unwrap_or(0),
+            name: c.name.unwrap_or_else(|| String::from("")), //Only evaluated on failure
+            forcontent: c.values
+                .and_then(|v| v.get(FORCONTENTKEY).and_then(|v2| v2.as_str()).and_then(|v3| Some(String::from(v3))))
+                .unwrap_or_else(|| String::from(""))
+        }
+    }).collect::<Vec<Category>>();
 
     //Manually parse the search, because of the tag magic (no javascript)
     //Err(Error::Other(String::from("wow")))
-    Ok(Response::Render(render(context.layout_data, pages,  users, search)))
+    Ok(Response::Render(render(context.layout_data, pages,  users, search, categories)))
 }
