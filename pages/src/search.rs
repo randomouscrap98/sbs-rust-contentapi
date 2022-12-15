@@ -52,7 +52,7 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                 @if search.subtype == PROGRAMTYPE {
                     label."inline" for="search-removed" {
                         span { "Show removed: " }
-                        input."" #"search-text" type="checkbox" name="removed" value=[&search.search];
+                        input."" #"search-text" type="checkbox" name="removed" checked[search.removed] value="true";
                     }
                 }
                 label."inline" for="search-page" {
@@ -95,10 +95,10 @@ pub fn page_card(config: &LinkConfig, page: &Content, users: &HashMap<i64, User>
                     div."description" { (s(&page.description)) }
                 }
                 //Conditionally render the "cardimage" container
-                div."cardimage" {
-                    @if let Some(images) = values.get(IMAGESKEY).and_then(|k| k.as_array()) {
-                        //we now have the images: we just need the first one (it's a hash?)
-                        @if let Some(image) = images.get(0).and_then(|i| i.as_str()) {
+                @if let Some(images) = values.get(IMAGESKEY).and_then(|k| k.as_array()) {
+                    //we now have the images: we just need the first one (it's a hash?)
+                    @if let Some(image) = images.get(0).and_then(|i| i.as_str()) {
+                        div."cardimage" {
                             img src=(image_link(config, image, 200, false));
                         }
                     }
@@ -111,6 +111,9 @@ pub fn page_card(config: &LinkConfig, page: &Content, users: &HashMap<i64, User>
                 //div."keyspec smallseparate" {
                     @if let Some(key) = values.get(DOWNLOADKEYKEY).and_then(|k| k.as_str()) {
                         span."key" { (key) }
+                    }
+                    @else {
+                        span."key error" { "REMOVED" }
                     }
                     div."systems" {
                         //Don't forget the program type! if it exists anyway
@@ -252,10 +255,10 @@ pub async fn get_render(context: PageContext, search: Search, per_page: i32) -> 
         query.push_str(" and !valuekeyin(@categoryTag)");
     }
 
-    if search.removed {
-        query.push_str(" and !valuelike({{");
-        query.push_str(DOWNLOADKEYKEY);
-        query.push_str("}},{{%REMOVE%}})");
+    //MUST have a key unless the user specifies otherwise
+    if !search.removed {
+        add_value!(request, "dlkeylist", vec![DOWNLOADKEYKEY]);
+        query.push_str(" and !valuekeyin(@dlkeylist)");
     }
 
     //let fields = "id,hash,contentType,createUserId";

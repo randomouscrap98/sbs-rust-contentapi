@@ -14,11 +14,11 @@
    *     PAGE CARDS       *
    ---------------------- */
 
-/* Pages are special! */
-.pagecard.program {
+/* Pages MAY be special in the future! */
+.pagecard {
     padding: 0.9em;
     border: 1px solid var(--color_divider);
-    border-radius: 0.5em;
+    border-radius: 0.65em;
     flex-basis: 30em;
     margin-right: 0.8em;
     margin-bottom: 0.8em;
