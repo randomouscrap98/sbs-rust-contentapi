@@ -109,6 +109,51 @@
 }
 
 
+/* ----------------------------------------------
+   *       PAGE STYLING (HERE FOR NOW)
+   -------------------------------------------- */
+
+.programinfo {
+   display: block;
+   float: right;
+   width: 25em;
+   max-width: 100%;
+   background: var(--color_divider);
+   border-radius: 1em;
+   margin-left: 1em;
+   margin-bottom: 1em;
+   padding: 1em;
+   box-sizing: border-box;
+}
+
+.programinfo .gallery img {
+    display: block;
+    width: 100%;
+    border-radius: 0.5em;
+    box-sizing: border-box;
+}
+
+.programinfo .extras {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.programinfo .extras > * {
+    margin-top: 0.7em;
+    display: flex;
+    align-items: center;
+}
+
+@media screen and (max-width: 55em) 
+{
+    .programinfo { 
+        float: none; 
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+
 @media screen and (max-width: 30em)
 {
     .content { font-size: 0.9em; }
@@ -117,4 +162,6 @@
     .postheader .username { font-size: 1em; }
     /*.threadicon { margin-right: 0.4em; }
     .threadicon img { width: 1em; }*/
+
 }
+

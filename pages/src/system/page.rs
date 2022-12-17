@@ -2,6 +2,8 @@
 use super::super::*;
 
 pub static DOWNLOADKEYKEY: &str = "dlkey";
+pub static VERSIONKEY: &str = "version";
+pub static SIZEKEY : &str = "size";
 pub static SYSTEMSKEY: &str = "systems";
 pub static IMAGESKEY: &str = "images";
 pub static FORCONTENTKEY: &str = "forcontent";
@@ -85,10 +87,7 @@ pub fn page_card(config: &LinkConfig, page: &Content, users: &HashMap<i64, User>
     let user = user_or_default(users.get(&page.createUserId.unwrap_or(0)));
     //very wasteful allocations but whatever
     let link = forum_thread_link(config, page);
-    let values = match &page.values {
-        Some(values) => values.clone(),
-        None => HashMap::new()
-    };
+    let values = match &page.values { Some(values) => values.clone(), None => HashMap::new() };
     html!{
         div.{"pagecard "(s(&page.literalType))} {
             div."cardmain" {

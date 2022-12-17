@@ -20,10 +20,6 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
         section {
             //Don't include an action so it just posts to the same url but with the form as params...?
             form."smallseparate" method="GET" id="searchform" {
-                label."inline" for="search-text" {
-                    span { "Search: " }
-                    input."" #"search-text" type="text" name="search" value=[&search.search];
-                }
                 label."inline" for="search-type" {
                     span{"Type: "}
                     select #"search-type" name="subtype" {
@@ -46,14 +42,6 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                         }
                     }
                 }
-                label."inline" for="search-order" {
-                    span{"Order: "}
-                    select #"search-order" name="order" {
-                        @for (value,text) in SubmissionOrder::list() {
-                            option value=(value) selected[value == search.order] { (text) }
-                        }
-                    }
-                }
                 @if search.subtype == PROGRAMTYPE {
                     label."inline" for="search-system" {
                         span{"System: "}
@@ -63,6 +51,20 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                             }
                         }
                     }
+                }
+                label."inline" for="search-order" {
+                    span{"Order: "}
+                    select #"search-order" name="order" {
+                        @for (value,text) in SubmissionOrder::list() {
+                            option value=(value) selected[value == search.order] { (text) }
+                        }
+                    }
+                }
+                label."inline" for="search-text" {
+                    span { "Search: " }
+                    input."" #"search-text" type="text" name="search" value=[&search.search];
+                }
+                @if search.subtype == PROGRAMTYPE {
                     label."inline" for="search-removed" {
                         span { "Show removed: " }
                         input."" #"search-text" type="checkbox" name="removed" checked[search.removed] value="true";

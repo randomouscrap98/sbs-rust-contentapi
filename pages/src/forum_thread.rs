@@ -9,10 +9,12 @@ use contentapi::{FullRequest, SpecialCount};
 use super::*;
 use system::layout::*;
 use system::forum::*;
+use system::page::*; //Again, controversial? idk
 
 pub fn render(data: MainLayoutData, bbcode: &mut BBCode, thread: ForumThread, users: &HashMap<i64,User>, path: Vec<ForumPathItem>,
     pages: Vec<ForumPagelistItem>, start_num: i32, selected_post_id: Option<i64>) -> String 
 {
+    let values = match &thread.thread.values { Some(values) => values.clone(), None => HashMap::new() };
     layout(&data, html!{
         (style(&data.config, "/forpage/forum.css"))
         section {
@@ -34,24 +36,54 @@ pub fn render(data: MainLayoutData, bbcode: &mut BBCode, thread: ForumThread, us
         }
         @if thread.thread.literalType != Some(SBSContentType::forumthread.to_string()) {
             section {
+                //First check is if it's a program, then we float this box to the right
+                @if thread.thread.literalType == Some(SBSContentType::program.to_string()) {
+                    div."programinfo" {
+                        @if let Some(images) = values.get(IMAGESKEY).and_then(|k| k.as_array()) {
+                            div."gallery" {
+                                //we now have the images: we just need the first one (it's a hash?)
+                                @if let Some(image) = images.get(0).and_then(|i| i.as_str()) {
+                                    img src=(base_image_link(&data.config, image));
+                                }
+                            }
+                        }
+                        div."extras mediumseparate" {
+                            @if let Some(key) = values.get(DOWNLOADKEYKEY).and_then(|k| k.as_str()) {
+                                span."smallseparate" {
+                                    b { "Download:" }
+                                    span."key" { (key) }
+                                    (threadicon(&data.config, &thread))
+                                }
+                            }
+                            @if let Some(version) = values.get(VERSIONKEY).and_then(|k| k.as_str()) {
+                                span."smallseparate" {
+                                    b { "Version:" }
+                                    span."version" { (version) }
+                                }
+                            }
+                            @if let Some(size) = values.get(SIZEKEY).and_then(|k| k.as_str()) {
+                                span."smallseparate" {
+                                    b { "Size:" }
+                                    span."size" { (size) }
+                                }
+                            }
+                        }
+                    }
+                }
+                //Next check is if there's even any text to show
                 @if let Some(text) = &thread.thread.text {
                     div."content bbcode" { (PreEscaped(bbcode.parse_profiled_opt(&text, format!("program-{}", i(&thread.thread.id))))) }
                 }
-                @if thread.thread.literalType == Some(SBSContentType::program.to_string()) {
-                    div."programinfo" {
-
-                    }
-                }
             }
         }
-        section data-selected=[selected_post_id] {
+        section #"thread-top" data-selected=[selected_post_id] {
             @for (index,post) in thread.posts.iter().enumerate() {
                 (post_item(&data.config, bbcode, post, &thread.thread, selected_post_id, users, start_num + index as i32))
                 @if index < thread.posts.len() - 1 { hr."smaller"; }
             }
             div."smallseparate pagelist" {
                 @for page in pages {
-                    a."current"[page.current] href={(forum_thread_link(&data.config, &thread.thread))"?page="(page.page)} { (page.text) }
+                    a."current"[page.current] href={(forum_thread_link(&data.config, &thread.thread))"?page="(page.page)"#thread-top"} { (page.text) }
                 }
             }
         }
