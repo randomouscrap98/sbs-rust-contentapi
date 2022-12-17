@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::*;
+use super::super::*;
 use contentapi::conversion::*;
 use contentapi::*;
 
@@ -451,7 +451,7 @@ pub fn forum_path(config: &LinkConfig, path: &Vec<ForumPathItem>) -> Markup {
 pub fn threadicon(config: &LinkConfig, thread: &ForumThread) -> Markup { //neutral: bool, sticky: bool, locked: bool) -> Markup {
     html! {
         div."threadicon smallseparate" {
-            @if thread.neutral { (_pagesys::pageicon(config, &thread.thread)) }
+            @if thread.neutral { (system::page::pageicon(config, &thread.thread)) }
             @if thread.sticky { span{"📌"} }
             @if thread.locked { span{"🔒"} }
         }

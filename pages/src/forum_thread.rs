@@ -5,7 +5,7 @@ use bbscope::BBCode;
 use contentapi::{conversion::*, SBSContentType};
 use contentapi::{FullRequest, SpecialCount};
 
-use crate::_forumsys::*;
+use crate::system::forum::*;
 
 use super::*;
 

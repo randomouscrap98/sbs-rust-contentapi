@@ -5,7 +5,7 @@ use contentapi::conversion::*;
 use contentapi::{User, FullRequest};
 use contentapi::endpoints::ApiContext;
 
-use crate::_forumsys::*;
+use crate::system::forum::*;
 
 use super::*;
 

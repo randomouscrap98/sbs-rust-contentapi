@@ -2,7 +2,7 @@
 use contentapi::conversion::*;
 use contentapi::endpoints::ApiContext;
 
-use crate::_forumsys::*;
+use crate::system::forum::*;
 
 use super::*;
 

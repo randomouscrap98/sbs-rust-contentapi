@@ -1,5 +1,5 @@
 
-use super::*;
+use super::super::*;
 
 pub static DOWNLOADKEYKEY: &str = "dlkey";
 pub static SYSTEMSKEY: &str = "systems";
@@ -77,6 +77,54 @@ pub fn pageicon(config: &LinkConfig, page: &Content) -> Markup {
         @else {
             //This must be a resource!
             img title="Resource" src={(config.resource_root)"/sb-page.png"};
+        }
+    }
+}
+
+pub fn page_card(config: &LinkConfig, page: &Content, users: &HashMap<i64, User>) -> Markup {
+    let user = user_or_default(users.get(&page.createUserId.unwrap_or(0)));
+    //very wasteful allocations but whatever
+    let link = forum_thread_link(config, page);
+    let values = match &page.values {
+        Some(values) => values.clone(),
+        None => HashMap::new()
+    };
+    html!{
+        div.{"pagecard "(s(&page.literalType))} {
+            div."cardmain" {
+                div."cardtext" {
+                    a."flatlink" href=(link) { h3 { (s(&page.name)) } }
+                    div."description" { (s(&page.description)) }
+                }
+                //Conditionally render the "cardimage" container
+                @if let Some(images) = values.get(IMAGESKEY).and_then(|k| k.as_array()) {
+                    //we now have the images: we just need the first one (it's a hash?)
+                    @if let Some(image) = images.get(0).and_then(|i| i.as_str()) {
+                        a."cardimage" href=(link) {
+                            img src=(image_link(config, image, 200, false));
+                        }
+                    }
+                }
+            }
+            div."smallseparate cardbottom" {
+                a."user flatlink" href=(user_link(config, &user)) { (user.username) }
+                //This may have conditional display? I don't know, depends on how much room there is!
+                time."aside" datetime=(d(&page.createDate)) { (timeago_o(&page.createDate)) } 
+                //div."keyspec smallseparate" {
+                    @if let Some(key) = values.get(DOWNLOADKEYKEY).and_then(|k| k.as_str()) {
+                        span."key" { (key) }
+                    }
+                    @else if s(&page.literalType) == PROGRAMTYPE {
+                        span."key error" { "REMOVED" }
+                    }
+                    @else {
+                        span."key" { /* nothing! just a placeholder! */ }
+                    }
+                    div."systems" {
+                        (pageicon(config, page))
+                    }
+                //}
+            }
         }
     }
 }
