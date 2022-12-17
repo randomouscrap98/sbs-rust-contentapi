@@ -13,14 +13,14 @@ pub fn render(data: MainLayoutData, bbcode: &mut BBCode, thread: ForumThread, us
     pages: Vec<ForumPagelistItem>, start_num: i32, selected_post_id: Option<i64>) -> String 
 {
     layout(&data, html!{
-        (style(&data.config, "/forum.css"))
+        (style(&data.config, "/forpage/forum.css"))
         section {
             h1 { (s(&thread.thread.name)) }
             (forum_path(&data.config, &path))
             div."foruminfo smallseparate aside" {
                 (threadicon(&data.config, &thread))
                 span {
-                    b { "OP: " }
+                    /*b { "By: " }*/
                     @if let Some(user) = users.get(&thread.thread.createUserId.unwrap_or(0)) {
                         a."flatlink" href=(user_link(&data.config, user)){ (user.username) }
                     }
@@ -31,12 +31,16 @@ pub fn render(data: MainLayoutData, bbcode: &mut BBCode, thread: ForumThread, us
                 }
             }
         }
-        @if thread.thread.literalType == Some(SBSContentType::program.to_string()) {
+        @if thread.thread.literalType != Some(SBSContentType::forumthread.to_string()) {
             section {
                 @if let Some(text) = &thread.thread.text {
                     div."content bbcode" { (PreEscaped(bbcode.parse_profiled_opt(&text, format!("program-{}", i(&thread.thread.id))))) }
                 }
-                div."programinfo" {}
+                @if thread.thread.literalType == Some(SBSContentType::program.to_string()) {
+                    div."programinfo" {
+
+                    }
+                }
             }
         }
         section data-selected=[selected_post_id] {

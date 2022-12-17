@@ -21,9 +21,7 @@
 }
 
 .threadicon > * {
-    /*width: 1.7em;*/
     width: 1.5em;
-    margin-right: 0.5em;
 }
 
 .thread h3 {

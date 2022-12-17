@@ -8,7 +8,7 @@ use super::*;
 
 pub fn render(data: MainLayoutData, categories: Vec<ForumCategory>) -> String {
     layout(&data, html!{
-        (style(&data.config, "/forum.css"))
+        (style(&data.config, "/forpage/forum.css"))
         section { h1 { "Forum Topics" } }
         section {
             @for (index, category_container) in categories.iter().enumerate() {

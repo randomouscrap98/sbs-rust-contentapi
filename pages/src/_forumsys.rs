@@ -450,7 +450,7 @@ pub fn forum_path(config: &LinkConfig, path: &Vec<ForumPathItem>) -> Markup {
 //Weird circular dependency... oh well, maybe I'll fix later
 pub fn threadicon(config: &LinkConfig, thread: &ForumThread) -> Markup { //neutral: bool, sticky: bool, locked: bool) -> Markup {
     html! {
-        div."threadicon" {
+        div."threadicon smallseparate" {
             @if thread.neutral { (_pagesys::pageicon(config, &thread.thread)) }
             @if thread.sticky { span{"📌"} }
             @if thread.locked { span{"🔒"} }
