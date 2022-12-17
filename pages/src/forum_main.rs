@@ -2,9 +2,9 @@
 use contentapi::conversion::*;
 use contentapi::endpoints::ApiContext;
 
-use crate::system::forum::*;
-
 use super::*;
+use system::layout::*;
+use system::forum::*;
 
 pub fn render(data: MainLayoutData, categories: Vec<ForumCategory>) -> String {
     layout(&data, html!{

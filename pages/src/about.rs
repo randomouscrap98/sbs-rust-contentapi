@@ -1,4 +1,5 @@
 use super::*;
+use system::layout::*;
 
 pub fn render(data: MainLayoutData) -> String {
     layout(&data, html!{

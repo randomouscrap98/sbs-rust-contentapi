@@ -5,9 +5,10 @@ use bbscope::BBCode;
 use contentapi::{conversion::*, SBSContentType};
 use contentapi::{FullRequest, SpecialCount};
 
-use crate::system::forum::*;
 
 use super::*;
+use system::layout::*;
+use system::forum::*;
 
 pub fn render(data: MainLayoutData, bbcode: &mut BBCode, thread: ForumThread, users: &HashMap<i64,User>, path: Vec<ForumPathItem>,
     pages: Vec<ForumPagelistItem>, start_num: i32, selected_post_id: Option<i64>) -> String 

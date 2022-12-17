@@ -8,6 +8,7 @@ use contentapi::endpoints::ApiContext;
 use crate::system::forum::*;
 
 use super::*;
+use system::layout::*;
 
 
 pub fn render(data: MainLayoutData, category: ForumCategory, path: Vec<ForumPathItem>, pages: Vec<ForumPagelistItem>) -> String {
