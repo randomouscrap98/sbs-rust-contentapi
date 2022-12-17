@@ -1,24 +1,13 @@
 use contentapi::{*, conversion::map_users};
 
 use super::*;
+use crate::_pagesys::*;
 
 //use serde_json::Value;
 
 // Eventually move this somewhere else?
 //static PROGRAMTYPE: &str = "program";
 //static RESOURCETYPE: &str = "resource";
-static DOWNLOADKEYKEY: &str = "dlkey";
-static SYSTEMSKEY: &str = "systems";
-static IMAGESKEY: &str = "images";
-static FORCONTENTKEY: &str = "forcontent";
-
-static CATEGORYTYPE: &str = "category";
-static PROGRAMTYPE: &str = "program";
-static RESOURCETYPE: &str = "resource";
-
-static POPSCORE1SORT: &str = "popScore1_desc";
-static ANYSYSTEM: &str = "any";
-
 pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, User>, search: Search,
     categories: Vec<Category>) -> String 
 {
@@ -105,7 +94,7 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
 pub fn page_card(config: &LinkConfig, page: &Content, users: &HashMap<i64, User>) -> Markup {
     let user = user_or_default(users.get(&page.createUserId.unwrap_or(0)));
     //very wasteful allocations but whatever
-    let systems_map = SubmissionSystem::list().into_iter().collect::<HashMap<&str, &str>>();
+    let link = forum_thread_link(config, page);
     let values = match &page.values {
         Some(values) => values.clone(),
         None => HashMap::new()
@@ -114,14 +103,14 @@ pub fn page_card(config: &LinkConfig, page: &Content, users: &HashMap<i64, User>
         div.{"pagecard "(s(&page.literalType))} {
             div."cardmain" {
                 div."cardtext" {
-                    a."flatlink" href=(page_link(config, page)) { h3 { (s(&page.name)) } }
+                    a."flatlink" href=(link) { h3 { (s(&page.name)) } }
                     div."description" { (s(&page.description)) }
                 }
                 //Conditionally render the "cardimage" container
                 @if let Some(images) = values.get(IMAGESKEY).and_then(|k| k.as_array()) {
                     //we now have the images: we just need the first one (it's a hash?)
                     @if let Some(image) = images.get(0).and_then(|i| i.as_str()) {
-                        a."cardimage" href=(page_link(config, page)) {
+                        a."cardimage" href=(link) {
                             img src=(image_link(config, image, 200, false));
                         }
                     }
@@ -142,20 +131,7 @@ pub fn page_card(config: &LinkConfig, page: &Content, users: &HashMap<i64, User>
                         span."key" { /* nothing! just a placeholder! */ }
                     }
                     div."systems" {
-                        //Don't forget the program type! if it exists anyway
-                        @if let Some(systems) = values.get(SYSTEMSKEY).and_then(|k| k.as_array()) {
-                            @for system in systems {
-                                @if let Some(system) = system.as_str() {
-                                    @if let Some(title) = systems_map.get(system) {
-                                        img title=(title) src={(config.resource_root)"/"(system)".svg"};
-                                    }
-                                }
-                            }
-                        }
-                        @else {
-                            //This must be a resource!
-                            img title="Resource" src={(config.resource_root)"/sb-page.png"};
-                        }
+                        (pageicon(config, page))
                     }
                 //}
             }
@@ -182,48 +158,6 @@ fn page_navigation(data: &MainLayoutData, search: &Search) -> Markup {
     }
 }
 
-
-pub enum SubmissionSystem { }
-
-impl SubmissionSystem {
-    pub fn list() -> Vec<(&'static str, &'static str)> {
-        //Idk, whatever
-        vec![
-            (ANYSYSTEM, "Any"), 
-            ("3ds", "Nintendo 3DS"), 
-            ("wiiu", "Nintendo WiiU"), 
-            ("switch", "Nintendo Switch")
-        ].into_iter().collect()
-    }
-}
-
-pub enum SubmissionType { }
-
-impl SubmissionType {
-    pub fn list() -> HashMap<&'static str, &'static str> {
-        //Idk, whatever
-        vec![
-            (PROGRAMTYPE, "Programs"), 
-            (RESOURCETYPE, "Resources")
-        ].into_iter().collect()
-    }
-}
-
-pub enum SubmissionOrder { }
-
-impl SubmissionOrder {
-    pub fn list() -> Vec<(&'static str, &'static str)> {
-        vec![
-            (POPSCORE1SORT, "Popular"), 
-            ("id_desc", "Created (newest)"), 
-            ("id", "Created (oldest)"),
-            ("lastRevisionId_desc", "Edited (newest)"),
-            ("lastRevisionId", "Edited (oldest)"),
-            ("name", "Alphabetical (A-Z)"),
-            ("name_desc", "Alphabetical (Z-A)"),
-        ].into_iter().collect()
-    }
-}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]

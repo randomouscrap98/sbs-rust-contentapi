@@ -13,6 +13,7 @@ pub mod register;
 pub mod registerconfirm;
 pub mod user;
 pub mod _forumsys; //non-page mod
+pub mod _pagesys; //non-page mod
 pub mod forum_main;
 pub mod forum_category;
 pub mod forum_thread;

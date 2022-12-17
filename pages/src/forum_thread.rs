@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 use bbscope::BBCode;
-use contentapi::conversion::*;
+use contentapi::{conversion::*, SBSContentType};
 use contentapi::{FullRequest, SpecialCount};
 
 use crate::_forumsys::*;
@@ -29,6 +29,14 @@ pub fn render(data: MainLayoutData, bbcode: &mut BBCode, thread: ForumThread, us
                     b { "Created: " }
                     time datetime=(d(&thread.thread.createDate)) { (timeago_o(&thread.thread.createDate)) }
                 }
+            }
+        }
+        @if thread.thread.literalType == Some(SBSContentType::program.to_string()) {
+            section {
+                @if let Some(text) = &thread.thread.text {
+                    div."content bbcode" { (PreEscaped(bbcode.parse_profiled_opt(&text, format!("program-{}", i(&thread.thread.id))))) }
+                }
+                div."programinfo" {}
             }
         }
         section data-selected=[selected_post_id] {

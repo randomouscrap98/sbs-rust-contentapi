@@ -18,12 +18,12 @@
     flex: none;
     display: flex;
     align-items: center;
-    /*margin-right: 0.7em;*/
 }
 
 .threadicon > * {
     /*width: 1.7em;*/
     width: 1.5em;
+    margin-right: 0.5em;
 }
 
 .thread h3 {

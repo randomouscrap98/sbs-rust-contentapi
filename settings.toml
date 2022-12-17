@@ -17,7 +17,7 @@ default_display_pages = 50  # pages to show per page (in search)
 
 # Special SBS stuff (may store in database instead?)
 # Category order is a "starts with" matching for order
-forum_category_order = ["Programming", "FAQ", "General", "Talk", "SmileBASIC Bug", "Site"]
+forum_category_order = ["Programming", "FAQ", "General", "Talk", "SmileBASIC Bug", "Submissions", "Site"]
 
 # file limit is 10 MB, but server will resize as necessary
 body_maxsize = 10000000

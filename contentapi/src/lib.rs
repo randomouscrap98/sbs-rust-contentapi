@@ -78,6 +78,9 @@ enum_type!{
     SBSContentType => {
         forumcategory,
         forumthread,
+        submissions,
+        program,
+        resource,
     }
 }
 
@@ -269,6 +272,8 @@ pub struct Request
     pub query: Option<String>, 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub order: Option<String>,
+    #[serde(default)]
+    pub expensive: bool,
     pub limit: i64, //Everything is i64 so it's easier to serialize/deserialize
     pub skip: i64
 }
@@ -302,7 +307,8 @@ macro_rules! build_request {
             query: $query,
             order: $order,
             limit: $limit.into(),
-            skip: $skip.into()
+            skip: $skip.into(),
+            expensive: false
         }
     };
 }

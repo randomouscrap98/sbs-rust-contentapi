@@ -6,9 +6,9 @@ use contentapi::*;
 
 
 //Not sure if we need values, but I NEED permissions to know if the thread is locked
-pub static THREADFIELDS : &str = "id,name,lastCommentId,literalType,hash,parentId,commentCount,createDate,createUserId,values,permissions";
+pub static THREADFIELDS : &str = "id,name,lastCommentId,literalType,contentType,hash,parentId,commentCount,createDate,createUserId,values,permissions";
 //Need values to know the stickies
-pub static CATEGORYFIELDS: &str = "id,hash,name,description,literalType,values";
+pub static CATEGORYFIELDS: &str = "id,hash,name,description,literalType,contentType,values";
 pub static THREADKEY: &str = "thread";
 pub static CATEGORYKEY: &str = "category";
 pub static PREMESSAGEKEY: &str = "premessage";
@@ -105,11 +105,17 @@ impl CleanedPreCategory {
             Some(ref values) => Ok(values),
             None => Err(Error::Other(String::from("Given category didn't have values!")))
         }?;
-        let sticky_value = cvalues.get("stickies").ok_or(Error::Other(String::from("Category didn't have stickes value!!")))?;
-        let sticky_array = sticky_value.as_array().ok_or(Error::Other(String::from("Sticky wasn't array!")))?;
-        let stickies = sticky_array.iter().map(|s| -> Result<i64, Error> { 
-            s.as_i64().ok_or(Error::Other(format!("Couldn't convert sticky value {}", s)))
-        }).collect::<Result<Vec<i64>, _>>()?;
+        let stickies;
+        //it is OK for something to not have stickied threads! 
+        if let Some(sticky_value) = cvalues.get("stickies") { //}.ok_or(Error::Other(String::from("Category didn't have stickies value!!")))?;
+            let sticky_array = sticky_value.as_array().ok_or(Error::Other(String::from("Sticky wasn't array!")))?;
+            stickies = sticky_array.iter().map(|s| -> Result<i64, Error> { 
+                s.as_i64().ok_or(Error::Other(format!("Couldn't convert sticky value {}", s)))
+            }).collect::<Result<Vec<i64>, _>>()?;
+        }
+        else {
+            stickies = Vec::new();
+        }
         //let stickies = category.get_stickies()?;
         Ok(CleanedPreCategory { category: category, stickies, id, name })
     }
@@ -129,9 +135,8 @@ pub fn get_category_request(hash: Option<String>, fcid: Option<i64>) -> FullRequ
 {
     //The request which we will spend the entire function building
     let mut request = FullRequest::new();
-    add_value!(request, "category_literal", SBSContentType::forumcategory.to_string());
 
-    let mut real_query = String::from("literalType = @category_literal and !notdeleted()");
+    let mut real_query = String::from("!notdeleted()");
 
     if let Some(hash) = hash {
         add_value!(request, "hash", hash);
@@ -141,6 +146,15 @@ pub fn get_category_request(hash: Option<String>, fcid: Option<i64>) -> FullRequ
         add_value!(request, "fcid_key", "fcid");
         add_value!(request, "fcid", fcid);
         real_query.push_str(" and !valuelike(@fcid_key, @fcid)");
+    }
+    else {
+        //This is the "general" case, where yes, we actually do want to limit to categories. Otherwise,
+        //if you pass a hash... it'll just work, regardless if it's a category or not.
+        add_value!(request, "category_literals", vec![
+            SBSContentType::forumcategory.to_string(),
+            SBSContentType::submissions.to_string()
+        ]);
+        real_query.push_str(" and literalType in @category_literals");
     }
 
     let mut category_request = build_request!(
@@ -158,7 +172,8 @@ pub fn get_category_request(hash: Option<String>, fcid: Option<i64>) -> FullRequ
 pub fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip: i32, get_stickies: bool) -> FullRequest
 {
     let mut request = FullRequest::new();
-    add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
+    add_value!(request, "page_type", ContentType::PAGE);
+    //add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
 
     let mut keys = Vec::new();
 
@@ -169,7 +184,7 @@ pub fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip
         request.values.insert(sticky_key.clone(), category.stickies.clone().into());
 
         //Standard threads get (for latest N threads)
-        let base_query = format!("parentId = {{{{{category_id}}}}} and literalType = @thread_literal and !notdeleted()");
+        let base_query = format!("parentId = {{{{{category_id}}}}} and contentType = @page_type and !notdeleted()");
 
         //Regular thread request. Needs to specifically NOT be the stickies
         let mut threads_request = build_request!(
@@ -204,7 +219,7 @@ pub fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip
         //Thread count get (if the previous is too expensive, consider just doing this)
         let mut count_request = build_request!(
             RequestType::content, 
-            String::from("specialCount,parentId,literalType,id"), 
+            String::from("specialCount,parentId,literalType,contentType,id"), 
             base_query.clone()
         );
         count_request.name = Some(Keygen::threadcount(category_id));
@@ -239,25 +254,27 @@ pub fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip
 pub fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option<i64>, thread_hash: Option<String>) -> FullRequest 
 {
     let mut request = FullRequest::new();
-    add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
-    add_value!(request, "category_literal", SBSContentType::forumcategory.to_string());
+    //add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
+    //add_value!(request, "category_literal", SBSContentType::forumcategory.to_string());
 
     let mut post_limited = false;
     let mut post_query = String::from("!basiccomments()");
-    let mut thread_query = format!("literalType = @thread_literal and !notdeleted()");
 
     //If you call it with both, it will limit to both (chances are that's not what you want)
     if let Some(fpid) = fpid {
         add_value!(request, "fpid", fpid);
         add_value!(request, "fpidkey", "fpid");
-        post_query = format!("{} and !valuelike(@fpidkey, @fpid)", post_query);
+        post_query.push_str(" and !valuelike(@fpidkey, @fpid)");
         post_limited = true;
     }
     if let Some(post_id) = post_id{
         add_value!(request, "postId", post_id);
-        post_query = format!("{} and id = @postId", post_query);
+        post_query.push_str(" and id = @postId");
         post_limited = true;
     }
+
+    //let mut thread_query = format!("literalType = @thread_literal and !notdeleted()");
+    let mut thread_query = String::from("!notdeleted()");
 
     //Add the pre-lookup post get so we can limit the thread by it. This will prevent users
     //from sending random hashes but with valid post ids, since the thread won't be found
@@ -274,22 +291,27 @@ pub fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option
         thread_query = format!("{} and id in @{}.contentId", thread_query, PREMESSAGEKEY);
     }
 
-    //Limit thread lookup based on given params. You probably don't want both of these limits course
+    //Take hashes over ftid if you gave both. Fail if neither are given
     if let Some(ftid) = ftid {
         add_value!(request, "ftid", ftid);
         add_value!(request, "ftidkey", "ftid");
         thread_query = format!("{} and !valuelike(@ftidkey, @ftid)", thread_query);
     }
-    if let Some(thread_hash) = thread_hash {
+    else if let Some(thread_hash) = thread_hash {
         add_value!(request, "hash", thread_hash);
         thread_query = format!("{} and hash = @hash", thread_query);
+    }
+    else {
+        //Is this acceptable? I mean you called it wrong...
+        panic!("You must pass at least one of either 'ftid' or 'thread_hash' to get_prepost_request()!");
     }
 
     let mut thread_request = build_request!(
         RequestType::content,
-        String::from(THREADFIELDS),
+        String::from("*"), //Here we ask for "everything" because we will be rendering all the thread data now
         thread_query
     );
+    thread_request.expensive = true;
     thread_request.name = Some(String::from(THREADKEY));
     request.requests.push(thread_request);
 
@@ -297,7 +319,8 @@ pub fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option
     let mut category_request = build_request!(
         RequestType::content, 
         String::from(CATEGORYFIELDS),
-        format!("literalType = @category_literal and !notdeleted() and id in @{}.parentId", THREADKEY)
+        format!("!notdeleted() and id in @{}.parentId", THREADKEY)
+        //format!("literalType = @category_literal and !notdeleted() and id in @{}.parentId", THREADKEY)
     );
     category_request.name = Some(String::from(CATEGORYKEY));
     request.requests.push(category_request);
@@ -423,10 +446,12 @@ pub fn forum_path(config: &LinkConfig, path: &Vec<ForumPathItem>) -> Markup {
     }
 }
 
+
+//Weird circular dependency... oh well, maybe I'll fix later
 pub fn threadicon(config: &LinkConfig, thread: &ForumThread) -> Markup { //neutral: bool, sticky: bool, locked: bool) -> Markup {
     html! {
         div."threadicon" {
-            @if thread.neutral { img src={(config.resource_root)"/sb-page.png"}; }
+            @if thread.neutral { (_pagesys::pageicon(config, &thread.thread)) }
             @if thread.sticky { span{"📌"} }
             @if thread.locked { span{"🔒"} }
         }
