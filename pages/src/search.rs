@@ -16,6 +16,7 @@ static CATEGORYTYPE: &str = "category";
 static PROGRAMTYPE: &str = "program";
 static RESOURCETYPE: &str = "resource";
 
+static POPSCORE1SORT: &str = "popScore1_desc";
 static ANYSYSTEM: &str = "any";
 
 pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, User>, search: Search,
@@ -104,7 +105,7 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
 pub fn page_card(config: &LinkConfig, page: &Content, users: &HashMap<i64, User>) -> Markup {
     let user = user_or_default(users.get(&page.createUserId.unwrap_or(0)));
     //very wasteful allocations but whatever
-    let systems_map = SubmissionSystem::list();
+    let systems_map = SubmissionSystem::list().into_iter().collect::<HashMap<&str, &str>>();
     let values = match &page.values {
         Some(values) => values.clone(),
         None => HashMap::new()
@@ -185,7 +186,7 @@ fn page_navigation(data: &MainLayoutData, search: &Search) -> Markup {
 pub enum SubmissionSystem { }
 
 impl SubmissionSystem {
-    pub fn list() -> HashMap<&'static str, &'static str> {
+    pub fn list() -> Vec<(&'static str, &'static str)> {
         //Idk, whatever
         vec![
             (ANYSYSTEM, "Any"), 
@@ -211,8 +212,9 @@ impl SubmissionType {
 pub enum SubmissionOrder { }
 
 impl SubmissionOrder {
-    pub fn list() -> HashMap<&'static str, &'static str> {
+    pub fn list() -> Vec<(&'static str, &'static str)> {
         vec![
+            (POPSCORE1SORT, "Popular"), 
             ("id_desc", "Created (newest)"), 
             ("id", "Created (oldest)"),
             ("lastRevisionId_desc", "Edited (newest)"),
@@ -240,8 +242,8 @@ impl Default for Search {
     fn default() -> Self {
         Self {
             search: None,
-            order: String::from("id_desc"), //SubmissionOrder::id_desc, //Some(String::from("id_desc")), //Inverse create time
-            subtype: String::from("program"), ////SubmissionType::Program,   //Show programs first!
+            order: String::from(POPSCORE1SORT), //SubmissionOrder::id_desc, //Some(String::from("id_desc")), //Inverse create time
+            subtype: String::from(PROGRAMTYPE), ////SubmissionType::Program,   //Show programs first!
             system: String::from(ANYSYSTEM),
             //system: None,
             category: None,
@@ -300,7 +302,7 @@ pub async fn get_render(context: PageContext, search: Search, per_page: i32) -> 
     //let order = String::from(if search.oldest { "id" } else { "id_desc" });
     let main_request = build_request!(
         RequestType::content, 
-        String::from("id,hash,contentType,literalType,values,name,description,createUserId,createDate,lastRevisionId,"), 
+        String::from("id,hash,contentType,literalType,values,name,description,createUserId,createDate,lastRevisionId,popScore1"), 
         query, 
         search.order.clone(), 
         per_page,
