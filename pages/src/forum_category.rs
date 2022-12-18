@@ -16,6 +16,7 @@ pub fn render(data: MainLayoutData, category: ForumCategory, path: Vec<ForumPath
         (style(&data.config, "/forpage/forum.css"))
         section {
             h1 { (s(&category.category.name)) }
+            p."aside" {(s(&category.category.description))}
             (forum_path(&data.config, &path))
         }
         section {
