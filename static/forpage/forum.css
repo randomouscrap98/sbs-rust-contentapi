@@ -39,6 +39,12 @@
     align-items: flex-start;
 }
 
+.post.current {
+    border-left: 0.4em solid var(--bg_activeselect);
+    padding-left: 0.4em; /* To give space between the bar (border-left) and the avatar */
+    margin-left: -0.8em; /* A hack to make the border extend beyond the bounds of the post */
+}
+
 .postleft {
     flex: none;
     margin-right: 0.75em;

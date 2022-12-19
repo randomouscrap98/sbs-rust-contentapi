@@ -34,9 +34,9 @@ checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
 name = "bbscope"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e426ccdf956d8096e36f952a71910ce5912a5ddff8dbb443d8d439239c17256a"
+checksum = "a6952d36baf6e0367cf9995f052c1a8aeffa9ab2d43e3f8dd9c803abe738b8f5"
 dependencies = [
  "html-escape",
  "onestop",

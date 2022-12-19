@@ -154,7 +154,7 @@ pub fn post_item(config: &LinkConfig, bbcode: &mut BBCode, post: &Message, threa
             div."postright" {
                 div."postheader" {
                     a."flatlink username" href=(user_link(config, &user)) { (&user.username) } 
-                    a."sequence" title=(i(&post.id)) href=(forum_post_link(config, post, thread)){ "#" (sequence) } 
+                    a."sequence" target="_top" title=(i(&post.id)) href=(forum_post_link(config, post, thread)){ "#" (sequence) } 
                 }
                 @if let Some(text) = &post.text {
                     div."content bbcode" { (PreEscaped(bbcode.parse_profiled_opt(text, format!("post-{}",i(&post.id))))) }
