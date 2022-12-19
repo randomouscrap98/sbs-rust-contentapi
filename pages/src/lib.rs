@@ -6,7 +6,7 @@ pub mod activity;
 pub mod search;
 pub mod widget_imagebrowser;
 pub mod widget_bbcodepreview;
-pub mod widget_comments;
+pub mod widget_thread;
 pub mod userhome;
 pub mod recover;
 pub mod register;

@@ -1,132 +1,17 @@
+use crate::system::layout::layout;
+use crate::widget_thread::*;
 
-use std::collections::HashMap;
+use super::*;
+use system::forum::*;
 
-use bbscope::BBCode;
-use contentapi::{conversion::*, SBSContentType};
+use contentapi::conversion::*;
 use contentapi::{FullRequest, SpecialCount};
 
 
-use super::*;
-use system::layout::*;
-use system::forum::*;
-use system::page::*; //Again, controversial? idk
-
-pub fn render(data: MainLayoutData, bbcode: &mut BBCode, thread: ForumThread, users: &HashMap<i64,User>, path: Vec<ForumPathItem>,
-    pages: Vec<ForumPagelistItem>, start_num: i32, selected_post_id: Option<i64>) -> String 
-{
-    let values = match &thread.thread.values { Some(values) => values.clone(), None => HashMap::new() };
-    layout(&data, html!{
-        (style(&data.config, "/forpage/forum.css"))
-        section {
-            h1 { (s(&thread.thread.name)) }
-            (forum_path(&data.config, &path))
-            div."foruminfo smallseparate aside" {
-                (threadicon(&data.config, &thread))
-                span {
-                    /*b { "By: " }*/
-                    @if let Some(user) = users.get(&thread.thread.createUserId.unwrap_or(0)) {
-                        a."flatlink" href=(user_link(&data.config, user)){ (user.username) }
-                    }
-                }
-                span {
-                    b { "Created: " }
-                    time datetime=(d(&thread.thread.createDate)) { (timeago_o(&thread.thread.createDate)) }
-                }
-            }
-        }
-        @if thread.thread.literalType != Some(SBSContentType::forumthread.to_string()) {
-            section {
-                //First check is if it's a program, then we float this box to the right
-                @if thread.thread.literalType == Some(SBSContentType::program.to_string()) {
-                    div."programinfo" {
-                        @if let Some(images) = values.get(IMAGESKEY).and_then(|k| k.as_array()) {
-                            div."gallery" {
-                                //we now have the images: we just need the first one (it's a hash?)
-                                @if let Some(image) = images.get(0).and_then(|i| i.as_str()) {
-                                    img src=(base_image_link(&data.config, image));
-                                }
-                            }
-                        }
-                        div."extras mediumseparate" {
-                            @if let Some(key) = values.get(DOWNLOADKEYKEY).and_then(|k| k.as_str()) {
-                                span."smallseparate" {
-                                    b { "Download:" }
-                                    span."key" { (key) }
-                                    (threadicon(&data.config, &thread))
-                                }
-                            }
-                            @if let Some(version) = values.get(VERSIONKEY).and_then(|k| k.as_str()) {
-                                span."smallseparate" {
-                                    b { "Version:" }
-                                    span."version" { (version) }
-                                }
-                            }
-                            @if let Some(size) = values.get(SIZEKEY).and_then(|k| k.as_str()) {
-                                span."smallseparate" {
-                                    b { "Size:" }
-                                    span."size" { (size) }
-                                }
-                            }
-                        }
-                    }
-                }
-                //Next check is if there's even any text to show
-                @if let Some(text) = &thread.thread.text {
-                    div."content bbcode" { (PreEscaped(bbcode.parse_profiled_opt(&text, format!("program-{}", i(&thread.thread.id))))) }
-                }
-            }
-        }
-        section #"thread-top" data-selected=[selected_post_id] {
-            @for (index,post) in thread.posts.iter().enumerate() {
-                (post_item(&data.config, bbcode, post, &thread.thread, selected_post_id, users, start_num + index as i32))
-                @if index < thread.posts.len() - 1 { hr."smaller"; }
-            }
-            div."smallseparate pagelist" {
-                @for page in pages {
-                    a."current"[page.current] href={(forum_thread_link(&data.config, &thread.thread))"?page="(page.page)"#thread-top"} { (page.text) }
-                }
-            }
-        }
-    }).into_string()
+pub fn render(mut context: PageContext, config: PostsConfig) -> String {
+    let main_page = widget_thread::render_posts(&mut context, config);
+    layout(&context.layout_data, main_page).into_string()
 }
-
-fn post_item(config: &LinkConfig, bbcode: &mut BBCode, post: &Message, thread: &Content, selected_post_id: Option<i64>, 
-    users: &HashMap<i64, User>, sequence: i32) -> Markup 
-{
-    let user = user_or_default(users.get(&post.createUserId.unwrap_or(0)));
-    let mut class = String::from("post");
-    if selected_post_id == post.id { class.push_str(" current") }
-    html! {
-        div.(class) #{"post_"(i(&post.id))} {
-            div."postleft" {
-                img."avatar" src=(image_link(config, &user.avatar, 100, true)); 
-            }
-            div."postright" {
-                div."postheader" {
-                    a."flatlink username" href=(user_link(config, &user)) { (&user.username) } 
-                    a."sequence" title=(i(&post.id)) href=(forum_post_link(config, post, thread)){ "#" (sequence) } 
-                }
-                @if let Some(text) = &post.text {
-                    div."content bbcode" { (PreEscaped(bbcode.parse_profiled_opt(text, format!("post-{}",i(&post.id))))) }
-                }
-                div."postfooter" {
-                    div."history" {
-                        time."aside" datetime=(d(&post.createDate)) { (timeago_o(&post.createDate)) } 
-                        @if let Some(edit_user_id) = post.editUserId {
-                            time."aside" datetime=(d(&post.editDate)) { 
-                                "Edited "(timeago_o(&post.editDate))" by "
-                                @if let Some(edit_user) = users.get(&edit_user_id) {
-                                    a."flatlink" href=(user_link(config,&edit_user)){ (&edit_user.username) }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 
 async fn render_thread(mut context: PageContext, pre_request: FullRequest, per_page: i32, 
     page: Option<i32>) -> Result<Response, Error> 
@@ -170,16 +55,16 @@ async fn render_thread(mut context: PageContext, pre_request: FullRequest, per_p
 
     //Construct before borrowing 
     let path = vec![ForumPathItem::root(), ForumPathItem::from_category(&category.category), ForumPathItem::from_thread(&thread)];
-    Ok(Response::Render(render(
-        context.layout_data, 
-        &mut context.bbcode, 
-        ForumThread::from_content(thread, &messages_raw, &category.stickies)?, 
-        &map_users(users_raw),
-        path,
-        get_pagelist(comment_count as i32, per_page, page),
-        1 + per_page * page,
-        selected_post.and_then(|m| m.id)
-    )))
+    Ok(Response::Render(render(context, PostsConfig {
+        thread: ForumThread::from_content(thread, &messages_raw, &category.stickies)?, 
+        users: map_users(users_raw),
+        path: Some(path),
+        pages: Some(get_pagelist(comment_count as i32, per_page, page)),
+        start_num: 1 + per_page * page,
+        selected_post_id: selected_post.and_then(|m| m.id),
+        render_header: true,
+        render_page: true
+    })))
 }
 
 
