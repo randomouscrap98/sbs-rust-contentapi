@@ -1,7 +1,7 @@
 use contentapi::forms::UserSensitive;
 
 use super::*;
-use system::layout::*;
+use common::layout::*;
 
 pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, email: Option<String>) -> String {
     layout(&data, html!{

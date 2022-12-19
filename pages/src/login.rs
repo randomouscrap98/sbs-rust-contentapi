@@ -1,5 +1,5 @@
 use super::*;
-use system::layout::*;
+use common::layout::*;
 use contentapi;
 
 use serde::{Serialize, Deserialize};

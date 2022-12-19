@@ -12,7 +12,7 @@ pub mod recover;
 pub mod register;
 pub mod registerconfirm;
 pub mod user;
-pub mod system; //non-page mod
+pub mod common; //non-page mod
 pub mod forum_main;
 pub mod forum_category;
 pub mod forum_thread;

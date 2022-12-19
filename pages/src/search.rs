@@ -1,8 +1,8 @@
 use contentapi::{*, conversion::map_users};
 
 use super::*;
-use system::page::*;
-use system::layout::*;
+use common::page::*;
+use common::layout::*;
 
 //use serde_json::Value;
 

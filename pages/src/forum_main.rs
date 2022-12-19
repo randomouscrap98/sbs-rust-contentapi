@@ -3,8 +3,8 @@ use contentapi::conversion::*;
 use contentapi::endpoints::ApiContext;
 
 use super::*;
-use system::layout::*;
-use system::forum::*;
+use common::layout::*;
+use common::forum::*;
 
 pub fn render(data: MainLayoutData, categories: Vec<ForumCategory>) -> String {
     layout(&data, html!{

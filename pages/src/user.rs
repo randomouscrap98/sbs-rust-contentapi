@@ -3,7 +3,7 @@ use bbscope::BBCode;
 use contentapi::{User, Content, add_value, build_request, FullRequest, RequestType};
 
 use super::*;
-use system::layout::*;
+use common::layout::*;
 
 pub fn render(data: MainLayoutData, mut bbcode: BBCode, user: Option<User>, userpage: Option<Content>) -> String {
     layout(&data, html!{

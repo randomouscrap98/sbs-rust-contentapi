@@ -1,6 +1,6 @@
 
 use super::*;
-use system::layout::*;
+use common::layout::*;
 
 pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, username: Option<String>, email: Option<String>) -> String {
     layout(&data, html!{

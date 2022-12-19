@@ -1,8 +1,9 @@
-use crate::system::layout::layout;
+use crate::common::layout::layout;
 use crate::widget_thread::*;
 
 use super::*;
-use system::forum::*;
+use common::forum::*;
+use common::pagination::*;
 
 use contentapi::conversion::*;
 use contentapi::{FullRequest, SpecialCount};

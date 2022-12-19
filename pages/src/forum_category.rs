@@ -5,13 +5,14 @@ use contentapi::conversion::*;
 use contentapi::{User, FullRequest};
 use contentapi::endpoints::ApiContext;
 
-use crate::system::forum::*;
+use crate::common::forum::*;
 
 use super::*;
-use system::layout::*;
+use common::layout::*;
+use common::pagination::*;
 
 
-pub fn render(data: MainLayoutData, category: ForumCategory, path: Vec<ForumPathItem>, pages: Vec<ForumPagelistItem>) -> String {
+pub fn render(data: MainLayoutData, category: ForumCategory, path: Vec<ForumPathItem>, pages: Vec<PagelistItem>) -> String {
     layout(&data, html!{
         (style(&data.config, "/forpage/forum.css"))
         section {

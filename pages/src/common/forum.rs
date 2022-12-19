@@ -371,35 +371,10 @@ pub fn get_finishpost_request(thread_id: i64, extra_uids: Vec<i64>, limit: i32, 
 }
 
 
-// --------------------------
-// *    FORUM FUNCTIONS     *
-// --------------------------
-
-pub fn get_pagelist(total: i32, page_size: i32, current: i32) -> Vec<ForumPagelistItem>
-{
-    let mut pagelist = Vec::new();
-
-    for i in (0..total).step_by(page_size as usize) {
-        let thispage = i / page_size;
-        pagelist.push(ForumPagelistItem {
-            page: thispage + 1,
-            text: format!("{}", thispage + 1),
-            current: thispage == current
-        });
-    }
-
-    pagelist
-}
 
 // ----------------------------
 // *     TEMPLATING PLUS      *
 // ----------------------------
-
-pub struct ForumPagelistItem {
-    pub text: String,
-    pub current: bool,
-    pub page: i32
-}
 
 
 //To build the forum path at the top
@@ -451,7 +426,7 @@ pub fn forum_path(config: &LinkConfig, path: &Vec<ForumPathItem>) -> Markup {
 pub fn threadicon(config: &LinkConfig, thread: &ForumThread) -> Markup { //neutral: bool, sticky: bool, locked: bool) -> Markup {
     html! {
         div."threadicon smallseparate" {
-            @if thread.neutral { (system::page::pageicon(config, &thread.thread)) }
+            @if thread.neutral { (common::page::pageicon(config, &thread.thread)) }
             @if thread.sticky { span{"📌"} }
             @if thread.locked { span{"🔒"} }
         }

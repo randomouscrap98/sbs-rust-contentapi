@@ -1,6 +1,6 @@
 
 use super::*;
-use system::layout::*;
+use common::layout::*;
 use contentapi::*;
 use contentapi::endpoints::*;
 use contentapi::forms::UserSensitive;

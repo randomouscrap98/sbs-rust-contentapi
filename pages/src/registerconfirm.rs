@@ -1,7 +1,7 @@
 use contentapi::User;
 
 use super::*;
-use system::layout::*;
+use common::layout::*;
 
 pub fn render(data: MainLayoutData, confirm_errors: Option<Vec<String>>, email_errors: Option<Vec<String>>,
     email: Option<String>, user: Option<User>, resend_success: bool) -> String 

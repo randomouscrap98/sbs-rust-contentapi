@@ -3,8 +3,9 @@ use super::*;
 use std::collections::HashMap;
 
 use contentapi::SBSContentType;
-use system::forum::*;
-use system::page::*; //Again, controversial? idk
+use common::forum::*;
+use common::page::*; //Again, controversial? idk
+use common::pagination::*;
 use bbscope::BBCode;
 
 
@@ -15,7 +16,7 @@ pub struct PostsConfig {
     /// The path to this thread; if not given, path not rendered. Thread must also be given
     pub path: Option<Vec<ForumPathItem>>,
     /// The pages to navigate posts; not displayed if not given
-    pub pages: Option<Vec<ForumPagelistItem>>,
+    pub pages: Option<Vec<PagelistItem>>,
     pub start_num: i32,
     pub selected_post_id: Option<i64>,
 
