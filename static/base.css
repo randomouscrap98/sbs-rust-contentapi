@@ -29,6 +29,8 @@
     --code_fg: #DDD;
     --code_bg: #222;
 
+    /* Spacing which is impacted by compact settings! You don't need EVERYTHING to be
+        based off these numbers! */
     --space_big: 1.5em;
     --space_medium: 1.0em;
     --space_small: 0.5em;
@@ -51,7 +53,7 @@
 }
 
 .errorlist .error {
-    margin-bottom: 0.5em;
+    margin-bottom: var(--space_small);
     padding: 0.2em 0.4em;
     border-radius: 0.2em;
     background-color: var(--bg_error);
@@ -162,11 +164,6 @@ input[type="checkbox"] {
     box-sizing: border-box;
 }
 
-/* Oh also, all readonly inputs should be the same! */
-/*input[readonly] {
-    filter: opacity(0.75);
-}*/
-
 input[type="file"] {
     border: 1px solid var(--color_border);
 }
@@ -179,9 +176,15 @@ hr {
 }
 
 hr.smaller {
-    margin-top: var(--space_medium); /* Split so left/right are left alone */
+    /* Split so left/right are left alone; use what was set before */
+    margin-top: var(--space_medium); 
     margin-bottom: var(--space_medium);
 }
+
+
+/*  ---------------------------------------
+    Generalized navigation (pagination/etc) 
+    ---------------------------------------  */
 
 .pagelist {
     display: flex;
@@ -205,7 +208,6 @@ hr.smaller {
 /*  -------------------------------
     CONTENT STUFF (MARKUP? BBCODE?)
     -------------------------------  */
-
 
 /* Some important stuff, like content rendering */
 .content {
@@ -279,17 +281,6 @@ hr.smaller {
 .content .code .function { color: var(--code_function); } 
 .content .code { color: var(--code_fg); background-color: var(--code_bg); }
 
-/* .content .code .keyword, .content inline-code .keyword { color: #07bac6; }
-.content .code .number, .content inline-code .number { color: #f442ad; }
-.content .code .comment, .content inline-code .comment { color: #39c655; }
-.content .code .string, .content inline-code .string { color: #967de0; }
-.content .code .label, .content inline-code .label { color: #fff496; }
-.content .code .function, .content inline-code .function { color: #63b3ff; } 
-.content .code .operator, .content inline-code .operator { color: ; } 
-.content .code .variable, .content inline-code .variable { color: ; } 
-.content .code .separator, .content inline-code .separator{ color: ; } 
-*/
-
 
 /* ------------------------
    *     PAGE CARDS       *
@@ -303,12 +294,14 @@ hr.smaller {
 
 /* Pages MAY be special in the future! */
 .pagecard {
-    padding: 0.9em;
+    padding: calc(0.9 * var(--space_medium));
     border: 1px solid var(--color_divider);
-    border-radius: 0.65em;
-    flex-basis: 30em;
-    margin-right: 0.8em;
-    margin-bottom: 0.8em;
+    border-radius: calc(0.65 * var(--space_medium));
+    flex-basis: 25em; /* 30em; */
+    flex-grow: 1;
+    max-width: 35em;
+    margin-right: calc(0.8 * var(--space_medium));
+    margin-bottom: calc(0.8 * var(--space_medium));
     display: flex;
     flex-direction: column;
 }
