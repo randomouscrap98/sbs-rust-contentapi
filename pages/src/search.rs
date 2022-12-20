@@ -1,7 +1,7 @@
 use contentapi::{*, conversion::map_users};
 
 use super::*;
-use common::page::*;
+use common::submission::*;
 use common::layout::*;
 
 //use serde_json::Value;
@@ -24,7 +24,7 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                     span{"Type: "}
                     select #"search-type" name="subtype" {
                         @for (value,text) in SubmissionType::list() {
-                            option value=(value) selected[value == search.subtype] { (text) }
+                            option value=(value) selected[Some(value) == search.subtype.as_deref()] { (text) }
                         }
                     }
                 }
@@ -42,7 +42,7 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                         }
                     }
                 }
-                @if search.subtype == PROGRAMTYPE {
+                @if search.subtype.as_deref() == Some(PROGRAMTYPE) {
                     label."inline" for="search-system" {
                         span{"System: "}
                         select #"search-system" name="system" {
@@ -64,7 +64,7 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                     span { "Search: " }
                     input."" #"search-text" type="text" name="search" value=[&search.search];
                 }
-                @if search.subtype == PROGRAMTYPE {
+                @if search.subtype.as_deref() == Some(PROGRAMTYPE) {
                     label."inline" for="search-removed" {
                         span { "Show removed: " }
                         input."" #"search-text" type="checkbox" name="removed" checked[search.removed] value="true";
@@ -115,34 +115,6 @@ fn page_navigation(data: &MainLayoutData, search: &Search) -> Markup {
 }
 
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(default)]
-pub struct Search {
-    pub search: Option<String>,
-    pub order: String, //SubmissionOrder,
-    pub subtype: String, //SubmissionType,
-    //pub system: Option<String>,
-    pub system: String,
-    pub category: Option<i64>,
-    pub removed: bool,
-    pub page: i32
-}
-
-impl Default for Search {
-    fn default() -> Self {
-        Self {
-            search: None,
-            order: String::from(POPSCORE1SORT), //SubmissionOrder::id_desc, //Some(String::from("id_desc")), //Inverse create time
-            subtype: String::from(PROGRAMTYPE), ////SubmissionType::Program,   //Show programs first!
-            system: String::from(ANYSYSTEM),
-            //system: None,
-            category: None,
-            removed: false, //By default, DON'T show removed!
-            page: 0
-        }
-    }
-}
-
 pub struct Category {
     pub id: i64,
     pub name: String,
@@ -155,10 +127,9 @@ pub async fn get_render(context: PageContext, search: Search, per_page: i32) -> 
     let mut request = FullRequest::new();
     add_value!(request, "type", ContentType::PAGE);
     add_value!(request, "systemtype", ContentType::SYSTEM);
-    add_value!(request, "subtype", search.subtype.clone());
     add_value!(request, "forcontent", FORCONTENTKEY);
 
-    let mut query = String::from("contentType = @type and !notdeleted() and literalType = @subtype"); 
+    let mut query = String::from("contentType = @type and !notdeleted()"); 
     // !valuekeynotlike({{system}}) and !notdeleted()";
 
     if let Some(stext) = &search.search {
@@ -166,30 +137,42 @@ pub async fn get_render(context: PageContext, search: Search, per_page: i32) -> 
         query.push_str(" and (name like @text or !keywordlike(@text))");
     }
 
-    if let Some(category) = &search.category {
-        if *category != 0 {
+    if let Some(category) = search.category {
+        if category != 0 {
             add_value!(request, "categoryTag", vec![format!("tag:{}", category)]);
             query.push_str(" and !valuekeyin(@categoryTag)");
         }
     }
 
-    //Ignore certain search criteria
-    if search.subtype == PROGRAMTYPE {
-        //MUST have a key unless the user specifies otherwise
-        if !search.removed {
-            add_value!(request, "dlkeylist", vec![DOWNLOADKEYKEY]);
-            query.push_str(" and !valuekeyin(@dlkeylist)");
-        }
-
-        if search.system != ANYSYSTEM {
-            add_value!(request, "systemkey", SYSTEMSKEY);
-            add_value!(request, "system", format!("%{}%", search.system)); //Systems is actually a json list but this should be fine
-            query.push_str(" and !valuelike(@systemkey, @system)");
+    if let Some(user_id) = search.user_id {
+        if user_id != 0 {
+            add_value!(request, "userId", user_id);
+            query.push_str(" and createUserId = @userId");
         }
     }
 
-    //let fields = "id,hash,contentType,createUserId";
-    //let order = String::from(if search.oldest { "id" } else { "id_desc" });
+    // This special request generator can be used in a lot of contexts, so there's lots of optional
+    // fields. The system doesn't HAVE to limit by subtype (program/resource/etc)
+    if let Some(subtype) = &search.subtype 
+    {
+        add_value!(request, "subtype", subtype.clone());
+        query.push_str(" and literalType = @subtype");
+        //Ignore certain search criteria
+        if subtype == PROGRAMTYPE {
+            //MUST have a key unless the user specifies otherwise
+            if !search.removed {
+                add_value!(request, "dlkeylist", vec![DOWNLOADKEYKEY]);
+                query.push_str(" and !valuekeyin(@dlkeylist)");
+            }
+
+            if search.system != ANYSYSTEM {
+                add_value!(request, "systemkey", SYSTEMSKEY);
+                add_value!(request, "system", format!("%{}%", search.system)); //Systems is actually a json list but this should be fine
+                query.push_str(" and !valuelike(@systemkey, @system)");
+            }
+        }
+    }
+
     let main_request = build_request!(
         RequestType::content, 
         String::from("id,hash,contentType,literalType,values,name,description,createUserId,createDate,lastRevisionId,popScore1"), 

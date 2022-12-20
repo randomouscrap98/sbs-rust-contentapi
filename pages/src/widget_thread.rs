@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use contentapi::SBSContentType;
 use common::forum::*;
-use common::page::*; //Again, controversial? idk
+use common::submission::*; //Again, controversial? idk
 use common::pagination::*;
 use bbscope::BBCode;
 

@@ -426,7 +426,7 @@ pub fn forum_path(config: &LinkConfig, path: &Vec<ForumPathItem>) -> Markup {
 pub fn threadicon(config: &LinkConfig, thread: &ForumThread) -> Markup { //neutral: bool, sticky: bool, locked: bool) -> Markup {
     html! {
         div."threadicon smallseparate" {
-            @if thread.neutral { (common::page::pageicon(config, &thread.thread)) }
+            @if thread.neutral { (common::submission::pageicon(config, &thread.thread)) }
             @if thread.sticky { span{"📌"} }
             @if thread.locked { span{"🔒"} }
         }

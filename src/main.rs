@@ -183,8 +183,8 @@ async fn main()
 
     let get_search_route = warp_get_async!(
             warp::path!("search")
-                .and(warp::query::<pages::search::Search>()),
-        |search: pages::search::Search, context:RequestContext| {
+                .and(warp::query::<pages::common::submission::Search>()),
+        |search: pages::common::submission::Search, context:RequestContext| {
             async move {
                 let gc = context.global_state.clone();
                 handle_response(
