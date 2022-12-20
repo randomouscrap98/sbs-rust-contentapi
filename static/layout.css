@@ -96,7 +96,7 @@ nav .headertab.current {
     margin: 0 0.2em;
 }
 
-#header-user, #footer-about {
+#header-user, #footer-spacer {
     margin-left: auto;
 }
 

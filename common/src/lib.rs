@@ -22,15 +22,18 @@ pub struct LinkConfig {
     pub cache_bust: String
 }
 
-#[derive(Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
 pub struct UserConfig {
-    pub language: String
+    pub language: String,
+    pub compact: bool
 }
 
 impl Default for UserConfig {
     fn default() -> Self {
         Self {
-            language: String::from("en")
+            language: String::from("en"),
+            compact: false
         }
     }
 }

@@ -168,6 +168,28 @@ async fn main()
     let get_activity_route = warp_get!(warp::path!("activity"),
         |context:RequestContext| warp::reply::html(pages::activity::render(context.layout_data)));
 
+    let get_sessionsettings_route = warp_get!(warp::path!("sessionsettings"),
+        |context:RequestContext| warp::reply::html(pages::sessionsettings::render(context.layout_data)));
+
+    let post_sessionsettings_route = warp::post()
+        .and(warp::path!("sessionsettings"))
+        .and(form_filter.clone())
+        .and(warp::body::form::<common::UserConfig>())
+        .and(state_filter.clone())
+        .and_then(|form: common::UserConfig, context: RequestContext| {
+            async move {
+                let gc = context.global_state.clone();
+                handle_response(
+                    errwrap!(pages::sessionsettings::post_render(
+                        context.into(),
+                        form
+                    ).await)?,
+                    &gc.link_config
+                )
+            }
+        })
+        .boxed();
+
     let get_bbcodepreview_route = warp_get!(warp::path!("widget" / "bbcodepreview"),
         |context:RequestContext| warp::reply::html(pages::widget_bbcodepreview::render(context.layout_data, &context.global_state.bbcode, None)));
 
@@ -343,6 +365,7 @@ async fn main()
         .or(post_registerconfirm_multi_route(&state_filter, &form_filter)) //Multiplexed! Confirm registration OR resend confirmation!
         .or(get_recover_route)
         .or(post_recover_route)
+        .or(get_sessionsettings_route)
         .or(get_imagebrowser_route)
         .or(get_bbcodepreview_route)
         .or(post_bbcodepreview_route)

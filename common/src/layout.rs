@@ -50,6 +50,8 @@ pub fn footer(config: &LinkConfig, about_api: &contentapi::About, current_path: 
     html! {
         footer class="controlbar smallseparate" {
             span #"api_about" { (about_api.environment) " - " (about_api.version) }
+            div #"footer-spacer" {}
+            (main_nav_link(config,"Settings","/sessionsettings",current_path,Some("footer-settings")))
             (main_nav_link(config,"About","/about",current_path,Some("footer-about")))
             //<!--<span id="debug">{{client_ip}}</span>-->
             //<!--<span id="debug">{{route_path}}</span>-->
