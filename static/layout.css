@@ -40,25 +40,35 @@ nav {
 }
 
 main {
-    padding: 1em;
+    padding: var(--space_medium);
 }
 
 section {
     border: 0.2em solid var(--color_border);
-    padding: 1.5em;
+    padding: var(--space_big);
     background: var(--bg_section);
     max-width: 70em;
     margin: 0.5em auto;
-    border-radius: 1em;
+    border-radius: var(--space_medium);
     overflow: hidden;
 }
 
 h1 {
-    margin: 0.5em 0; /* reduce the margins on h1 a bit */
+    /* Use a SMALL margin here because it's em and h1 is BIG */
+    margin: var(--space_small) 0; /* reduce the margins on h1 a bit */
+}
+
+h2 {
+    margin: var(--space_small) 0;
+}
+
+h3 {
+    margin: var(--space_medium) 0;
 }
 
 p { /* Not sure about this one? */
-    line-height: 1.4;
+    line-height: var(--reg_lineheight);
+    margin: var(--space_medium) 0;
 }
 
 /* Inside a section, let the parent determine the distance to the top and bottom edges */
@@ -163,7 +173,7 @@ form textarea {
 
     /* Remove decorations, turn into simple page */
     section {
-        padding: 1em;
+        padding: var(--space_medium);
         margin: 0;
         border-right: none;
         border-left: none;

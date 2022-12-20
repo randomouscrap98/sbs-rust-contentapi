@@ -16,7 +16,7 @@ pub fn render(data: MainLayoutData, bbcode: &BBCode, text: Option<String>) -> St
                 (style(&data.config, "/forpage/bbcodepreview.css"))
             }
             //This is meant to go in an iframe, so it will use up the whole space
-            body {
+            body data-compact[data.user_config.compact] {
                 @if let Some(text) = text {
                     div."content bbcode" { (PreEscaped(bbcode.parse(&text))) }
                 }

@@ -23,7 +23,7 @@ pub fn render(data: MainLayoutData, search: Search, images: Vec<Image>, previews
                 (script(&data.config, "/forpage/imagebrowser.js"))
             }
             //This is meant to go in an iframe, so it will use up the whole space
-            body data-size=(search.size){
+            body data-size=(search.size) data-compact[data.user_config.compact] {
                 //Might as well not show the upload form if user isn't logged in
                 @if let Some(_user) = &data.user {
                     h3 { "Upload file:" }

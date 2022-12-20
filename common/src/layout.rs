@@ -92,7 +92,7 @@ pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
                 }
             }
         }
-        body {
+        body data-compact[main_data.user_config.compact] {
             (header(&main_data.config, &main_data.current_path, &main_data.user))
             main { 
                 section {

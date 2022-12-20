@@ -28,6 +28,18 @@
     --code_function: #63b3ff;
     --code_fg: #DDD;
     --code_bg: #222;
+
+    --space_big: 1.5em;
+    --space_medium: 1.0em;
+    --space_small: 0.5em;
+    --reg_lineheight: 1.4;
+}
+
+[data-compact] {
+    --space_big: 0.75em;
+    --space_medium: 0.5em;
+    --space_small: 0.25em;
+    --reg_lineheight: 1.2;
 }
 
 /* ----------------------------- *
@@ -163,12 +175,12 @@ input[type="file"] {
 hr {
     border: none;
     border-top: 1px solid var(--color_divider);
-    margin: 1.5em 0;
+    margin: var(--space_big) 0;
 }
 
 hr.smaller {
-    margin-top: 1.0em; /* Split so left/right are left alone */
-    margin-bottom: 1.0em; 
+    margin-top: var(--space_medium); /* Split so left/right are left alone */
+    margin-bottom: var(--space_medium);
 }
 
 .pagelist {
@@ -176,7 +188,7 @@ hr.smaller {
     align-items: center;
     justify-content: center;
     flex-wrap: wrap;
-    margin-top: 1.5em;
+    margin-top: var(--space_big);
 }
 
 .pagelist .current {
@@ -197,7 +209,7 @@ hr.smaller {
 
 /* Some important stuff, like content rendering */
 .content {
-    line-height: 1.4;
+    line-height: var(--reg_lineheight);
     white-space: pre-wrap;
     word-wrap: break-word;
 }
@@ -308,7 +320,7 @@ hr.smaller {
 
 .cardtext {
     margin-right: 0.8em;
-    line-height: 1.4;
+    line-height: var(--reg_lineheight);
 }
 
 .cardtext .description {

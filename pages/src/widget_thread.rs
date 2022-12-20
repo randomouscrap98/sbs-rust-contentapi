@@ -38,7 +38,7 @@ pub fn render(context: &mut PageContext, config: PostsConfig) -> String {
                 (script(&context.layout_data.config, "/base.js"))
             }
             //This is meant to go in an iframe, so it will use up the whole space
-            body {
+            body data-compact[context.layout_data.user_config.compact] {
                 (render_posts(context, config))
             }
         }
