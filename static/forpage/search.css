@@ -2,4 +2,6 @@
 #searchform {
     display: flex;
     flex-wrap: wrap;
+    /* A hack that will need to be removed if something goes below the form */
+    margin-bottom: -0.5em;
 }

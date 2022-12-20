@@ -125,17 +125,17 @@
    width: 25em;
    max-width: 100%;
    background: var(--color_divider);
-   border-radius: 1em;
-   margin-left: 1em;
-   margin-bottom: 1em;
-   padding: 1em;
+   border-radius: var(--space_medium);
+   margin-left: var(--space_medium);
+   margin-bottom: var(--space_medium);
+   padding: var(--space_medium);
    box-sizing: border-box;
 }
 
 .programinfo .gallery img {
     display: block;
     width: 100%;
-    border-radius: 0.5em;
+    border-radius: var(--space_small);
     box-sizing: border-box;
 }
 
@@ -146,7 +146,7 @@
 }
 
 .programinfo .extras > * {
-    margin-top: 0.7em;
+    margin-top: calc(0.7 * var(--space_medium)); /*0.7em;*/
     display: flex;
     align-items: center;
 }
