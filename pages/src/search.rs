@@ -7,11 +7,6 @@ use common::submission::*;
 use common::layout::*;
 use maud::*;
 
-//use serde_json::Value;
-
-// Eventually move this somewhere else?
-//static PROGRAMTYPE: &str = "program";
-//static RESOURCETYPE: &str = "resource";
 pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, User>, search: Search,
     categories: Vec<Category>) -> String 
 {
@@ -83,7 +78,7 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
         }
         // All the pages (directly in the section?)
         section."results" {
-            div."resultslist" {
+            div."cardslist" {
                 //Or maybe in here
                 @for page in &pages {
                     (page_card(&data.config, page, &users))
@@ -91,8 +86,6 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
             }
             //Generic pagelist generation (just need data)
             (page_navigation(&data, &search))
-            //h1 { "Browse is search"}
-            //p { "Search may be simultaneously more powerful and less powerful than before"}
         }
     }).into_string()
 }
@@ -126,82 +119,7 @@ pub struct Category {
 
 pub async fn get_render(context: PageContext, search: Search, per_page: i32) -> Result<Response, Error> 
 {
-    //Build up the request based on the search, then render
-    let mut request = FullRequest::new();
-    add_value!(request, "type", ContentType::PAGE);
-    add_value!(request, "systemtype", ContentType::SYSTEM);
-    add_value!(request, "forcontent", FORCONTENTKEY);
-
-    let mut query = String::from("contentType = @type and !notdeleted()"); 
-    // !valuekeynotlike({{system}}) and !notdeleted()";
-
-    if let Some(stext) = &search.search {
-        add_value!(request, "text", format!("%{}%", stext));
-        query.push_str(" and (name like @text or !keywordlike(@text))");
-    }
-
-    if let Some(category) = search.category {
-        if category != 0 {
-            add_value!(request, "categoryTag", vec![format!("tag:{}", category)]);
-            query.push_str(" and !valuekeyin(@categoryTag)");
-        }
-    }
-
-    if let Some(user_id) = search.user_id {
-        if user_id != 0 {
-            add_value!(request, "userId", user_id);
-            query.push_str(" and createUserId = @userId");
-        }
-    }
-
-    // This special request generator can be used in a lot of contexts, so there's lots of optional
-    // fields. The system doesn't HAVE to limit by subtype (program/resource/etc)
-    if let Some(subtype) = &search.subtype 
-    {
-        add_value!(request, "subtype", subtype.clone());
-        query.push_str(" and literalType = @subtype");
-        //Ignore certain search criteria
-        if subtype == PROGRAMTYPE {
-            //MUST have a key unless the user specifies otherwise
-            if !search.removed {
-                add_value!(request, "dlkeylist", vec![DOWNLOADKEYKEY]);
-                query.push_str(" and !valuekeyin(@dlkeylist)");
-            }
-
-            if search.system != ANYSYSTEM {
-                add_value!(request, "systemkey", SYSTEMSKEY);
-                add_value!(request, "system", format!("%{}%", search.system)); //Systems is actually a json list but this should be fine
-                query.push_str(" and !valuelike(@systemkey, @system)");
-            }
-        }
-    }
-
-    let main_request = build_request!(
-        RequestType::content, 
-        String::from("id,hash,contentType,literalType,values,name,description,createUserId,createDate,lastRevisionId,popScore1"), 
-        query, 
-        search.order.clone(), 
-        per_page,
-        search.page * per_page
-    ); 
-    request.requests.push(main_request);
-
-    let user_request = build_request!(
-        RequestType::user,
-        String::from("*"),
-        String::from("id in @content.createUserId")
-    );
-    request.requests.push(user_request);
-
-    add_value!(request, "categorytype", CATEGORYTYPE);
-    //add_value!(request, "subtypesearch", format!("%{}%", &search.subtype));
-    let mut category_request = build_request!(
-        RequestType::content,
-        String::from("id,literalType,contentType,values,name"),
-        String::from("contentType = @systemtype and !notdeleted() and literalType = @categorytype") // and !valuelike(@forcontent,@subtypesearch)")
-    );
-    category_request.name = Some(String::from("categories"));
-    request.requests.push(category_request);
+    let request = get_search_request(&search, per_page);
 
     let result = context.api_context.post_request(&request).await?;
     //println!("RESULT: {:#?}", &result);

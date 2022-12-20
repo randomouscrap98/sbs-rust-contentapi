@@ -86,7 +86,9 @@ impl Default for Search {
     }
 }
 
-pub fn get_search_request(search: Search, per_page: i32) -> FullRequest
+// Generate the complicated FullRequest for the given search. Could be a "From" if 
+// the search included a per-page I guess...
+pub fn get_search_request(search: &Search, per_page: i32) -> FullRequest
 {
     //Build up the request based on the search, then render
     let mut request = FullRequest::new();
