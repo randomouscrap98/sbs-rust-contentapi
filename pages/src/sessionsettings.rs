@@ -3,7 +3,7 @@ use common::*;
 use common::layout::*;
 use maud::*;
 
-pub fn render(data: MainLayoutData) -> String 
+pub fn render(data: MainLayoutData, errors: Option<Vec<String>>) -> String 
 {
     let settings = &data.user_config;
     //Need to split category search into parts 
@@ -13,6 +13,7 @@ pub fn render(data: MainLayoutData) -> String
             h1 { "Local session settings" }
             p."aside" { "These settings are persisted in a cookie and only available on this device" }
             form method="POST" action={(data.config.http_root)"/sessionsettings"} {
+                (errorlist(errors))
                 label."inline" for="settings-compact" {
                     span { "Compact mode: " }
                     input."" #"settings-compact" type="checkbox" name="compact" checked[settings.compact] value="true";

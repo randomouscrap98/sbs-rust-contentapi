@@ -22,6 +22,7 @@ macro_rules! wrap_from_error {
 
 wrap_from_error!(InvalidUri);
 wrap_from_error!(warp::http::Error);
+
 //
 ////This is so stupid. Oh well
 macro_rules! errwrap {

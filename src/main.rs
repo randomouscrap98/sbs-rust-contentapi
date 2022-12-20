@@ -20,6 +20,7 @@ use crate::state::*;
 
 static CONFIGNAME : &str = "settings";
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
+static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
 
 
 //Silly thing to limit a route by a single flag present (must be i8)
@@ -109,11 +110,12 @@ async fn main()
     let state_filter = warp::path::full()
         .and(warp::method())
         .and(warp::cookie::optional::<String>(SESSIONCOOKIE))
-        .and_then(move |path, method, token| {  //Create a closure that takes ownership of map_state to let it infinitely clone
+        .and(warp::cookie::optional::<String>(SETTINGSCOOKIE))
+        .and_then(move |path, method, token, config_raw| {  //Create a closure that takes ownership of map_state to let it infinitely clone
             println!("[{}] {:>5} - {:?}", chrono::Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true), &method, &path);
             let this_state = global_for_state.clone();
             async move { 
-                errwrap!(RequestContext::generate(this_state, path, token).await)
+                errwrap!(RequestContext::generate(this_state, path, token, config_raw).await)
             }
         }).boxed();
     
@@ -169,22 +171,29 @@ async fn main()
         |context:RequestContext| warp::reply::html(pages::activity::render(context.layout_data)));
 
     let get_sessionsettings_route = warp_get!(warp::path!("sessionsettings"),
-        |context:RequestContext| warp::reply::html(pages::sessionsettings::render(context.layout_data)));
+        |context:RequestContext| warp::reply::html(pages::sessionsettings::render(context.layout_data, None)));
 
     let post_sessionsettings_route = warp::post()
         .and(warp::path!("sessionsettings"))
         .and(form_filter.clone())
         .and(warp::body::form::<common::UserConfig>())
         .and(state_filter.clone())
-        .and_then(|form: common::UserConfig, context: RequestContext| {
+        .and_then(|form: common::UserConfig, mut context: RequestContext| {
             async move {
                 let gc = context.global_state.clone();
-                handle_response(
-                    errwrap!(pages::sessionsettings::post_render(
-                        context.into(),
-                        form
-                    ).await)?,
-                    &gc.link_config
+                let mut errors: Option<Vec<String>> = None;
+                let mut cookie_raw: Option<String> = None;
+                match serde_json::to_string(&form) {
+                    Ok(cookie) => cookie_raw = Some(String::from(cookie)),
+                    Err(error) => errors = Some(vec![error.to_string()])
+                }
+                context.layout_data.user_config = form; //Is this safe? idk
+                handle_response_with_anycookie(
+                    common::Response::Render(pages::sessionsettings::render(context.layout_data, errors)),
+                    &gc.link_config, 
+                    SETTINGSCOOKIE,
+                    cookie_raw,
+                    gc.config.long_cookie_expire as i64
                 )
             }
         })
@@ -366,6 +375,7 @@ async fn main()
         .or(get_recover_route)
         .or(post_recover_route)
         .or(get_sessionsettings_route)
+        .or(post_sessionsettings_route)
         .or(get_imagebrowser_route)
         .or(get_bbcodepreview_route)
         .or(post_bbcodepreview_route)

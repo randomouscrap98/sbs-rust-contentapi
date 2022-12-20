@@ -57,11 +57,16 @@ pub fn handle_response(response: common::Response, link_config: &LinkConfig) -> 
 
 pub fn handle_response_with_token(response: common::Response, link_config: &LinkConfig, token: Option<String>, expire: i64) -> Result<impl Reply, Rejection>
 {
+    handle_response_with_anycookie(response, link_config, SESSIONCOOKIE, token, expire)
+}
+
+pub fn handle_response_with_anycookie(response: common::Response, link_config: &LinkConfig, cookie_name: &str, cookie_raw: Option<String>, expire: i64) -> Result<impl Reply, Rejection>
+{
     //Have to begin the builder here? Then if there's a token, add the header?
     let mut builder = warp::http::Response::builder();
 
-    if let Some(token) = token {
-        builder = builder.header("set-cookie", format!("{}={}; Max-Age={}; Path=/; SameSite=Strict", SESSIONCOOKIE, token, expire));
+    if let Some(token) = cookie_raw {
+        builder = builder.header("set-cookie", format!("{}={}; Max-Age={}; Path=/; SameSite=Strict", cookie_name, token, expire));
     }
 
     match response {

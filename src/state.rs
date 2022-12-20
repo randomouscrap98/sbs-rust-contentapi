@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bbscope::BBCode;
-use contentapi::endpoints::{ApiContext, ApiError};
+use contentapi::endpoints::{ApiContext};
 use common::{LinkConfig, MainLayoutData, UserConfig, PageContext};
 use warp::path::FullPath;
 
@@ -30,7 +30,8 @@ pub struct RequestContext {
 }
 
 impl RequestContext {
-    pub async fn generate(state: Arc<GlobalState>, path: FullPath, token: Option<String>) -> Result<Self, ApiError> 
+    pub async fn generate(state: Arc<GlobalState>, path: FullPath, token: Option<String>, config_raw: Option<String>) -> 
+        Result<Self, common::Error> 
     {
         #[cfg(feature = "profiling")]
         let profiler = onestop::OneList::<onestop::OneDuration>::new(); //One profiler per request
@@ -48,10 +49,17 @@ impl RequestContext {
             token.clone()
         );
 
+        let user_config = if let Some(config) = config_raw {
+            serde_json::from_str::<UserConfig>(&config)?
+        }
+        else {
+            UserConfig::default()
+        };
+
         let layout_data = MainLayoutData 
         {
             config: state.link_config.clone(),
-            user_config: UserConfig::default(), //Settings and stuff, but there are none right now
+            user_config, //Local settings
             current_path: String::from(path.as_str()),
             user: context.get_me_safe().await,
             user_token: token,

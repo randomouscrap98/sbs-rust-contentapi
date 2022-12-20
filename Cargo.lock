@@ -844,6 +844,7 @@ dependencies = [
  "onestop",
  "pages",
  "serde",
+ "serde_json",
  "tokio",
  "toml",
  "warp",
