@@ -1,6 +1,8 @@
 
 use super::*;
+use common::*;
 use common::layout::*;
+use maud::*;
 
 pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, username: Option<String>, email: Option<String>) -> String {
     layout(&data, html!{

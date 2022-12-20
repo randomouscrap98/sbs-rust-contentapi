@@ -1,5 +1,5 @@
 [package]
-name = "pages"
+name = "common"
 version = "0.1.0"
 edition = "2021"
 
@@ -16,12 +16,10 @@ onestop = { version = "0.0.1", optional = true }
 bbscope = { version = "0.1.2" }
 
 contentapi = { path = "../contentapi" }
-common = { path = "../common" }
 
 [features]
 profiling = [
     "contentapi/profiling", 
     "bbscope/profiling",
-    "common/profiling",
     "dep:onestop"
 ]

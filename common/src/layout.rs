@@ -1,4 +1,4 @@
-use super::super::*;
+use super::*;
 
 //Render basic navigation link with only text as the body
 pub fn main_nav_link(config: &LinkConfig, text: &str, href: &str, current_path: &str, id: Option<&str>) -> Markup {

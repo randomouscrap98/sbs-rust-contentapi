@@ -1,6 +1,7 @@
 use bbscope::BBCode;
 
-use super::*;
+use common::*;
+use maud::*;
 
 pub fn render(data: MainLayoutData, bbcode: &BBCode, text: Option<String>) -> String {
     html!{

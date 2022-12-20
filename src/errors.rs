@@ -4,19 +4,19 @@ use warp::{reject::Reject, http::uri::InvalidUri};
 
 #[derive(Debug)]
 pub struct ErrorWrapper {
-    pub error: pages::Error
+    pub error: common::Error
 }
 
 impl Reject for ErrorWrapper {} 
 //
 ////Just a bunch of stupid repetitive stuff because IMO bad design (can't impl Reject on types that aren't defined in the crate)
 //impl Reject for ErrorWrapper {}
-impl From<ApiError> for ErrorWrapper { fn from(error: ApiError) -> Self { Self { error: pages::Error::Api(error) } } }
-impl From<pages::Error> for ErrorWrapper { fn from(error: pages::Error) -> Self { Self { error } } }
+impl From<ApiError> for ErrorWrapper { fn from(error: ApiError) -> Self { Self { error: common::Error::Api(error) } } }
+impl From<common::Error> for ErrorWrapper { fn from(error: common::Error) -> Self { Self { error } } }
 //
 macro_rules! wrap_from_error {
     ($t:ty) => {
-        impl From<$t> for ErrorWrapper { fn from(error: $t) -> Self { Self { error: pages::Error::Other(error.to_string())} }}
+        impl From<$t> for ErrorWrapper { fn from(error: $t) -> Self { Self { error: common::Error::Other(error.to_string())} }}
     };
 }
 

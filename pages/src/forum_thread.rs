@@ -1,16 +1,17 @@
-use crate::common::layout::layout;
 use crate::widget_thread::*;
 
-use super::*;
+use common::*;
+use common::layout::layout;
 use common::forum::*;
 use common::pagination::*;
 
+use contentapi::*;
 use contentapi::conversion::*;
 use contentapi::{FullRequest, SpecialCount};
 
 
 pub fn render(mut context: PageContext, config: PostsConfig) -> String {
-    let main_page = widget_thread::render_posts(&mut context, config);
+    let main_page = crate::widget_thread::render_posts(&mut context, config);
     layout(&context.layout_data, main_page).into_string()
 }
 

@@ -2,14 +2,15 @@
 use std::collections::HashMap;
 
 use contentapi::conversion::*;
-use contentapi::{User, FullRequest};
+use contentapi::*;
 use contentapi::endpoints::ApiContext;
 
-use crate::common::forum::*;
 
-use super::*;
+use common::*;
+use common::forum::*;
 use common::layout::*;
 use common::pagination::*;
+use maud::*;
 
 
 pub fn render(data: MainLayoutData, category: ForumCategory, path: Vec<ForumPathItem>, pages: Vec<PagelistItem>) -> String {

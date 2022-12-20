@@ -2,8 +2,9 @@
 use bbscope::BBCode;
 use contentapi::{User, Content, add_value, build_request, FullRequest, RequestType};
 
-use super::*;
+use common::*;
 use common::layout::*;
+use maud::*;
 
 pub fn render(data: MainLayoutData, mut bbcode: BBCode, user: Option<User>, userpage: Option<Content>) -> String {
     layout(&data, html!{

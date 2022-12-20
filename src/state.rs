@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use bbscope::BBCode;
 use contentapi::endpoints::{ApiContext, ApiError};
-use pages::{LinkConfig, MainLayoutData, UserConfig, PageContext};
+use common::{LinkConfig, MainLayoutData, UserConfig, PageContext};
 use warp::path::FullPath;
 
 use crate::Config;

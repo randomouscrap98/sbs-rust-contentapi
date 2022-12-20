@@ -1,12 +1,13 @@
-use super::*;
+use common::*;
 
 use std::collections::HashMap;
 
-use contentapi::SBSContentType;
+use contentapi::*;
 use common::forum::*;
 use common::submission::*; //Again, controversial? idk
 use common::pagination::*;
 use bbscope::BBCode;
+use maud::*;
 
 
 pub struct PostsConfig {

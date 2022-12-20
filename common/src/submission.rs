@@ -1,4 +1,4 @@
-use super::super::*;
+use super::*;
 use contentapi::*;
 
 pub static DOWNLOADKEYKEY: &str = "dlkey";

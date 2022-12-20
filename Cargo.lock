@@ -119,6 +119,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "bbscope",
+ "chrono",
+ "contentapi",
+ "maud",
+ "onestop",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "timeago",
+]
+
+[[package]]
 name = "contentapi"
 version = "0.1.0"
 dependencies = [
@@ -630,6 +645,7 @@ version = "0.1.0"
 dependencies = [
  "bbscope",
  "chrono",
+ "common",
  "contentapi",
  "maud",
  "onestop",
@@ -823,6 +839,7 @@ version = "0.3.0"
 dependencies = [
  "bbscope",
  "chrono",
+ "common",
  "contentapi",
  "onestop",
  "pages",

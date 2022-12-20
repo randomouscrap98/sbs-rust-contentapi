@@ -1,10 +1,12 @@
 
+use contentapi::*;
 use contentapi::conversion::*;
 use contentapi::endpoints::ApiContext;
 
-use super::*;
+use common::*;
 use common::layout::*;
 use common::forum::*;
+use maud::*;
 
 pub fn render(data: MainLayoutData, categories: Vec<ForumCategory>) -> String {
     layout(&data, html!{

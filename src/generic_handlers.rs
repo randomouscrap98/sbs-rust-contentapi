@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 
-use pages::LinkConfig;
+use common::LinkConfig;
 use warp::reject::InvalidQuery;
 use warp::{Rejection, Reply};
 use warp::body::BodyDeserializeError;
@@ -13,19 +13,19 @@ pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> 
     let message: String;
     if let Some(error) = err.find::<ErrorWrapper>() {
         match &error.error {
-            pages::Error::Api(apierr) => { 
+            common::Error::Api(apierr) => { 
                 code = StatusCode::from_u16(apierr.to_status()).unwrap();
                 message = apierr.to_verbose_string();
             },
-            pages::Error::Other(otherr) => {
+            common::Error::Other(otherr) => {
                 code = StatusCode::INTERNAL_SERVER_ERROR;
                 message = otherr.clone();
             },
-            pages::Error::NotFound(otherr) => {
+            common::Error::NotFound(otherr) => {
                 code = StatusCode::NOT_FOUND;
                 message = otherr.clone();
             },
-            pages::Error::Data(derr,data) => {
+            common::Error::Data(derr,data) => {
                 code = StatusCode::INTERNAL_SERVER_ERROR;
                 message = derr.clone();
                 println!("DATA ERROR: {}\n{}", derr, data);
@@ -50,12 +50,12 @@ pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> 
 }
 
 
-pub fn handle_response(response: pages::Response, link_config: &LinkConfig) -> Result<impl Reply, Rejection>
+pub fn handle_response(response: common::Response, link_config: &LinkConfig) -> Result<impl Reply, Rejection>
 {
     handle_response_with_token(response, link_config, None, 0)
 }
 
-pub fn handle_response_with_token(response: pages::Response, link_config: &LinkConfig, token: Option<String>, expire: i64) -> Result<impl Reply, Rejection>
+pub fn handle_response_with_token(response: common::Response, link_config: &LinkConfig, token: Option<String>, expire: i64) -> Result<impl Reply, Rejection>
 {
     //Have to begin the builder here? Then if there's a token, add the header?
     let mut builder = warp::http::Response::builder();
@@ -65,11 +65,11 @@ pub fn handle_response_with_token(response: pages::Response, link_config: &LinkC
     }
 
     match response {
-        pages::Response::Redirect(url) => {
+        common::Response::Redirect(url) => {
             builder = builder.status(303).header("Location", format!("{}{}", link_config.http_root, url));
             Ok(errwrap!(builder.body(String::from("")))?) 
         },
-        pages::Response::Render(page) => {
+        common::Response::Render(page) => {
             builder = builder.status(200).header("Content-Type", "text/html");
             Ok(errwrap!(builder.body(page))?)
         }
