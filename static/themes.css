@@ -37,18 +37,19 @@ body[data-theme="sbs-dark"] {
 
 
 
+
 [data-theme="sbs-blue"] {
     /* Main colors */
-    --tc_main: rgb(32 76 168); /*rgb(19, 36, 71);*/
-    --tc_aside: #68b5e7; /*rgb(84, 104, 168);*/
+    --tc_main: #142a57; /*#002b85; /*rgb(32 76 168); /*rgb(19, 36, 71);*/
+    --tc_aside: #2a6b99; /*#3ba0e1; /*#68b5e7; /*rgb(84, 104, 168);*/
     --bg_section: rgb(250, 253, 255);
-    --color_border: #c2d5e7; /*rgb(182, 213, 255);*/
+    --color_border: #c5d9e7; /*#c2d5e7; /*rgb(182, 213, 255);*/
     --color_divider: #cfdbe7; /*rgb(199, 228, 255);*/
-    --tc_flatlink: #0274bb;/*#4293ce; /*#1b8abc;*/
-    --tc_link: rgb(41, 86, 209);
+    --tc_flatlink: #1b8abc; /*#71549b; /*#0c9db9; /*#0274bb;/*#4293ce; /*#1b8abc;*/
+    --tc_link: #193c9c; /*rgb(41, 86, 209);*/
 
     /* Header-only colors (but MAY be reused in other elements? */
-    --bg_header: rgb(51, 85, 139);
+    --bg_header: #2a4167; /*rgb(51, 85, 139);*/
     --tc_header: #edfaff; /*rgb(225, 247, 255);*/
 
     /* Special text and bg */
@@ -61,6 +62,48 @@ body[data-theme="sbs-dark"] {
 }
 
 body[data-theme="sbs-blue"] {
-    background-color: rgb(240 247 255); /*rgb(230 244 255); /*rgb(21, 154, 255);*/
+    background-color: #f6fbff; /*#8b8f91; /*rgb(240 247 255); /*rgb(230 244 255); /*rgb(21, 154, 255);*/
     background-blend-mode: luminosity;
+}
+
+[data-theme="sbs-blue"] input:not(.notheme), 
+[data-theme="sbs-blue"] select, 
+[data-theme="sbs-blue"] textarea {
+   filter: sepia(0.1) hue-rotate(170deg);
+}
+
+[data-theme="sbs-blue"] .threadicon > * {
+    filter: hue-rotate(145deg); /*hue-rotate(125deg);*/
+}
+
+[data-theme="sbs-blue"] .sysicon {
+    filter: contrast(0.5) sepia(1) saturate(6) hue-rotate(177deg);
+}
+
+
+
+
+[data-theme="sbs-contrast"] {
+    /* Main colors */
+    --tc_main: #000;
+    --tc_aside: #444;
+    --bg_section: white;
+    --color_border: #555;
+    --color_divider: #444;
+    --tc_flatlink: #cb0000;
+    --tc_link: #002eac;
+
+    /* Header-only colors (but MAY be reused in other elements? */
+    --bg_header: #222;
+    --tc_header: #FFF;
+
+    /* Special text and bg */
+    --bg_altsection: rgba(127,127,127,0.2);
+    --bg_activeselect:#ffc100;
+    --tc_activeselect: #000;
+    --tc_error: darkred;
+    --bg_error: rgba(255,0,0,0.05);
+    --tc_success: green;
+
+    --line_width: 2.5px;
 }

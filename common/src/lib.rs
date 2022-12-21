@@ -46,7 +46,8 @@ impl UserConfig {
         vec![
             ("sbs", "SBS (default)"),
             ("sbs-dark", "SBS Dark"),
-            ("sbs-blue", "SBS Blue")
+            ("sbs-blue", "SBS Blue"),
+            ("sbs-contrast", "SBS High Contrast")
         ]
     }
 }

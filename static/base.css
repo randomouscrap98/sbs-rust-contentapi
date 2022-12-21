@@ -2,7 +2,7 @@
 /* all the css variables to control common document constants */
 :root {
     /* Main colors */
-    --tc_main: #111;
+    --tc_main: #222;
     --tc_aside: gray;
     --bg_section: white;
     --color_border: lightgray;
@@ -25,6 +25,7 @@
     /* Extra junk (generally not themed?) */
     --font: sans-serif;
     --simple_hover: brightness(1.2);
+    --line_width: 1.5px;
 
     /* Syntax highlighting in code sections! You don't have to change these if you don't 
        want, they're not used anywhere */
@@ -86,7 +87,7 @@ p { /* Not sure about this one? */
 /* Also, dividers are like decorators, want them generic too */
 hr {
     border: none;
-    border-top: 1px solid var(--color_divider);
+    border-top: var(--line_width) solid var(--color_divider);
     margin: var(--space_big) 0;
 }
 
@@ -94,6 +95,10 @@ hr.smaller {
     /* Split so left/right are left alone; use what was set before */
     margin-top: var(--space_medium); 
     margin-bottom: var(--space_medium);
+}
+
+form {
+    margin: var(--space_small);
 }
 
 
@@ -165,7 +170,6 @@ hr.smaller {
     max-height: 80vh;
     box-sizing: border-box;
     border: none;
-    /*border: 1px solid var(--color_divider);*/
 }
 
 .scrollable {
@@ -290,7 +294,7 @@ input[type="file"] {
     padding: 0.3em 0.4em;
     margin: 0.3em 0;
     border-radius: 0.3em;
-    border: 1px solid var(--color_divider);
+    border: var(--line_width) solid var(--color_divider);
 }
 
 .content .icode {
@@ -332,7 +336,7 @@ input[type="file"] {
 /* Pages MAY be special in the future! */
 .pagecard {
     padding: calc(0.9 * var(--space_medium));
-    border: 1px solid var(--color_divider);
+    border: var(--line_width) solid var(--color_divider);
     border-radius: calc(0.65 * var(--space_medium));
     flex-basis: 22em; /* 30em; */
     flex-grow: 1;
@@ -360,7 +364,7 @@ input[type="file"] {
 .cardtext .description {
     filter: opacity(0.85);
     margin-left: 0.05em;
-    font-size: 0.95em;
+    font-size: 0.9em;
 }
 
 .cardtext h3 {

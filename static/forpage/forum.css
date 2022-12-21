@@ -90,7 +90,7 @@
 .replychain iframe {
     width: 100%;
     box-sizing: border-box;
-    border: 1px solid var(--color_divider);
+    border: var(--line_width) solid var(--color_divider);
     border-radius: var(--space_small);
     margin: var(--space_small) 0;
     height: 50vh;
