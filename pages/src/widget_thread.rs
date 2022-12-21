@@ -29,22 +29,12 @@ pub struct PostsConfig {
 /// Rendering for the actual widget. The 
 pub fn render(context: &mut PageContext, config: PostsConfig) -> String {
     let posts = render_posts(context, config);
-    html!{
-        (DOCTYPE)
-        html lang=(context.layout_data.user_config.language) {
-            head {
-                (basic_meta(&context.layout_data.config))
-                title { "SmileBASIC Source Image Browser" }
-                meta name="description" content="Simple image browser widget";
-                (style(&context.layout_data.config, "/base.css"))
-                (script(&context.layout_data.config, "/base.js"))
-            }
-            //This is meant to go in an iframe, so it will use up the whole space
-            (body(&context.layout_data, html! {
-                (posts)
-            }))
-        }
-    }.into_string()
+    basic_skeleton(&context.layout_data, html! {
+        title { "SmileBASIC Source Image Browser" }
+        meta name="description" content="Simple image browser widget";
+    }, html! {
+        (posts)
+    }).into_string()
 }
 
 pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup

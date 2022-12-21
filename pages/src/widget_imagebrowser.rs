@@ -7,97 +7,88 @@ use maud::*;
 use serde::{Serialize, Deserialize};
 
 
-pub fn render(data: MainLayoutData, search: Search, images: Vec<Image>, previews: Vec<Image>, errors: Option<Vec<String>>) -> String {
+pub fn render(data: MainLayoutData, search: Search, images: Vec<Image>, previews: Vec<Image>, errors: Option<Vec<String>>) -> String 
+{
     let sizes = vec![(1,"1"),(2,"2"),(3,"3")]; //This may seem stupid but I might want to change the text later
     let imagesize: i64 = 100 * search.size as i64; //Used to have + something, but now...
 
-    html!{
-        (DOCTYPE)
-        html lang=(data.user_config.language) {
-            head {
-                (basic_meta(&data.config))
-                title { "SmileBASIC Source Image Browser" }
-                meta name="description" content="Simple image browser widget";
-                (style(&data.config, "/base.css"))
-                (script(&data.config, "/base.js"))
-                (style(&data.config, "/forpage/imagebrowser.css"))
-                (script(&data.config, "/forpage/imagebrowser.js"))
+    basic_skeleton(&data, html! {
+        title { "SmileBASIC Source Image Browser" }
+        meta name="description" content="Simple image browser widget";
+        (style(&data.config, "/forpage/imagebrowser.css"))
+        (script(&data.config, "/forpage/imagebrowser.js"))
+    }, html! {
+        //Might as well not show the upload form if user isn't logged in
+        @if let Some(_user) = &data.user {
+            h3 { "Upload file:" }
+            //This doesn't need an action since it's self posting but just in case...
+            form method="POST" action=(data.config.file_upload_root) enctype="multipart/form-data" {
+                (errorlist(errors))
+                @if let Some(error) = &search.error {
+                    (errorlist(Some(vec![error.clone()])))
+                }
+                input #"fileinput" type="file" name="file" class="largeinput" accept="image/*";
+                input type="hidden" name="token" value=[&data.user_token];
+                input type="hidden" name="errorUrl" value={(self_link(&data))"?error={{error}}"};
+                input type="hidden" name="successUrl" value={(self_link(&data))"?preview={{hash}}"};
+                input type="submit" value="Upload";
             }
-            //This is meant to go in an iframe, so it will use up the whole space
-            (body(&data, html! {
-                //Might as well not show the upload form if user isn't logged in
-                @if let Some(_user) = &data.user {
-                    h3 { "Upload file:" }
-                    //This doesn't need an action since it's self posting but just in case...
-                    form method="POST" action=(data.config.file_upload_root) enctype="multipart/form-data" {
-                        (errorlist(errors))
-                        @if let Some(error) = &search.error {
-                            (errorlist(Some(vec![error.clone()])))
-                        }
-                        input #"fileinput" type="file" name="file" class="largeinput" accept="image/*";
-                        input type="hidden" name="token" value=[&data.user_token];
-                        input type="hidden" name="errorUrl" value={(self_link(&data))"?error={{error}}"};
-                        input type="hidden" name="successUrl" value={(self_link(&data))"?preview={{hash}}"};
-                        input type="submit" value="Upload";
-                    }
-                    hr;
-                }
-                h3{ "Browse files:" }
-                div."scrollable" {
-                    //Don't include an action so it just posts to the same url but with the form as params...?
-                    form method="GET" id="browseform" {
-                        label."inline" for="search-preview" {
-                            span { "Preview: " }
-                            input."largeinput" #"search-preview" type="text" name="preview" value=[&search.preview] placeholder="Comma separated hashes";
-                        }
-                        label."inline" for="search-all" {
-                            span { "Global search:" }
-                            input #"search-all" type="checkbox" name="global" value="true" checked[search.global];
-                        }
-                        label."inline" for="search-oldest" {
-                            span {"Oldest first:"}
-                            input #"search-oldest" type="checkbox" name="oldest" value="true" checked[search.oldest];
-                        }
-                        label."inline" for="search-size" {
-                            span{"Size:"}
-                            select #"search-size" value=(search.size) name="size" {
-                                @for (value,text) in sizes {
-                                    option value=(value) selected[value == search.size] { (text) }
-                                }
-                            }
-                        }
-                        label."inline" for="search-page" {
-                            span {"Page:"}
-                            input."smallinput" #"search-page" type="text" name="page" value=(search.page); 
-                        }
-                        input type="submit" value="Update search";
-                    }
-                    @if !is_empty(&search.preview) {
-                        //Used to have h4 Preview images
-                        div."imagelist" {
-                            @if previews.len() > 0 {
-                                (image_list(&data.config, previews, imagesize))
-                            }
-                            @else {
-                                p."aside" {"No images returned for preview!"}
-                            }
-                        }
-                        hr;
-                    }
-                    //Used to have img navigation here
-                    div."imagelist" {
-                        @if images.len() > 0 {
-                            (image_list(&data.config, images, imagesize))
-                        }
-                        @else {
-                            p."aside" {"No images!"}
-                        }
-                    }
-                    (image_navigation(&data, search))
-                }
-            }))
+            hr;
         }
-    }.into_string()
+        h3{ "Browse files:" }
+        div."scrollable" {
+            //Don't include an action so it just posts to the same url but with the form as params...?
+            form method="GET" id="browseform" {
+                label."inline" for="search-preview" {
+                    span { "Preview: " }
+                    input."largeinput" #"search-preview" type="text" name="preview" value=[&search.preview] placeholder="Comma separated hashes";
+                }
+                label."inline" for="search-all" {
+                    span { "Global search:" }
+                    input #"search-all" type="checkbox" name="global" value="true" checked[search.global];
+                }
+                label."inline" for="search-oldest" {
+                    span {"Oldest first:"}
+                    input #"search-oldest" type="checkbox" name="oldest" value="true" checked[search.oldest];
+                }
+                label."inline" for="search-size" {
+                    span{"Size:"}
+                    select #"search-size" value=(search.size) name="size" {
+                        @for (value,text) in sizes {
+                            option value=(value) selected[value == search.size] { (text) }
+                        }
+                    }
+                }
+                label."inline" for="search-page" {
+                    span {"Page:"}
+                    input."smallinput" #"search-page" type="text" name="page" value=(search.page); 
+                }
+                input type="submit" value="Update search";
+            }
+            @if !is_empty(&search.preview) {
+                //Used to have h4 Preview images
+                div."imagelist" {
+                    @if previews.len() > 0 {
+                        (image_list(&data.config, previews, imagesize))
+                    }
+                    @else {
+                        p."aside" {"No images returned for preview!"}
+                    }
+                }
+                hr;
+            }
+            //Used to have img navigation here
+            div."imagelist" {
+                @if images.len() > 0 {
+                    (image_list(&data.config, images, imagesize))
+                }
+                @else {
+                    p."aside" {"No images!"}
+                }
+            }
+            (image_navigation(&data, search))
+        }
+    }).into_string()
 }
 
 fn image_list(config: &LinkConfig, images: Vec<Image>, size: i64) -> Markup {
