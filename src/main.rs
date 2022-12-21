@@ -308,9 +308,9 @@ async fn main()
 
     let get_imagebrowser_route = warp_get_async!(
         warp::path!("widget" / "imagebrowser")
-            .and(warp::query::<pages::widget_imagebrowser::Search>()
-                .or(warp::any().map(|| pages::widget_imagebrowser::Search::default()))
-                .unify()),
+            .and(warp::query::<pages::widget_imagebrowser::Search>()),
+                //.or(warp::any().map(|| pages::widget_imagebrowser::Search::default()))
+                //.unify()),
         |search:pages::widget_imagebrowser::Search, context:RequestContext| {
             async move {
                 let gc = context.global_state.clone();
@@ -320,6 +320,21 @@ async fn main()
                         search, 
                         gc.config.default_imagebrowser_count).await)?,
                     &gc.link_config)
+            }
+        });
+
+    let get_widgetthread_route = warp_get_async!(
+        warp::path!("widget" / "thread")
+            .and(warp::query::<pages::widget_thread::ThreadQuery>()),
+                //.or(warp::any().map(|| pages::widget_thread::Search::default()))
+                //.unify()),
+        |search:pages::widget_thread::ThreadQuery, context:RequestContext| {
+            async move {
+                let gc = context.global_state.clone();
+                handle_response(
+                    errwrap!(pages::widget_thread::get_render(context.into(), search).await)?,
+                    &gc.link_config
+                )
             }
         });
 
@@ -377,6 +392,7 @@ async fn main()
         .or(get_sessionsettings_route)
         .or(post_sessionsettings_route)
         .or(get_imagebrowser_route)
+        .or(get_widgetthread_route)
         .or(get_bbcodepreview_route)
         .or(post_bbcodepreview_route)
         .recover(handle_rejection)

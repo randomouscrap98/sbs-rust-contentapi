@@ -5,6 +5,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 
 use contentapi::*;
+use contentapi::conversion::*;
 use common::forum::*;
 use common::submission::*; //Again, controversial? idk
 use common::pagination::*;
@@ -21,13 +22,47 @@ pub struct PostsConfig {
     pub path: Option<Vec<ForumPathItem>>,
     /// The pages to navigate posts; not displayed if not given
     pub pages: Option<Vec<PagelistItem>>,
-    pub start_num: i32,
+    pub start_num: Option<i32>,
     pub selected_post_id: Option<i64>,
 
     pub render_header: bool,
     pub render_page: bool,
     pub render_reply_chain: bool,
-    pub render_reply_link: bool
+    pub render_reply_link: bool,
+    //pub render_sequence: bool
+}
+
+impl PostsConfig {
+    pub fn thread_mode(thread: ForumThread, users: HashMap<i64,User>, path: Vec<ForumPathItem>, pages: Vec<PagelistItem>, 
+        start: i32, selected_post_id: Option<i64>) -> Self
+    {
+        Self {
+            thread,
+            users,
+            path: Some(path),
+            pages: Some(pages),
+            start_num: Some(start),
+            selected_post_id,
+            render_header: true,
+            render_page: true,
+            render_reply_chain: false,
+            render_reply_link: true
+        }
+    }
+    pub fn reply_mode(thread: ForumThread, users: HashMap<i64,User>, selected_post_id: Option<i64>) -> Self {
+        Self {
+            thread,
+            users,
+            path: None,
+            pages: None,
+            start_num: None,
+            selected_post_id,
+            render_header: false,
+            render_page: false,
+            render_reply_chain: true,
+            render_reply_link: false
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -81,7 +116,8 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
         }
         section #"thread-top" data-selected=[config.selected_post_id] {
             @for (index,post) in thread.posts.iter().enumerate() {
-                (post_item(&context.layout_data, &mut context.bbcode, &config, post, config.start_num + index as i32)) //.config, bbcode, post, &thread.thread, config.selected_post_id, &config.users, config.start_num + index as i32))
+                @let sequence = config.start_num.and_then(|s| Some(s + index as i32));
+                (post_item(&context.layout_data, &mut context.bbcode, &config, post, sequence)) 
                 @if index < thread.posts.len() - 1 { hr."smaller"; }
             }
             @if let Some(pages) = config.pages {
@@ -159,7 +195,7 @@ fn get_replydata(post: &Message) -> Option<Vec<i64>> {
 }
 
 /// Render a single post on a thread.
-pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &PostsConfig, post: &Message, sequence: i32) -> Markup// config: &LinkConfig, bbcode: &mut BBCode, post: &Message,  //thread: &Content, selected_post_id: Option<i64>, 
+pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &PostsConfig, post: &Message, sequence: Option<i32>) -> Markup// config: &LinkConfig, bbcode: &mut BBCode, post: &Message,  //thread: &Content, selected_post_id: Option<i64>, 
     //users: &HashMap<i64, User>, sequence: i32) -> Markup 
 {
     let users = &config.users;
@@ -192,7 +228,9 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
             div."postright" {
                 div."postheader" {
                     a."flatlink username" href=(user_link(&layout_data.config, &user)) { (&user.username) } 
-                    a."sequence" target="_top" title=(i(&post.id)) href=(forum_post_link(&layout_data.config, post, &config.thread.thread)){ "#" (sequence) } 
+                    @if let Some(sequence) = sequence {
+                        a."sequence" target="_top" title=(i(&post.id)) href=(forum_post_link(&layout_data.config, post, &config.thread.thread)){ "#" (sequence) } 
+                    }
                 }
                 @if let Some(text) = &post.text {
                     div."content bbcode" { (PreEscaped(bbcode.parse_profiled_opt(text, format!("post-{}",i(&post.id))))) }
@@ -221,7 +259,39 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
     }
 }
 
-pub async fn get_render(context: PageContext, query: ThreadQuery) -> Result<Response, Error> 
+pub async fn get_render(mut context: PageContext, query: ThreadQuery) -> Result<Response, Error> 
 {
-    //Now need to get data (with replies!) and construct the config
+    if let Some(post_id) = query.reply 
+    {
+        //This is a WASTEFUL query for rendering this simple widget, at some point make this better!
+        let pre_request = get_prepost_request(None, Some(post_id), None, None);
+
+        //Go lookup all the 'initial' data, which everything except posts and users
+        let pre_result = context.api_context.post_request_profiled_opt(&pre_request, "prepost").await?;
+
+        //Pull out and parse all that stupid data. It's fun using strongly typed languages!! maybe...
+        let mut categories_cleaned = CleanedPreCategory::from_many(cast_result_required::<Content>(&pre_result, CATEGORYKEY)?)?;
+        let mut threads_raw = cast_result_required::<Content>(&pre_result, THREADKEY)?;
+
+        //There must be one category, and one thread, otherwise return 404
+        let thread = threads_raw.pop().ok_or(Error::NotFound(String::from("Could not find thread!")))?;
+        let category = categories_cleaned.pop().ok_or(Error::NotFound(String::from("Could not find category!")))?;
+
+        //OK NOW you can go lookup the posts, since we are sure about where in the postlist we want
+        let after_request = get_reply_request(post_id);
+        let after_result = context.api_context.post_request_profiled_opt(&after_request, "finishpost").await?;
+
+        //Pull the data out of THAT request
+        let messages_raw = cast_result_required::<Message>(&after_result, "message")?;
+        let users_raw = cast_result_required::<User>(&after_result, "user")?;
+
+        Ok(Response::Render(render(&mut context, PostsConfig::reply_mode(
+            ForumThread::from_content(thread, &messages_raw, &category.stickies)?, 
+            map_users(users_raw), 
+            query.selected
+        ))))
+    }
+    else {
+        Err(Error::Other(String::from("No data provided; this widget requires at least 'reply'")))
+    }
 }

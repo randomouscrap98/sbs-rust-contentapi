@@ -254,8 +254,6 @@ pub fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip
 pub fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option<i64>, thread_hash: Option<String>) -> FullRequest 
 {
     let mut request = FullRequest::new();
-    //add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
-    //add_value!(request, "category_literal", SBSContentType::forumcategory.to_string());
 
     let mut post_limited = false;
     let mut post_query = String::from("!basiccomments()");
@@ -273,7 +271,6 @@ pub fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option
         post_limited = true;
     }
 
-    //let mut thread_query = format!("literalType = @thread_literal and !notdeleted()");
     let mut thread_query = String::from("!notdeleted()");
 
     //Add the pre-lookup post get so we can limit the thread by it. This will prevent users
@@ -301,9 +298,9 @@ pub fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option
         add_value!(request, "hash", thread_hash);
         thread_query = format!("{} and hash = @hash", thread_query);
     }
-    else {
+    else if !post_limited {
         //Is this acceptable? I mean you called it wrong...
-        panic!("You must pass at least one of either 'ftid' or 'thread_hash' to get_prepost_request()!");
+        panic!("You must pass at least one of either 'ftid' or 'thread_hash' or 'post_id' to get_prepost_request()!");
     }
 
     let mut thread_request = build_request!(
@@ -370,6 +367,32 @@ pub fn get_finishpost_request(thread_id: i64, extra_uids: Vec<i64>, limit: i32, 
     request
 }
 
+/// Generate a request for ONLY messages and users for the given root post id. NO limits set on reply chain
+/// length (other than those imposed by the API)
+pub fn get_reply_request(root_post_id: i64) -> FullRequest 
+{
+    let mut request = FullRequest::new();
+    //add_value!(request, "root_post", root_post_id);
+    add_value!(request, "root_key", vec![format!("re:{}", root_post_id)]);
+
+    let message_request = build_request!(
+        RequestType::message,
+        String::from("*"),
+        String::from("!basiccomments() and !valuekeyin(@root_key)"),
+        String::from("id")
+    );
+    request.requests.push(message_request);
+
+    //users in messages OR in extra_uids
+    let user_request = build_request!(
+        RequestType::user,
+        String::from("*"),
+        String::from("id in @message.createUserId or id in @message.editUserId")
+    );
+    request.requests.push(user_request);
+
+    request
+}
 
 
 // ----------------------------
