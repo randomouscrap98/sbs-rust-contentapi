@@ -1,7 +1,7 @@
 use common::*;
 
 use contentapi::*;
-use forum_thread::*;
+use forum_render::*;
 use contentapi::conversion::*;
 use common::forum::*;
 use common::layout::*;

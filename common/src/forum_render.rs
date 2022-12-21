@@ -7,6 +7,71 @@ use submission::*;
 use pagination::*;
 use maud::*;
 
+
+// ----------------------------
+// *       BASIC JUNK         *
+// ----------------------------
+
+//To build the forum path at the top
+pub struct ForumPathItem {
+    pub link: String,
+    pub title: String
+}
+
+impl ForumPathItem {
+    pub fn from_category(category: &Content) -> Self {
+        Self {
+            link: format!("/forum/category/{}", if let Some(ref hash) = category.hash { hash } else { "" }),
+            title: if let Some(ref name) = category.name { name.clone() } else { String::from("NOTFOUND") }
+        }
+    }
+    pub fn from_thread(thread: &Content) -> Self {
+        Self {
+            link: format!("/forum/thread/{}", if let Some(ref hash) = thread.hash { hash } else { "" }),
+            title: if let Some(ref name) = thread.name { name.clone() } else { String::from("NOTFOUND") }
+        }
+    }
+    pub fn root() -> Self {
+        Self {
+            link: String::from("/forum"),
+            title: String::from("Root")
+        }
+    }
+}
+
+pub fn forum_path(config: &LinkConfig, path: &Vec<ForumPathItem>) -> Markup {
+    html!{
+        p."forumpath" {
+            @for (index, segment) in path.iter().enumerate() {
+                @let last = index == path.len() - 1;
+                a."flatlink" href={(config.http_root)(segment.link)} {
+                    @if last { "[.]" }
+                    @else { (segment.title) }
+                }
+                @if !last {
+                    span."pathseparator" { " / " }
+                }
+            }
+        }
+    }
+}
+
+//Weird circular dependency... oh well, maybe I'll fix later
+pub fn threadicon(config: &LinkConfig, thread: &ForumThread) -> Markup { //neutral: bool, sticky: bool, locked: bool) -> Markup {
+    html! {
+        div."threadicon smallseparate" {
+            @if thread.neutral { (submission::pageicon(config, &thread.thread)) }
+            @if thread.sticky { span{"📌"} }
+            @if thread.locked { span{"🔒"} }
+        }
+    }
+}
+
+
+// ----------------------------
+// *     BIG JUNK (THReAD)    *
+// ----------------------------
+
 // Unfortunately need this in here so the post knows how to render the iframe
 #[derive(Serialize, Deserialize, Default)]
 #[serde(default)]
@@ -199,7 +264,7 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
                     selected: config.selected_post_id
                 };
                 match serde_urlencoded::to_string(query) {
-                    Ok(query) => reply_link = Some(format!("{}/widget_thread?{}", &layout_data.config.http_root, query)),
+                    Ok(query) => reply_link = Some(format!("{}/widget/thread?{}", &layout_data.config.http_root, query)),
                     Err(error) => println!("ERROR: couldn't encode thread query!: {}", error)
                 }
             }
@@ -225,7 +290,7 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
                     @if let Some(reply_link) = reply_link {
                         details."replychain aside" {
                             summary { "View previous conversation" }
-                            iframe href=(reply_link){}
+                            iframe src=(reply_link){}
                         }
                     }
                     div."history" {

@@ -2,7 +2,7 @@ use common::*;
 use common::layout::layout;
 use common::forum::*;
 use common::pagination::*;
-use common::forum_thread::*;
+use common::forum_render::*;
 
 use contentapi::*;
 use contentapi::conversion::*;

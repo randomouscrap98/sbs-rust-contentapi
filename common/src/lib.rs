@@ -2,7 +2,7 @@ pub mod forum;
 pub mod layout;
 pub mod pagination;
 pub mod submission;
-pub mod forum_thread;
+pub mod forum_render;
 
 use std::collections::HashMap;
 

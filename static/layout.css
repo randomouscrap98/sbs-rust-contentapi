@@ -6,10 +6,6 @@
 
 /* The body needs to get out of the way */
 body {
-    font-family: var(--font);
-    padding: 0;
-    margin: 0;
-    border: none;
     width: 100%;
     min-height: 100vh; /* this doesn't work on mobile */
     display: flex;
@@ -51,24 +47,6 @@ section {
     margin: 0.5em auto;
     border-radius: var(--space_medium);
     overflow: hidden;
-}
-
-h1 {
-    /* Use a SMALL margin here because it's em and h1 is BIG */
-    margin: var(--space_small) 0; /* reduce the margins on h1 a bit */
-}
-
-h2 {
-    margin: var(--space_small) 0;
-}
-
-h3 {
-    margin: var(--space_medium) 0;
-}
-
-p { /* Not sure about this one? */
-    line-height: var(--reg_lineheight);
-    margin: var(--space_medium) 0;
 }
 
 /* Inside a section, let the parent determine the distance to the top and bottom edges */

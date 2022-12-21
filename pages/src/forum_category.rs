@@ -8,6 +8,7 @@ use contentapi::endpoints::ApiContext;
 
 use common::*;
 use common::forum::*;
+use common::forum_render::*;
 use common::layout::*;
 use common::pagination::*;
 use maud::*;

@@ -325,10 +325,10 @@ async fn main()
 
     let get_widgetthread_route = warp_get_async!(
         warp::path!("widget" / "thread")
-            .and(warp::query::<common::forum_thread::ThreadQuery>()),
+            .and(warp::query::<common::forum_render::ThreadQuery>()),
                 //.or(warp::any().map(|| pages::widget_thread::Search::default()))
                 //.unify()),
-        |search:common::forum_thread::ThreadQuery, context:RequestContext| {
+        |search:common::forum_render::ThreadQuery, context:RequestContext| {
             async move {
                 let gc = context.global_state.clone();
                 handle_response(
