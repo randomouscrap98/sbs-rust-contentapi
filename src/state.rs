@@ -93,10 +93,13 @@ impl RequestContext {
 
 impl From<RequestContext> for PageContext {
     fn from(context: RequestContext) -> Self {
+        let mut consumer = context.bbcode.clone();
+        consumer.to_consumer();
         Self {
             layout_data: context.layout_data,
             api_context: context.api_context,
-            bbcode: context.bbcode
+            bbcode: context.bbcode,
+            bbconsume: consumer
         } 
     }
 }

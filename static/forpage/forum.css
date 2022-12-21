@@ -52,6 +52,7 @@
 
 .postright {
     flex: auto;
+    min-width: 0;
 }
 
 .post .avatar {
@@ -113,6 +114,42 @@
     margin-top: 0.65em; /* special */
 }
 
+/*  -------------------
+ *     POST REPLY     *
+ *  ----------------- */
+ .reply {
+    display: flex;
+    align-items: center;
+    /*max-width: 75vw; /* Just too tired to remember how to do this */
+    margin-top: var(--space_small);
+ }
+
+ .reply .replylink {
+    margin-right: 0.5em;
+    flex: none;
+ }
+
+ .reply img {
+    width: 1em;
+    max-height: 1em;
+    border-radius: 0.2em;
+ }
+
+ .reply > .username {
+    display: block;
+    margin-left: 0.2em;
+    margin-right: 0.3em;
+ }
+ .reply > .username::after {
+    content: ":";
+ }
+
+ .reply .content {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 0 !important;
+ }
 
 
 /*  -------------------

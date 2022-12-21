@@ -70,7 +70,8 @@ pub struct MainLayoutData {
 pub struct PageContext {
     pub layout_data: MainLayoutData,
     pub api_context: ApiContext,
-    pub bbcode: BBCode
+    pub bbcode: BBCode,
+    pub bbconsume: BBCode
 }
 
 // ------------------------

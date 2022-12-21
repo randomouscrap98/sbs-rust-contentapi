@@ -194,7 +194,7 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
         section #"thread-top" data-selected=[config.selected_post_id] {
             @for (index,post) in thread.posts.iter().enumerate() {
                 @let sequence = config.start_num.and_then(|s| Some(s + index as i32));
-                (post_item(&context.layout_data, &mut context.bbcode, &config, post, sequence)) 
+                (post_item(&context.layout_data, &mut context.bbcode, &mut context.bbconsume, &config, post, sequence)) 
                 @if index < thread.posts.len() - 1 { hr."smaller"; }
             }
             @if let Some(pages) = config.pages {
@@ -257,15 +257,15 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
     }
 }
 
-pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &PostsConfig, post: &Message, sequence: Option<i32>) -> Markup// config: &LinkConfig, bbcode: &mut BBCode, post: &Message,  //thread: &Content, selected_post_id: Option<i64>, 
-    //users: &HashMap<i64, User>, sequence: i32) -> Markup 
+pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, bbconsume: &mut BBCode, config: &PostsConfig, 
+    post: &Message, sequence: Option<i32>) -> Markup
 {
     let users = &config.users;
     let user = user_or_default(users.get(&post.createUserId.unwrap_or(0)));
     let mut class = String::from("post");
     if config.selected_post_id == post.id { class.push_str(" current") }
     let mut reply_chain_link: Option<String> = None;
-    let mut reply_link: Option<String> = None;
+    let mut reply_post : Option<&Message> = None;
 
     //Don't do the (not particularly expensive) calculation of all the reply links if the user didn't ask for it!
     if config.render_reply_link {
@@ -278,11 +278,13 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
                 match serde_urlencoded::to_string(query) {
                     Ok(query) => {
                         reply_chain_link = Some(format!("{}/widget/thread?{}", &layout_data.config.http_root, query));
-                        //reply_link = Some(forum_post_link(&layout_data.config, &post, &config.thread.thread))
                     },
                     Err(error) => println!("ERROR: couldn't encode thread query!: {}", error)
                 }
-            //}
+                reply_post = config.related.get(&replies.direct);
+                if reply_post.is_none() {
+                    println!("ERROR: couldn't find related post {}!", replies.direct)
+                }
         }
     }
 
@@ -297,6 +299,9 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
                     @if let Some(sequence) = sequence {
                         a."sequence" target="_top" title=(i(&post.id)) href=(forum_post_link(&layout_data.config, post, &config.thread.thread)){ "#" (sequence) } 
                     }
+                }
+                @if let Some(reply_post) = reply_post {
+                    (post_reply(layout_data, &mut bbconsume.clone(), reply_post, &config.thread.thread, &config.users))
                 }
                 //@if let some(reply_link) = reply_link {
                 //    a."reply" href=(reply_link) { ">>"(i()) }
@@ -325,6 +330,26 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
                     }
                 }
             }
+        }
+    }
+}
+
+pub fn post_reply(layout_data: &MainLayoutData, bbconsume: &mut BBCode, post: &Message, thread: &Content, users: &HashMap<i64, User>) -> Markup// config: &LinkConfig, bbcode: &mut BBCode, post: &Message,  //thread: &Content, selected_post_id: Option<i64>, 
+{
+    let user = user_or_default(users.get(&post.createUserId.unwrap_or(0)));
+    html! {
+        div."reply aside" {
+            a."replylink" href=(forum_post_link(&layout_data.config, post, thread)) { "Replying to:" }
+            //div."replypost" {
+            img src=(image_link(&layout_data.config, &user.avatar, 50, true)); 
+            a."flatlink username" href=(user_link(&layout_data.config, &user)) { (&user.username) } 
+            @if let Some(text) = &post.text {
+                //Ignoring graphemes for now, sorry. In NEARLY all cases, 200 bytes should be enough to fill 
+                //a line, unless you're being ridiculous
+                @let text = if text.len() > 200 { &text[0..200] } else { &text };
+                div."content bbcode" { (PreEscaped(bbconsume.parse_profiled_opt(text, format!("reply-{}",i(&post.id))))) }
+            }
+            //}
         }
     }
 }

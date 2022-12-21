@@ -79,11 +79,15 @@ async fn main()
         BBCode::from_matchers(matchers)
     };
 
+    //let mut bbconsume = bbcode.clone();
+    //bbconsume.to_consumer();
+
     //Set up the SINGULAR global state, which will be passed around with a counting reference.
     //So when you see "clone" on this, it's not actually cloning all the data, it's just making
     //a new pointer and incrementing a count.
     let global_state = Arc::new(GlobalState {
         bbcode,
+        //bbconsume,
         link_config : {
             let root = config.http_root.clone();
             LinkConfig {
