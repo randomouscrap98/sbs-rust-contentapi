@@ -182,9 +182,14 @@ pub fn forum_thread_link(config: &LinkConfig, thread: &Content) -> String {
     format!("{}/forum/thread/{}", config.http_root, s(&thread.hash)) //}"{{@root.http_root}}/forum/thread/{{thread.hash}}" class="flatlink">{{thread.name}}</a> }
 }
 
+pub fn forum_post_hash(post: &Message) -> String {
+    let post_id = post.id.unwrap_or(0);
+    format!("#post_{}", post_id)
+}
+
 pub fn forum_post_link(config: &LinkConfig, post: &Message, thread: &Content) -> String {
     let post_id = post.id.unwrap_or(0);
-    format!("{}/forum/thread/{}/{}#post_{}", config.http_root, s(&thread.hash), post_id, post_id)
+    format!("{}/forum/thread/{}/{}{}", config.http_root, s(&thread.hash), post_id, forum_post_hash(post))
 }
 
 // ----------------------------

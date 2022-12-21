@@ -167,6 +167,7 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
     let thread = &config.thread;
     html!{
         (style(&data.config, "/forpage/forum.css"))
+        (script(&data.config, "/forpage/forum.js"))
         @if config.render_header {
             section {
                 h1 { (s(&thread.thread.name)) }
@@ -257,7 +258,8 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
     }
 }
 
-pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, bbconsume: &mut BBCode, config: &PostsConfig, 
+//WAS consuming bbcode, now i'm not sure. leaving for now
+pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, _bbconsume: &mut BBCode, config: &PostsConfig, 
     post: &Message, sequence: Option<i32>) -> Markup
 {
     let users = &config.users;
@@ -277,7 +279,7 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, bbconsume: &
                 };
                 match serde_urlencoded::to_string(query) {
                     Ok(query) => {
-                        reply_chain_link = Some(format!("{}/widget/thread?{}", &layout_data.config.http_root, query));
+                        reply_chain_link = Some(format!("{}/widget/thread?{}", &layout_data.config.http_root, query)); //, forum_post_hash(post)));
                     },
                     Err(error) => println!("ERROR: couldn't encode thread query!: {}", error)
                 }
@@ -301,7 +303,8 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, bbconsume: &
                     }
                 }
                 @if let Some(reply_post) = reply_post {
-                    (post_reply(layout_data, &mut bbconsume.clone(), reply_post, &config.thread.thread, &config.users))
+                    //TODO: can't decide between consuming or not. spoilers are the important bit
+                    (post_reply(layout_data, &mut bbcode.clone(), reply_post, &config.thread.thread, &config.users))
                 }
                 //@if let some(reply_link) = reply_link {
                 //    a."reply" href=(reply_link) { ">>"(i()) }
@@ -312,9 +315,9 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, bbconsume: &
                 div."postfooter mediumseparate" {
                     //div."aside id" { (i(&post.id)) }
                     @if let Some(reply_link) = reply_chain_link {
-                        details."replychain aside" {
+                        details."replychain aside" style="display:none" {
                             summary { "View conversation" }
-                            iframe src=(reply_link){}
+                            iframe data-src=(reply_link){}
                         }
                     }
                     div."history" {

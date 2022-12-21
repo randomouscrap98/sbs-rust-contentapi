@@ -40,9 +40,9 @@
 }
 
 .post.current {
-    border-left: 0.4em solid var(--bg_activeselect);
-    padding-left: 0.4em; /* To give space between the bar (border-left) and the avatar */
-    margin-left: -0.8em; /* A hack to make the border extend beyond the bounds of the post */
+    border-left: calc(0.8 * var(--space_small)) solid var(--bg_activeselect);
+    padding-left: calc(0.8 * var(--space_small)); /* calc(0.8 * var(--space_small)); /* To give space between the bar (border-left) and the avatar */
+    margin-left: calc(-1.6 * var(--space_small)); /* A hack to make the border extend beyond the bounds of the post */
 }
 
 .postleft {
@@ -52,6 +52,7 @@
 
 .postright {
     flex: auto;
+    /* REQUIRED TO MAKE ALL TEXT TRUNCATION IN ANY CHILD AT ANY LEVEL WITHIN WORK */
     min-width: 0;
 }
 

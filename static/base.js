@@ -57,3 +57,12 @@ function setup_input_copy(input)
     input.copyVisual = input_copy_visual;
     input.onclick = copy_text_generic_onclick;
 }
+
+// For any iframes that are within that haven't been loaded yet, set the src
+function load_inner_iframe(e) {
+    var iframe = e.target.querySelector("iframe[data-src]");
+    if (iframe) {
+        iframe.setAttribute("src", iframe.getAttribute("data-src"));
+        iframe.removeAttribute("data-src");
+    }
+}
