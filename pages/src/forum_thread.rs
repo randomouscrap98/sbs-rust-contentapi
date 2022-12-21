@@ -65,7 +65,9 @@ async fn render_thread(mut context: PageContext, pre_request: FullRequest, per_p
         start_num: 1 + per_page * page,
         selected_post_id: selected_post.and_then(|m| m.id),
         render_header: true,
-        render_page: true
+        render_page: true,
+        render_reply_chain: false,
+        render_reply_link: true
     })))
 }
 

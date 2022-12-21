@@ -1,4 +1,6 @@
 use common::*;
+use serde::Deserialize;
+use serde::Serialize;
 
 use std::collections::HashMap;
 
@@ -23,7 +25,16 @@ pub struct PostsConfig {
     pub selected_post_id: Option<i64>,
 
     pub render_header: bool,
-    pub render_page: bool
+    pub render_page: bool,
+    pub render_reply_chain: bool,
+    pub render_reply_link: bool
+}
+
+#[derive(Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct ThreadQuery {
+    pub reply: Option<i64>,
+    pub selected: Option<i64>
 }
 
 /// Rendering for the actual widget. The 
@@ -47,7 +58,7 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
         @if config.render_header {
             section {
                 h1 { (s(&thread.thread.name)) }
-                @if let Some(path) = config.path {
+                @if let Some(path) = &config.path {
                     (forum_path(&data.config, &path))
                 }
                 div."foruminfo smallseparate aside" {
@@ -70,7 +81,7 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
         }
         section #"thread-top" data-selected=[config.selected_post_id] {
             @for (index,post) in thread.posts.iter().enumerate() {
-                (post_item(&data.config, bbcode, post, &thread.thread, config.selected_post_id, &config.users, config.start_num + index as i32))
+                (post_item(&context.layout_data, &mut context.bbcode, &config, post, config.start_num + index as i32)) //.config, bbcode, post, &thread.thread, config.selected_post_id, &config.users, config.start_num + index as i32))
                 @if index < thread.posts.len() - 1 { hr."smaller"; }
             }
             @if let Some(pages) = config.pages {
@@ -133,34 +144,73 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
     }
 }
 
+fn get_replydata(post: &Message) -> Option<Vec<i64>> {
+    if let Some(values) = &post.values {
+        let mut res: Vec<i64> = values.iter()
+            .filter(|(k,_v)| k.starts_with("re:"))
+            .map(|(_k,v)| v.as_i64().unwrap_or_else(||0i64))
+            .collect();
+        res.sort();
+        Some(res)
+    }
+    else {
+        None
+    }
+}
+
 /// Render a single post on a thread.
-pub fn post_item(config: &LinkConfig, bbcode: &mut BBCode, post: &Message, thread: &Content, selected_post_id: Option<i64>, 
-    users: &HashMap<i64, User>, sequence: i32) -> Markup 
+pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &PostsConfig, post: &Message, sequence: i32) -> Markup// config: &LinkConfig, bbcode: &mut BBCode, post: &Message,  //thread: &Content, selected_post_id: Option<i64>, 
+    //users: &HashMap<i64, User>, sequence: i32) -> Markup 
 {
+    let users = &config.users;
     let user = user_or_default(users.get(&post.createUserId.unwrap_or(0)));
     let mut class = String::from("post");
-    if selected_post_id == post.id { class.push_str(" current") }
+    if config.selected_post_id == post.id { class.push_str(" current") }
+    let mut reply_link: Option<String> = None;
+
+    //Don't do the (not particularly expensive) calculation of all the reply links if the user didn't ask for it!
+    if config.render_reply_link {
+        if let Some(res) = get_replydata(post) {
+            if res.len() > 0 {
+                let query = ThreadQuery {
+                    reply: res.first().copied(),
+                    selected: config.selected_post_id
+                };
+                match serde_urlencoded::to_string(query) {
+                    Ok(query) => reply_link = Some(format!("{}/widget_thread?{}", &layout_data.config.http_root, query)),
+                    Err(error) => println!("ERROR: couldn't encode thread query!: {}", error)
+                }
+            }
+        }
+    }
+
     html! {
         div.(class) #{"post_"(i(&post.id))} {
             div."postleft" {
-                img."avatar" src=(image_link(config, &user.avatar, 100, true)); 
+                img."avatar" src=(image_link(&layout_data.config, &user.avatar, 100, true)); 
             }
             div."postright" {
                 div."postheader" {
-                    a."flatlink username" href=(user_link(config, &user)) { (&user.username) } 
-                    a."sequence" target="_top" title=(i(&post.id)) href=(forum_post_link(config, post, thread)){ "#" (sequence) } 
+                    a."flatlink username" href=(user_link(&layout_data.config, &user)) { (&user.username) } 
+                    a."sequence" target="_top" title=(i(&post.id)) href=(forum_post_link(&layout_data.config, post, &config.thread.thread)){ "#" (sequence) } 
                 }
                 @if let Some(text) = &post.text {
                     div."content bbcode" { (PreEscaped(bbcode.parse_profiled_opt(text, format!("post-{}",i(&post.id))))) }
                 }
-                div."postfooter" {
+                div."postfooter mediumseparate" {
+                    @if let Some(reply_link) = reply_link {
+                        details."replychain aside" {
+                            summary { "View previous conversation" }
+                            iframe href=(reply_link){}
+                        }
+                    }
                     div."history" {
                         time."aside" datetime=(d(&post.createDate)) { (timeago_o(&post.createDate)) } 
                         @if let Some(edit_user_id) = post.editUserId {
                             time."aside" datetime=(d(&post.editDate)) { 
                                 "Edited "(timeago_o(&post.editDate))" by "
                                 @if let Some(edit_user) = users.get(&edit_user_id) {
-                                    a."flatlink" href=(user_link(config,&edit_user)){ (&edit_user.username) }
+                                    a."flatlink" href=(user_link(&layout_data.config,&edit_user)){ (&edit_user.username) }
                                 }
                             }
                         }
@@ -169,4 +219,9 @@ pub fn post_item(config: &LinkConfig, bbcode: &mut BBCode, post: &Message, threa
             }
         }
     }
+}
+
+pub async fn get_render(context: PageContext, query: ThreadQuery) -> Result<Response, Error> 
+{
+    //Now need to get data (with replies!) and construct the config
 }
