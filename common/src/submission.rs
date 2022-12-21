@@ -183,7 +183,7 @@ pub fn pageicon(config: &LinkConfig, page: &Content) -> Markup {
             @for system in systems {
                 @if let Some(system) = system.as_str() {
                     @if let Some(title) = systems_map.get(system) {
-                        img title=(title) src={(config.resource_root)"/"(system)".svg"};
+                        img title=(title) class="sysicon" src={(config.resource_root)"/"(system)".svg"};
                     }
                 }
             }

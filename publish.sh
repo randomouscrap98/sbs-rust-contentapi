@@ -41,7 +41,7 @@ FULLENDPOINT="${LOGIN}:${INSTALLDIR}"
 
 # Copy everything except 'target', which is a LOT of data...
 echo "Copying release to ${FULLENDPOINT}"
-rsync -rvhz -e "ssh -p ${INSTALLPORT}" ./ --exclude 'target' --exclude '.git' ${FULLENDPOINT}
+rsync -avhz -e "ssh -p ${INSTALLPORT}" ./ --exclude 'target' --exclude '.git' ${FULLENDPOINT}
 #rsync -avhz -e "ssh -p ${INSTALLPORT}" ./ --exclude 'target' --exclude '.git' ${FULLENDPOINT}
 
 # We have to build ON the server itself because glibc (I don't want to use docker)

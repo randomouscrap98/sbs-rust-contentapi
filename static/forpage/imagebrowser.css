@@ -15,7 +15,7 @@ body {
     box-sizing: border-box;
     overflow-x: hidden;
     overflow-y: hidden;
-    background-color: var(--bg_section);
+    background-color: var(--bg_section) !important;
     font-family: var(--font);
 }
 
@@ -28,7 +28,7 @@ h3 {
     display: flex;
     flex-wrap: wrap;
     padding: 0.5em 0.75em;
-    background-color: var(--color_divider);
+    background-color: var(--bg_altsection);
     border-radius: 0.5em;
     margin-bottom: 0.5em;
 }
@@ -63,6 +63,8 @@ h3 {
 
 .imagepreview.copyable img {
     border-radius: 0.3em;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .imagepreview.copyable input {
@@ -76,7 +78,8 @@ h3 {
 }
 
 .imagepreview.copyable input.success {
-    background-color: var(--tc_success);
+    background-color: var(--bg_activeselect);
+    color: var(--tc_activeselect);
 }
 
 [data-size="1"] .imagepreview {

@@ -1,20 +1,28 @@
 
 /* all the css variables to control common document constants */
 :root {
-    --bg_header: #444;
-    --tc_header: #EEE;
+    /* Main colors */
+    --tc_main: #111;
+    --tc_aside: gray;
     --bg_section: white;
-    --bg_altsection: rgba(127,127,127,0.1);
     --color_border: lightgray;
     --color_divider: gainsboro;
+    --tc_flatlink: teal;
+    --tc_link: rgb(55, 91, 189);
+
+    /* Header-only colors (but MAY be reused in other elements? */
+    --bg_header: #444;
+    --tc_header: #EEE;
+
+    /* Special text and bg */
+    --bg_altsection: rgba(127,127,127,0.1);
     --bg_activeselect: teal;
     --tc_activeselect: white;
-    --tc_aside: gray;
     --tc_error: darkred;
     --bg_error: rgba(255,0,0,0.05);
     --tc_success: green;
-    --tc_flatlink: teal;
-    --tc_link: rgb(55, 91, 189);
+
+    /* Extra junk (generally not themed?) */
     --font: sans-serif;
     --simple_hover: brightness(1.2);
 
@@ -47,6 +55,10 @@
 /* ----------------------------- *
  *     BASIC / GENERIC STUFF     *
  * ----------------------------- */
+
+ body {
+    color: var(--tc_main);
+ }
 
 .error {
     color: var(--tc_error);
@@ -129,7 +141,7 @@ a.coolbutton {
 }
 
 /* UGH LINKS */
-a.coolbutton:link, a.coolbutton:visited { color: var(--tc_header);
+a.coolbutton:link, a.coolbutton:visited { color: var(--tc_activeselect);
 }
 
 /* These properties themselves are fine, but consider what should get them. */
@@ -307,6 +319,10 @@ hr.smaller {
     flex-direction: column;
 }
 
+.sysicon {
+    filter: opacity(0.9);
+}
+
 .cardmain {
     display: flex;
     margin-bottom: 0.5em;
@@ -318,7 +334,7 @@ hr.smaller {
 }
 
 .cardtext .description {
-    filter: opacity(0.7);
+    filter: opacity(0.85);
     margin-left: 0.05em;
     font-size: 0.95em;
 }

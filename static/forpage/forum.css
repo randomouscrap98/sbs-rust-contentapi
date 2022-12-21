@@ -124,7 +124,7 @@
    float: right;
    width: 25em;
    max-width: 100%;
-   background: var(--color_divider);
+   background: var(--bg_altsection);
    border-radius: var(--space_medium);
    margin-left: var(--space_medium);
    margin-bottom: var(--space_medium);

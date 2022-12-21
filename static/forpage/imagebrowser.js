@@ -6,6 +6,7 @@ function set_copy_on_click() {
         {
             setup_input_copy(x);
             x.parentNode.className += " copyable";
+            x.className += " notheme";
         });
     }
     else {

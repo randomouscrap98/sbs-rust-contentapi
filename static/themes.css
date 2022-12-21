@@ -1,0 +1,36 @@
+
+[data-theme="sbs-dark"] {
+    /* Main colors */
+    --tc_main: #CCC;
+    --tc_aside: #AAA;
+    --bg_section: #333;
+    --color_border: #292929;
+    --color_divider: #555;
+    --tc_flatlink: rgb(32, 217, 217); /*#79c8b7; /*rgb(81, 228, 228);*/
+    --tc_link: #8bc3ff; /*rgb(106, 170, 255);*/
+
+    /* Header-only colors (but MAY be reused in other elements? */
+    --bg_header: #222;
+    --tc_header: #BBB;
+
+    /* Special text and bg */
+    --bg_altsection: rgba(127,127,127,0.1);
+    --bg_activeselect: teal;
+    --tc_activeselect: white;
+    --tc_error: rgb(225, 117, 117);
+    --bg_error: rgba(255,0,0,0.05);
+    --tc_success: rgb(178, 254, 178);
+}
+
+body[data-theme="sbs-dark"] {
+    background-color: #444;
+    background-blend-mode: multiply;
+}
+
+[data-theme="sbs-dark"] input:not(.notheme), [data-theme="sbs-dark"] select, [data-theme="sbs-dark"] textarea {
+   filter: invert(0.8);
+}
+
+[data-theme="sbs-dark"] .sysicon { 
+    filter: invert(0.6);
+}
