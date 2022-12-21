@@ -1,6 +1,7 @@
 use bbscope::BBCode;
 
 use common::*;
+use common::layout::*;
 use maud::*;
 
 pub fn render(data: MainLayoutData, bbcode: &BBCode, text: Option<String>) -> String {
@@ -16,7 +17,7 @@ pub fn render(data: MainLayoutData, bbcode: &BBCode, text: Option<String>) -> St
                 (style(&data.config, "/forpage/bbcodepreview.css"))
             }
             //This is meant to go in an iframe, so it will use up the whole space
-            body data-compact[data.user_config.compact] {
+            (body(&data, html!{
                 @if let Some(text) = text {
                     div."content bbcode" { (PreEscaped(bbcode.parse(&text))) }
                 }
@@ -26,7 +27,7 @@ pub fn render(data: MainLayoutData, bbcode: &BBCode, text: Option<String>) -> St
                         input type="submit" value="Test";
                     }
                 }
-            }
+            }))
         }
     }.into_string()
 }

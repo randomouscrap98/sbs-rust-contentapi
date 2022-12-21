@@ -6,6 +6,7 @@ use contentapi::*;
 use common::forum::*;
 use common::submission::*; //Again, controversial? idk
 use common::pagination::*;
+use common::layout::*;
 use bbscope::BBCode;
 use maud::*;
 
@@ -27,6 +28,7 @@ pub struct PostsConfig {
 
 /// Rendering for the actual widget. The 
 pub fn render(context: &mut PageContext, config: PostsConfig) -> String {
+    let posts = render_posts(context, config);
     html!{
         (DOCTYPE)
         html lang=(context.layout_data.user_config.language) {
@@ -38,9 +40,9 @@ pub fn render(context: &mut PageContext, config: PostsConfig) -> String {
                 (script(&context.layout_data.config, "/base.js"))
             }
             //This is meant to go in an iframe, so it will use up the whole space
-            body data-compact[context.layout_data.user_config.compact] {
-                (render_posts(context, config))
-            }
+            (body(&context.layout_data, html! {
+                (posts)
+            }))
         }
     }.into_string()
 }

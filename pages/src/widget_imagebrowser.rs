@@ -1,4 +1,5 @@
 use common::*;
+use common::layout::*;
 
 use contentapi::*;
 use contentapi::endpoints::*;
@@ -23,7 +24,7 @@ pub fn render(data: MainLayoutData, search: Search, images: Vec<Image>, previews
                 (script(&data.config, "/forpage/imagebrowser.js"))
             }
             //This is meant to go in an iframe, so it will use up the whole space
-            body data-size=(search.size) data-compact[data.user_config.compact] {
+            (body(&data, html! {
                 //Might as well not show the upload form if user isn't logged in
                 @if let Some(_user) = &data.user {
                     h3 { "Upload file:" }
@@ -94,7 +95,7 @@ pub fn render(data: MainLayoutData, search: Search, images: Vec<Image>, previews
                     }
                     (image_navigation(&data, search))
                 }
-            }
+            }))
         }
     }.into_string()
 }

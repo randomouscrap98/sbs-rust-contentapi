@@ -45,6 +45,17 @@ pub fn header(config: &LinkConfig, current_path: &str, user: &Option<contentapi:
     }
 }
 
+/// Basic wrapper to allow you to generate a standard body (with all the proper fields set)
+pub fn body(data: &MainLayoutData, inner: Markup) -> Markup {
+    html!{
+        body data-compact[data.user_config.compact]
+             data-theme=(data.user_config.theme) 
+        { 
+            (inner) 
+        }
+    }
+}
+
 //Produce the footer for the main selection of pages
 pub fn footer(config: &LinkConfig, about_api: &contentapi::About, current_path: &str) -> Markup {
     html! {
@@ -92,7 +103,7 @@ pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
                 }
             }
         }
-        body data-compact[main_data.user_config.compact] {
+        (body(main_data, html! {
             (header(&main_data.config, &main_data.current_path, &main_data.user))
             main { 
                 section {
@@ -111,6 +122,6 @@ pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
                     //(PreEscaped(r#"console.log("Profiling data:", profile_data);"#))
                 }
             }
-        }
+        }))
     }
 }

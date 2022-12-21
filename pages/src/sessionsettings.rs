@@ -14,6 +14,15 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>) -> String
             p."aside" { "These settings are persisted in a cookie and only available on this device" }
             form method="POST" action={(data.config.http_root)"/sessionsettings"} {
                 (errorlist(errors))
+                label."inline" for="settings-theme" 
+                {
+                    span{"Theme:"}
+                    select #"settings-theme" name="theme" {
+                        @for (key,value) in UserConfig::all_themes() {
+                            option value=(value) selected[data.user_config.theme == key] { (value) }
+                        }
+                    }
+                }
                 label."inline" for="settings-compact" {
                     span { "Compact mode: " }
                     input."" #"settings-compact" type="checkbox" name="compact" checked[settings.compact] value="true";

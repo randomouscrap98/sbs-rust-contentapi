@@ -26,15 +26,27 @@ pub struct LinkConfig {
 #[serde(default)]
 pub struct UserConfig {
     pub language: String,
-    pub compact: bool
+    pub compact: bool,
+    pub theme: String
 }
 
 impl Default for UserConfig {
     fn default() -> Self {
         Self {
             language: String::from("en"),
-            compact: false
+            compact: false,
+            theme: String::from("sbs")
         }
+    }
+}
+
+impl UserConfig {
+    pub fn all_themes() -> Vec<(&'static str,&'static str)> {
+        vec![
+            ("sbs", "SBS (default)"),
+            ("sbs-dark", "SBS Dark"),
+            ("sbs-blue", "SBS Blue")
+        ]
     }
 }
 
