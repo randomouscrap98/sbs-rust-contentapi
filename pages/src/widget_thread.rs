@@ -14,6 +14,17 @@ pub fn render(context: &mut PageContext, config: PostsConfig) -> String {
     basic_skeleton(&context.layout_data, html! {
         title { "SmileBASIC Source Image Browser" }
         meta name="description" content="Simple image browser widget";
+        (style(&context.layout_data.config, "/forpage/forum.css"))
+        style { r#"
+            body { 
+                /* This shrinks the WHOLE page! */
+                font-size: 0.85rem; 
+                padding: var(--space_medium);
+            }
+            @media screen and (max-width: 30em) {
+                font-size: 0.75rem; 
+            }
+        "# }
     }, html! {
         (posts)
     }).into_string()
@@ -44,10 +55,12 @@ pub async fn get_render(mut context: PageContext, query: ThreadQuery) -> Result<
 
         //Pull the data out of THAT request
         let messages_raw = cast_result_required::<Message>(&after_result, "message")?;
+        let related_raw = cast_result_required::<Message>(&after_result, "related")?;
         let users_raw = cast_result_required::<User>(&after_result, "user")?;
 
         Ok(Response::Render(render(&mut context, PostsConfig::reply_mode(
             ForumThread::from_content(thread, &messages_raw, &category.stickies)?, 
+            map_messages(related_raw),
             map_users(users_raw), 
             query.selected
         ))))

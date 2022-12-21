@@ -52,12 +52,14 @@ async fn render_thread(mut context: PageContext, pre_request: FullRequest, per_p
 
     //Pull the data out of THAT request
     let messages_raw = cast_result_required::<Message>(&after_result, "message")?;
+    let related_raw = cast_result_required::<Message>(&after_result, "related")?;
     let users_raw = cast_result_required::<User>(&after_result, "user")?;
 
     //Construct before borrowing 
     let path = vec![ForumPathItem::root(), ForumPathItem::from_category(&category.category), ForumPathItem::from_thread(&thread)];
     Ok(Response::Render(render(context, PostsConfig::thread_mode(
         ForumThread::from_content(thread, &messages_raw, &category.stickies)?, 
+        map_messages(related_raw),
         map_users(users_raw),
         path,
         get_pagelist(comment_count as i32, per_page, page),

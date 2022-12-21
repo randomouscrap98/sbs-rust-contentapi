@@ -39,6 +39,14 @@ pub fn map_users(users: Vec<User>) -> HashMap<i64, User> {
     users.into_iter().map(|u| (u.id, u)).collect::<HashMap<i64, User>>()
 }
 
+pub fn map_content(content: Vec<Content>) -> HashMap<i64, Content> {
+    content.into_iter().map(|u| (u.id.unwrap_or_else(|| 0), u)).collect::<HashMap<i64, Content>>()
+}
+
+pub fn map_messages(messages: Vec<Message>) -> HashMap<i64, Message> {
+    messages.into_iter().map(|u| (u.id.unwrap_or_else(|| 0), u)).collect::<HashMap<i64, Message>>()
+}
+
 //This gets rid of our dependency on serde_qs
 //pub fn list_to_querystring(list: Vec<(String, Option<impl Display>)>) -> String {
 //    if list.len() == 0 {

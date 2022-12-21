@@ -84,6 +84,7 @@ pub struct ThreadQuery {
 pub struct PostsConfig {
     /// The thread that holds all the posts to render
     pub thread: ForumThread,
+    pub related: HashMap<i64,Message>,
     pub users: HashMap<i64,User>,
     /// The path to this thread; if not given, path not rendered. Thread must also be given
     pub path: Option<Vec<ForumPathItem>>,
@@ -100,11 +101,12 @@ pub struct PostsConfig {
 }
 
 impl PostsConfig {
-    pub fn thread_mode(thread: ForumThread, users: HashMap<i64,User>, path: Vec<ForumPathItem>, pages: Vec<PagelistItem>, 
-        start: i32, selected_post_id: Option<i64>) -> Self
+    pub fn thread_mode(thread: ForumThread, related: HashMap<i64,Message>, users: HashMap<i64,User>, 
+        path: Vec<ForumPathItem>, pages: Vec<PagelistItem>, start: i32, selected_post_id: Option<i64>) -> Self
     {
         Self {
             thread,
+            related,
             users,
             path: Some(path),
             pages: Some(pages),
@@ -116,9 +118,10 @@ impl PostsConfig {
             render_reply_link: true
         }
     }
-    pub fn reply_mode(thread: ForumThread, users: HashMap<i64,User>, selected_post_id: Option<i64>) -> Self {
+    pub fn reply_mode(thread: ForumThread, related: HashMap<i64,Message>, users: HashMap<i64,User>, selected_post_id: Option<i64>) -> Self {
         Self {
             thread,
+            related,
             users,
             path: None,
             pages: None,
@@ -132,20 +135,28 @@ impl PostsConfig {
     }
 }
 
+struct ReplyData {
+    top: i64,
+    direct: i64
+}
+
 /// Compute the flattened reply data for the given message
-fn get_replydata(post: &Message) -> Option<Vec<i64>> 
+fn get_replydata(post: &Message) -> Option<ReplyData>
 {
     if let Some(values) = &post.values {
-        let mut res: Vec<i64> = values.iter()
-            .filter(|(k,_v)| k.starts_with("re:"))
-            .map(|(_k,v)| v.as_i64().unwrap_or_else(||0i64))
-            .collect();
-        res.sort();
-        Some(res)
+        if let Some(top) = values.get("re-top").and_then(|v| v.as_i64()) {
+            if let Some(direct) = values.get("re").and_then(|v| v.as_i64()) {
+                return Some(ReplyData { top, direct })
+            }
+        }
+        //let mut res: Vec<i64> = values.iter()
+        //    .filter(|(k,_v)| k.starts_with("re:"))
+        //    .map(|(_k,v)| v.as_i64().unwrap_or_else(||0i64))
+        //    .collect();
+        //res.sort();
+        //Some(res)
     }
-    else {
-        None
-    }
+    return None
 }
 
 
@@ -253,21 +264,25 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
     let user = user_or_default(users.get(&post.createUserId.unwrap_or(0)));
     let mut class = String::from("post");
     if config.selected_post_id == post.id { class.push_str(" current") }
+    let mut reply_chain_link: Option<String> = None;
     let mut reply_link: Option<String> = None;
 
     //Don't do the (not particularly expensive) calculation of all the reply links if the user didn't ask for it!
     if config.render_reply_link {
-        if let Some(res) = get_replydata(post) {
-            if res.len() > 0 {
+        if let Some(replies) = get_replydata(post) {
+            //if res.len() > 0 {
                 let query = ThreadQuery {
-                    reply: res.first().copied(),
-                    selected: config.selected_post_id
+                    reply: Some(replies.top),//res.first().copied(),
+                    selected: post.id
                 };
                 match serde_urlencoded::to_string(query) {
-                    Ok(query) => reply_link = Some(format!("{}/widget/thread?{}", &layout_data.config.http_root, query)),
+                    Ok(query) => {
+                        reply_chain_link = Some(format!("{}/widget/thread?{}", &layout_data.config.http_root, query));
+                        //reply_link = Some(forum_post_link(&layout_data.config, &post, &config.thread.thread))
+                    },
                     Err(error) => println!("ERROR: couldn't encode thread query!: {}", error)
                 }
-            }
+            //}
         }
     }
 
@@ -283,13 +298,17 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
                         a."sequence" target="_top" title=(i(&post.id)) href=(forum_post_link(&layout_data.config, post, &config.thread.thread)){ "#" (sequence) } 
                     }
                 }
+                //@if let some(reply_link) = reply_link {
+                //    a."reply" href=(reply_link) { ">>"(i()) }
+                //}
                 @if let Some(text) = &post.text {
                     div."content bbcode" { (PreEscaped(bbcode.parse_profiled_opt(text, format!("post-{}",i(&post.id))))) }
                 }
                 div."postfooter mediumseparate" {
-                    @if let Some(reply_link) = reply_link {
+                    //div."aside id" { (i(&post.id)) }
+                    @if let Some(reply_link) = reply_chain_link {
                         details."replychain aside" {
-                            summary { "View previous conversation" }
+                            summary { "View conversation" }
                             iframe src=(reply_link){}
                         }
                     }

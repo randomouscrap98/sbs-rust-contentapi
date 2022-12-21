@@ -339,31 +339,47 @@ pub fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option
     request
 }
 
-//Apparently can't decide on transfered ownership or not
-pub fn get_finishpost_request(thread_id: i64, extra_uids: Vec<i64>, limit: i32, skip: i32) -> FullRequest 
+fn get_generic_message_request(query: &str, extra_uids: Vec<i64>, limit: i32, skip: i32) -> FullRequest 
 {
     let mut request = FullRequest::new();
-    add_value!(request, "thread_id", thread_id);
     add_value!(request, "uids", extra_uids);
 
     let message_request = build_request!(
         RequestType::message,
         String::from("*"),
-        String::from("!basiccomments() and contentId = @thread_id"),
+        format!("!basiccomments() and ({})", query),
         String::from("id"),
         limit,
         skip
     );
     request.requests.push(message_request);
 
+    let mut related_request = build_request!(
+        RequestType::message,
+        String::from("*"),
+        String::from("!basiccomments() and id in @message.values.re"),
+        String::from("id")
+    );
+    related_request.name = Some(String::from("related"));
+    request.requests.push(related_request);
+
     //users in messages OR in extra_uids
     let user_request = build_request!(
         RequestType::user,
         String::from("*"),
-        String::from("id in @message.createUserId or id in @message.editUserId or id in @uids")
+        String::from("id in @message.createUserId or id in @message.editUserId or \
+                      id in @related.createUserId or id in @related.editUserId or id in @uids")
     );
     request.requests.push(user_request);
 
+    request
+}
+
+//Apparently can't decide on transfered ownership or not
+pub fn get_finishpost_request(thread_id: i64, extra_uids: Vec<i64>, limit: i32, skip: i32) -> FullRequest 
+{
+    let mut request = get_generic_message_request("contentId = @thread_id", extra_uids, limit, skip);
+    add_value!(request, "thread_id", thread_id);
     request
 }
 
@@ -371,26 +387,9 @@ pub fn get_finishpost_request(thread_id: i64, extra_uids: Vec<i64>, limit: i32, 
 /// length (other than those imposed by the API)
 pub fn get_reply_request(root_post_id: i64) -> FullRequest 
 {
-    let mut request = FullRequest::new();
-    //add_value!(request, "root_post", root_post_id);
-    add_value!(request, "root_key", vec![format!("re:{}", root_post_id)]);
-
-    let message_request = build_request!(
-        RequestType::message,
-        String::from("*"),
-        String::from("!basiccomments() and !valuekeyin(@root_key)"),
-        String::from("id")
-    );
-    request.requests.push(message_request);
-
-    //users in messages OR in extra_uids
-    let user_request = build_request!(
-        RequestType::user,
-        String::from("*"),
-        String::from("id in @message.createUserId or id in @message.editUserId")
-    );
-    request.requests.push(user_request);
-
+    let mut request = get_generic_message_request("!valuelike({{re-top}},@root_post) or id = @root_post", Vec::new(), 0, 0);
+    add_value!(request, "root_post", root_post_id);
+    //add_value!(request, "root_key", vec![format!("re:{}", root_post_id)]);
     request
 }
 
