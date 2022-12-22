@@ -269,6 +269,24 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
     }
 }
 
+fn images_to_attr(config: &LinkConfig, images: &Vec<serde_json::Value>) -> String 
+{
+    serde_json::to_string(
+        &images.iter().map(|i| {
+            match i.as_str() {
+                Some(string) => base_image_link(config, string),
+                None => {
+                    println!("ERROR: IMAGE HASH NOT STRING: {}", i);
+                    String::new()
+                }
+            }
+        }).collect::<Vec<String>>()
+    ).unwrap_or_else(|err| {
+        println!("ERROR: COULD NOT SERIALIZE PAGE IMAGES: {}", err);
+        String::new()
+    })
+}
+
 /// Render the page data, such as text and infoboxes, on standard pages. True forum threads don't have main
 /// content like that, so this is only called on programs, resources, etc
 pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThread) -> Markup 
@@ -280,7 +298,7 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
             @if thread.thread.literalType == Some(SBSContentType::program.to_string()) {
                 div."programinfo" {
                     @if let Some(images) = values.get(IMAGESKEY).and_then(|k| k.as_array()) {
-                        div."gallery" {
+                        div."gallery" #"page_gallery" /*data-index="0"*/ data-images=(images_to_attr(&data.config, &images)) {
                             //we now have the images: we just need the first one (it's a hash?)
                             @if let Some(image) = images.get(0).and_then(|i| i.as_str()) {
                                 img src=(base_image_link(&data.config, image));

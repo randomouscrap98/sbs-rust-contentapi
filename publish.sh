@@ -1,4 +1,4 @@
-set -e
+# set -e
 
 # Stuff you may want to change
 NAME="sbs-rust-contentapi"
