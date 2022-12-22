@@ -39,6 +39,8 @@ pub fn render(data: MainLayoutData, private: Option<contentapi::UserPrivate>, us
                         div."smallseparate" #"userlinks" {
                             a."flatlink" #"publiclink" href={(data.config.http_root)"/user/"(user.username)} {"User page"}
                             span{"/"}
+                            a."flatlink" #"privatethreadslink" href=(forum_category_link_unsafe(&data.config, "private-threads")) {"Private Threads"}
+                            span{"/"}
                             a."flatlink" #"logoutlink" href={(data.config.http_root)"/logout"} {"Logout"}
                         }
                     }

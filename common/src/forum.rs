@@ -30,6 +30,7 @@ pub struct ForumThread {
     pub thread: Content,
     pub sticky: bool,
     pub locked: bool,
+    pub private: bool,
     pub neutral: bool, //Used by the frontend
     pub posts: Vec<Message>
 }
@@ -42,11 +43,14 @@ impl ForumThread {
             None => Err(Error::Other(String::from("Thread didn't have permissions in resultset!")))
         }?;
         //"get" luckily already gets the thing as a reference
-        let global_perms = permissions.get("0").and_then(|s| Some(s.as_str())).unwrap_or_else(||"");//ok_or(Error::Other(String::from("Thread didn't have global permissions!")))?;
+        //These are APPROXIMATIONS for display only! They should NOT be used to determine ACTUAL functionality!
+        let global_perms = permissions.get("0").and_then(|s| Some(s.as_str())).unwrap_or_else(||"");
+        //ok_or(Error::Other(String::from("Thread didn't have global permissions!")))?;
         let locked = !global_perms.contains('C'); //Right... the order matters. need to finish using it before you give up thread
+        let private = !global_perms.contains('R');
         let sticky = stickies.contains(&thread_id.unwrap_or(0));
         Ok(ForumThread { 
-            locked, sticky, thread,
+            locked, sticky, thread, private,
             neutral: !locked && !sticky,
             posts: messages_raw.iter().filter(|m| m.contentId == thread_id).map(|m| m.clone()).collect()
         })

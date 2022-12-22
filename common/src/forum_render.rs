@@ -61,8 +61,9 @@ pub fn threadicon(config: &LinkConfig, thread: &ForumThread) -> Markup { //neutr
     html! {
         div."threadicon smallseparate" {
             @if thread.neutral { (submission::pageicon(config, &thread.thread)) }
-            @if thread.sticky { span{"📌"} }
-            @if thread.locked { span{"🔒"} }
+            @if thread.sticky { span title="Pinned" {"📌"} }
+            @if thread.locked { span title="Locked (No posting)" {"🔒"} }
+            @if thread.private { span title="Private (Only participants can view)" {"🤫"} }
         }
     }
 }
@@ -370,6 +371,9 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
         div.(class) #{"post_"(i(&post.id))} {
             div."postleft" {
                 img."avatar" src=(image_link(&layout_data.config, &user.avatar, 100, true)); 
+                @if config.thread.private {
+                    div."private" { "PRIVATE" }
+                }
             }
             div."postright" {
                 div."postheader" {

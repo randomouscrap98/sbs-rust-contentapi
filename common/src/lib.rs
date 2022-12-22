@@ -176,11 +176,17 @@ pub fn page_link(config: &LinkConfig, page: &Content) -> String {
 }
 
 pub fn forum_category_link(config: &LinkConfig, category: &Content) -> String {
-    format!("{}/forum/category/{}", config.http_root, s(&category.hash))
+    forum_category_link_unsafe(config, s(&category.hash))
+}
+
+/// Create a category link using the current link system, which only uses the hash AVOID AS MUCH AS POSSIBLE!
+/// The implementation of the links may change!
+pub fn forum_category_link_unsafe(config: &LinkConfig, hash: &str) -> String {
+    format!("{}/forum/category/{}", config.http_root, hash) //s(&category.hash))
 }
 
 pub fn forum_thread_link(config: &LinkConfig, thread: &Content) -> String {
-    format!("{}/forum/thread/{}", config.http_root, s(&thread.hash)) //}"{{@root.http_root}}/forum/thread/{{thread.hash}}" class="flatlink">{{thread.name}}</a> }
+    format!("{}/forum/thread/{}", config.http_root, s(&thread.hash))
 }
 
 pub fn forum_post_hash(post: &Message) -> String {

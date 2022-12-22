@@ -136,11 +136,12 @@ form {
 }
 
 .smallseparate > :not(:last-child) {
-    margin-right: 0.5em;
+    margin-right: var(--space_small);
 }
 
 .mediumseparate > :not(:last-child) {
-    margin-right: 0.8em;
+    /* Consider just making this medium */
+    margin-right: calc(0.8 * var(--space_medium));
 }
 
 .aside {
