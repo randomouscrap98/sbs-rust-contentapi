@@ -51,6 +51,7 @@ config::create_config!{
         default_display_threads : i32,
         default_display_posts : i32,
         default_display_pages : i32,
+        default_activity_count: i32,
         forum_category_order: Vec<String>,
         //file_maxsize: i32,
         body_maxsize: i32, //this can be used for a lot of things, I don't really care
@@ -171,8 +172,8 @@ async fn main()
     let get_recover_route = warp_get!(warp::path!("recover"),
         |context:RequestContext| warp::reply::html(pages::recover::render(context.layout_data, None, None)));
 
-    let get_activity_route = warp_get!(warp::path!("activity"),
-        |context:RequestContext| warp::reply::html(pages::activity::render(context.layout_data)));
+    //let get_activity_route = warp_get!(warp::path!("activity"),
+    //    |context:RequestContext| warp::reply::html(pages::activity::render(context.layout_data)));
 
     let get_sessionsettings_route = warp_get!(warp::path!("sessionsettings"),
         |context:RequestContext| warp::reply::html(pages::sessionsettings::render(context.layout_data, None)));
@@ -232,6 +233,24 @@ async fn main()
                 )
             }
         });
+
+    let get_activity_route = warp_get_async!(
+        warp::path!("activity")
+            .and(warp::query::<pages::activity::ActivityQuery>()),
+        |query: pages::activity::ActivityQuery, context:RequestContext| {
+            async move {
+                let gc = context.global_state.clone();
+                handle_response(
+                    errwrap!(pages::activity::get_render(
+                        context.into(),
+                        query,
+                        gc.config.default_activity_count
+                        ).await)?,
+                    &gc.link_config
+                )
+            }
+        });
+       // warp::reply::html(pages::activity::render(context.layout_data)));
 
 
     #[derive(Deserialize, Debug)]

@@ -13,6 +13,7 @@ default_category_threads = 1  # threads to show in category view
 default_display_threads = 50  # threads to show per page 
 default_display_posts = 20  # posts to show per page (on threads)
 default_display_pages = 50  # pages to show per page (in search)
+default_activity_count = 100 # The amount of activity to show per page
 
 
 # Special SBS stuff (may store in database instead?)
