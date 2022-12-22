@@ -241,8 +241,12 @@ pub fn b(boolean: bool) -> &'static str {
 }
 
 pub fn d(date: &Option<chrono::DateTime<Utc>>) -> String {
-    if let Some(date) = date { date.to_rfc3339_opts(SecondsFormat::Secs, true) }
+    if let Some(date) = date { dd(date) }
     else { String::from("NODATE") }
+}
+
+pub fn dd(date: &chrono::DateTime<Utc>) -> String {
+    date.to_rfc3339_opts(SecondsFormat::Secs, true)
 }
 
 pub fn i(int: &Option<i64>) -> String {

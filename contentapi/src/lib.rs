@@ -219,7 +219,11 @@ pub struct Message
     //#[serde(deserialize_with = "deserialize_bool_from_anything")]
     //pub edited: bool, 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub module: Option<String>
+    pub module: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_literalType: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_contentType: Option<i8>
     //pub deleted: bool,
 }
 
