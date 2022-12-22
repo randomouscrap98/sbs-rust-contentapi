@@ -236,7 +236,6 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
                 div."foruminfo smallseparate aside" {
                     (threadicon(&data.config, &thread))
                     span {
-                        /*b { "By: " }*/
                         @if let Some(user) = config.users.get(&thread.thread.createUserId.unwrap_or(0)) {
                             a."flatlink" href=(user_link(&data.config, user)){ (user.username) }
                         }
@@ -248,15 +247,15 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
                 }
             }
         }
-        @if config.render_page && thread.thread.literalType != Some(SBSContentType::forumthread.to_string()) {
+        @if config.render_page && (thread.thread.literalType == Some(SBSContentType::program.to_string()) ||
+            thread.thread.literalType == Some(SBSContentType::resource.to_string())) 
+        {
             (render_page(&data, bbcode, &thread))
         }
         section #"thread-top" data-selected=[config.selected_post_id] {
             @for (index,tree) in reply_tree.iter().enumerate() {
                 @let sequence = config.start_num.and_then(|s| Some(s + index as i32));
                 (walk_post_tree(&context.layout_data, &mut context.bbcode, &config, tree, sequence, &mut post_count))
-                //(post_item(&context.layout_data, &mut context.bbcode, &mut context.bbconsume, &config, post, sequence)) 
-                //@if index < thread.posts.len() - 1 { hr."smaller"; }
             }
             @if let Some(pages) = config.pages {
                 div."smallseparate pagelist" {

@@ -369,8 +369,20 @@ async fn main()
             }
         })
         .boxed();
-
+    
     //let log = warp::log("warp");
+    let legacy_page_pid = warp::get()
+        .and(warp::path!("page"))
+        .and(warp::query::<pages::page::PageQuery>())
+        .and(state_filter.clone())
+        .and_then(|query: pages::page::PageQuery, context:RequestContext| async move {
+            let gc = context.global_state.clone();
+            handle_response(
+                errwrap!(pages::page::get_pid_redirect(context.into(), query).await)?,
+                &gc.link_config //common::Response::Redirect(format!("forum?ftid={}",pid.pid)), &context.global_state.link_config)
+            )
+        })
+        .boxed();
         
     warp::serve(
             fs_static_route
@@ -401,11 +413,30 @@ async fn main()
         .or(get_widgetthread_route)
         .or(get_bbcodepreview_route)
         .or(post_bbcodepreview_route)
+        .or(legacy_page_pid)
         .recover(handle_rejection)
         //.with(log)
     ).run(address).await;
 }
 
+
+//fn get_legacy_page_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter<(impl Reply,)> 
+//{
+//    //Simple legacy redirect
+//    //http://http//smilebasicsource.com/page?pid=325
+//    warp::get()
+//        .and(warp::path!("page"))
+//        .and(warp::query::<PagePid>())
+//        .and(state_filter.clone())
+//        .and_then(|pid: PagePid, context:RequestContext| async move {
+//            let gc = context.global_state.clone();
+//            handle_response(
+//                errwrap!(pages::page::get_pid_redirect(context.into(), pid.pid).await)?,
+//                &gc.link_config //common::Response::Redirect(format!("forum?ftid={}",pid.pid)), &context.global_state.link_config)
+//            )
+//        })
+//        .boxed()
+//}
 
 /// 'GET':/forum is a heavily multiplexed route, since it could either be the root, the old fcid
 /// threadlist, the old ftid post list, or the old fpid direct link to post

@@ -14,6 +14,8 @@ pub static CATEGORYKEY: &str = "category";
 pub static PREMESSAGEKEY: &str = "premessage";
 pub static PREMESSAGEINDEXKEY: &str = "premessage_index";
 
+pub const ALLOWEDTYPES: &[&str] = &["forumthread","program","resource","directmessage"];
+
 struct Keygen();
 
 impl Keygen {
@@ -40,7 +42,7 @@ impl ForumThread {
             None => Err(Error::Other(String::from("Thread didn't have permissions in resultset!")))
         }?;
         //"get" luckily already gets the thing as a reference
-        let global_perms = permissions.get("0").ok_or(Error::Other(String::from("Thread didn't have global permissions!")))?;
+        let global_perms = permissions.get("0").and_then(|s| Some(s.as_str())).unwrap_or_else(||"");//ok_or(Error::Other(String::from("Thread didn't have global permissions!")))?;
         let locked = !global_perms.contains('C'); //Right... the order matters. need to finish using it before you give up thread
         let sticky = stickies.contains(&thread_id.unwrap_or(0));
         Ok(ForumThread { 
@@ -173,7 +175,7 @@ pub fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip
 {
     let mut request = FullRequest::new();
     add_value!(request, "page_type", ContentType::PAGE);
-    //add_value!(request, "thread_literal", SBSContentType::forumthread.to_string());
+    add_value!(request, "allowed_types", ALLOWEDTYPES);
 
     let mut keys = Vec::new();
 
@@ -184,7 +186,7 @@ pub fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip
         request.values.insert(sticky_key.clone(), category.stickies.clone().into());
 
         //Standard threads get (for latest N threads)
-        let base_query = format!("parentId = {{{{{category_id}}}}} and contentType = @page_type and !notdeleted()");
+        let base_query = format!("parentId = {{{{{category_id}}}}} and contentType = @page_type and literalType in @allowed_types and !notdeleted()");
 
         //Regular thread request. Needs to specifically NOT be the stickies
         let mut threads_request = build_request!(
@@ -272,7 +274,8 @@ pub fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option
         post_limited = true;
     }
 
-    let mut thread_query = String::from("!notdeleted()");
+    add_value!(request, "allowed_types", ALLOWEDTYPES);
+    let mut thread_query = String::from("!notdeleted() and literalType in @allowed_types");
 
     //Add the pre-lookup post get so we can limit the thread by it. This will prevent users
     //from sending random hashes but with valid post ids, since the thread won't be found
