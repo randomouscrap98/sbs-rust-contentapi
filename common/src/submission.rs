@@ -158,11 +158,10 @@ pub fn get_search_request(search: &Search, per_page: i32) -> FullRequest
     request.requests.push(user_request);
 
     add_value!(request, "categorytype", CATEGORYTYPE);
-    //add_value!(request, "subtypesearch", format!("%{}%", &search.subtype));
     let mut category_request = build_request!(
         RequestType::content,
         String::from("id,literalType,contentType,values,name"),
-        String::from("contentType = @systemtype and !notdeleted() and literalType = @categorytype") // and !valuelike(@forcontent,@subtypesearch)")
+        String::from("contentType = @systemtype and !notdeleted() and literalType = @categorytype") 
     );
     category_request.name = Some(String::from("categories"));
     request.requests.push(category_request);

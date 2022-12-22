@@ -143,9 +143,9 @@ pub fn get_category_request(hash: Option<String>, fcid: Option<i64>) -> FullRequ
         real_query.push_str(" and hash = @hash");
     }
     else if let Some(fcid) = fcid {
-        add_value!(request, "fcid_key", "fcid");
-        add_value!(request, "fcid", fcid);
-        real_query.push_str(" and !valuelike(@fcid_key, @fcid)");
+        add_value!(request, "fcid_key", vec!["fcid"]);
+        add_value!(request, "fcid", vec![fcid]);
+        real_query.push_str(" and !valuein(@fcid_key, @fcid)");
     }
     else {
         //This is the "general" case, where yes, we actually do want to limit to categories. Otherwise,
@@ -260,9 +260,10 @@ pub fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option
 
     //If you call it with both, it will limit to both (chances are that's not what you want)
     if let Some(fpid) = fpid {
-        add_value!(request, "fpid", fpid);
-        add_value!(request, "fpidkey", "fpid");
-        post_query.push_str(" and !valuelike(@fpidkey, @fpid)");
+        add_value!(request, "fpidkey", vec!["fpid"]);
+        add_value!(request, "fpid", vec![fpid]);
+        //Remember: valuein way faster! eventually add "valueis"
+        post_query.push_str(" and !valuein(@fpidkey, @fpid)");
         post_limited = true;
     }
     if let Some(post_id) = post_id{
@@ -290,9 +291,9 @@ pub fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option
 
     //Take hashes over ftid if you gave both. Fail if neither are given
     if let Some(ftid) = ftid {
-        add_value!(request, "ftid", ftid);
-        add_value!(request, "ftidkey", "ftid");
-        thread_query = format!("{} and !valuelike(@ftidkey, @ftid)", thread_query);
+        add_value!(request, "ftidkey", vec!["ftid"]);
+        add_value!(request, "ftid", vec![ftid]);
+        thread_query = format!("{} and !valuein(@ftidkey, @ftid)", thread_query);
     }
     else if let Some(thread_hash) = thread_hash {
         add_value!(request, "hash", thread_hash);
