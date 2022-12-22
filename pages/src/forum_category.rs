@@ -14,7 +14,14 @@ use common::pagination::*;
 use maud::*;
 
 
-pub fn render(data: MainLayoutData, category: ForumCategory, path: Vec<ForumPathItem>, pages: Vec<PagelistItem>) -> String {
+pub fn render(mut data: MainLayoutData, category: ForumCategory, path: Vec<ForumPathItem>, pages: Vec<PagelistItem>) -> String 
+{
+    if category.category.literalType == Some(SBSContentType::submissions.to_string()) {
+        data.override_nav_path = Some("/search");
+    }
+    else if category.category.literalType == Some(SBSContentType::directmessages.to_string()) {
+        data.override_nav_path = Some("/userhome");
+    }
     layout(&data, html!{
         (style(&data.config, "/forpage/forum.css"))
         section {

@@ -81,6 +81,8 @@ enum_type!{
         submissions,
         program,
         resource,
+        directmessage,
+        directmessages,
     }
 }
 

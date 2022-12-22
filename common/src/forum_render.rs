@@ -209,11 +209,25 @@ fn walk_post_tree(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Po
     }
 }
 
+/// Render the main sections of a content and message stream (the MAIN view on the website!) but configured
+/// for the particular viewing instance. WARN: THIS ALSO MODIFIES context WITH APPROPRIATE OVERRIDES! A bit
+/// more than rendering, I guess...
 pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
 {
+    let thread = &config.thread;
+
+    let is_pagetype = thread.thread.literalType == Some(SBSContentType::program.to_string()) ||
+            thread.thread.literalType == Some(SBSContentType::resource.to_string());
+
+    if is_pagetype {
+        context.layout_data.override_nav_path = Some("/search");
+    }
+    else if thread.thread.literalType == Some(SBSContentType::directmessage.to_string()) {
+        context.layout_data.override_nav_path = Some("/userhome");
+    }
+
     let data = &context.layout_data;
     let bbcode = &mut context.bbcode;
-    let thread = &config.thread;
     let mut post_count = config.thread.posts.len() as i32;
 
     let reply_tree: Vec<ReplyTree> = if config.render_reply_chain 
@@ -248,9 +262,7 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
                 }
             }
         }
-        @if config.render_page && (thread.thread.literalType == Some(SBSContentType::program.to_string()) ||
-            thread.thread.literalType == Some(SBSContentType::resource.to_string())) 
-        {
+        @if config.render_page && is_pagetype {
             (render_page(&data, bbcode, &thread))
         }
         section #"thread-top" data-selected=[config.selected_post_id] {

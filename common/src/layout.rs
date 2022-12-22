@@ -1,44 +1,43 @@
 use super::*;
 
 //Render basic navigation link with only text as the body
-pub fn main_nav_link(config: &LinkConfig, text: &str, href: &str, current_path: &str, id: Option<&str>) -> Markup {
-    main_nav_link_raw(config, PreEscaped(String::from(text)), href, current_path, id)
+pub fn main_nav_link(data: &MainLayoutData, text: &str, href: &str, id: Option<&str>) -> Markup {
+    main_nav_link_raw(data, PreEscaped(String::from(text)), href, id)
 }
 
 //Produce a link for site navigation which supports highlighting if on current page. Body can be "anything"
-pub fn main_nav_link_raw(config: &LinkConfig, body: Markup, href: &str, current_path: &str, id: Option<&str>) -> Markup {
+pub fn main_nav_link_raw(data: &MainLayoutData, body: Markup, href: &str, id: Option<&str>) -> Markup {
     let mut class = String::from("plainlink headertab");
-    if current_path.starts_with(href) { class.push_str(" current"); }
+    let compare_path = match &data.override_nav_path {
+        Some(path) => path,
+        None => data.current_path.as_str()
+    };
+    if compare_path.starts_with(href) { class.push_str(" current"); }
     html! {
-        a.(class) href={(config.http_root) (href)} id=[id] { (body) }
+        a.(class) href={(data.config.http_root) (href)} id=[id] { (body) }
     }
 }
 
-//Produce just the inner user element (not the link itself) for a logged-in user
-pub fn header_user_inner(config: &LinkConfig, user: &contentapi::User) -> Markup {
-    html! {
-        span { (user.username) }
-        img src=(image_link(config, &user.avatar, 100, true));
-    }
-}
-
-pub fn header(config: &LinkConfig, current_path: &str, user: &Option<contentapi::User>) -> Markup {
+pub fn header(data: &MainLayoutData) -> Markup {
     html! {
         header."controlbar" {
             nav {
-                a."plainlink" #"homelink" href={(config.http_root)"/"}{
-                    img src={(config.resource_root)"/favicon.ico"};
-                    (main_nav_link(config,"Activity","/activity",current_path,None))
-                    (main_nav_link(config,"Browse","/search",current_path,None))
-                    (main_nav_link(config,"Forums","/forum",current_path,None))
+                a."plainlink" #"homelink" href={(data.config.http_root)"/"}{
+                    img src={(data.config.resource_root)"/favicon.ico"};
+                    (main_nav_link(data,"Activity","/activity",None))
+                    (main_nav_link(data,"Browse","/search",None))
+                    (main_nav_link(data,"Forums","/forum",None))
                 }
             }
             div #"header-user" {
-                @if let Some(user) = user {
-                    (main_nav_link_raw(config,header_user_inner(config,user),"/userhome",current_path,None))
+                @if let Some(user) = &data.user {
+                    (main_nav_link_raw(data,html! {
+                        span { (user.username) }
+                        img src=(image_link(&data.config, &user.avatar, 100, true));
+                    },"/userhome",None))
                 }
                 @else {
-                    (main_nav_link(config,"Login","/login",current_path,None))
+                    (main_nav_link(data,"Login","/login",None))
                 }
             }
         }
@@ -46,13 +45,13 @@ pub fn header(config: &LinkConfig, current_path: &str, user: &Option<contentapi:
 }
 
 //Produce the footer for the main selection of pages
-pub fn footer(config: &LinkConfig, about_api: &contentapi::About, current_path: &str) -> Markup {
+pub fn footer(data: &MainLayoutData) -> Markup {
     html! {
         footer class="controlbar smallseparate" {
-            span #"api_about" { (about_api.environment) " - " (about_api.version) }
+            span #"api_about" { (data.about_api.environment) " - " (data.about_api.version) }
             div #"footer-spacer" {}
-            (main_nav_link(config,"Settings","/sessionsettings",current_path,Some("footer-settings")))
-            (main_nav_link(config,"About","/about",current_path,Some("footer-about")))
+            (main_nav_link(data,"Settings","/sessionsettings",Some("footer-settings")))
+            (main_nav_link(data,"About","/about",Some("footer-about")))
             //<!--<span id="debug">{{client_ip}}</span>-->
             //<!--<span id="debug">{{route_path}}</span>-->
         }
@@ -115,7 +114,7 @@ pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
             "#))
         }
     }, html! {
-        (header(&main_data.config, &main_data.current_path, &main_data.user))
+        (header(&main_data))
         main { 
             section {
                 p { 
@@ -125,6 +124,6 @@ pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
             }
             (page) 
         }
-        (footer(&main_data.config, &main_data.about_api, &main_data.current_path ))
+        (footer(&main_data))
     })
 }
