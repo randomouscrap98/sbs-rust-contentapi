@@ -369,6 +369,8 @@ async fn main()
             }
         })
         .boxed();
+
+    //let log = warp::log("warp");
         
     warp::serve(
             fs_static_route
@@ -400,6 +402,7 @@ async fn main()
         .or(get_bbcodepreview_route)
         .or(post_bbcodepreview_route)
         .recover(handle_rejection)
+        //.with(log)
     ).run(address).await;
 }
 

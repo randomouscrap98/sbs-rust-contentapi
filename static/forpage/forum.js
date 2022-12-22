@@ -2,7 +2,7 @@ stop_iframes();
 
 function stop_iframes()
 {
-    var replychains = document.querySelectorAll('.replychain');
+    var replychains = document.querySelectorAll('.repliesview');
     for(var i = 0; i < replychains.length; i++)
     {
         var el = replychains[i];

@@ -149,22 +149,81 @@ fn get_replydata(post: &Message) -> Option<ReplyData>
                 return Some(ReplyData { top, direct })
             }
         }
-        //let mut res: Vec<i64> = values.iter()
-        //    .filter(|(k,_v)| k.starts_with("re:"))
-        //    .map(|(_k,v)| v.as_i64().unwrap_or_else(||0i64))
-        //    .collect();
-        //res.sort();
-        //Some(res)
     }
     return None
 }
 
+struct ReplyTree<'a> {
+    id: i64,
+    post: &'a Message,
+    children: Vec<ReplyTree<'a>>
+}
+
+impl<'a> ReplyTree<'a> {
+    fn new(message: &'a Message) -> Self {
+        ReplyTree { 
+            id: message.id.unwrap_or_else(||0), 
+            post: message, 
+            children: Vec::new() 
+        }
+    }
+}
+
+fn posts_to_replytree(posts: &Vec<Message>) -> Vec<ReplyTree> 
+{
+    let mut temp_tree : Vec<ReplyTree> =  Vec::new(); 
+    'outer: for post in posts.iter() {
+        if let Some(data) = get_replydata(post) {
+            //Slow and I don't care
+            for node in temp_tree.iter_mut() {
+                if node.id == data.direct {
+                    node.children.push(ReplyTree::new(post));
+                    continue 'outer;
+                }
+            }
+            println!("WARN: could not find place for message {}, reply to {}", i(&post.id), data.direct);
+        }
+        temp_tree.push(ReplyTree::new(post));
+    }
+    temp_tree
+}
+
+fn walk_post_tree(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &PostsConfig, tree: &ReplyTree, 
+    sequence: Option<i32>, posts_left: &mut i32) -> Markup
+{
+    *posts_left -= 1;
+    html! {
+        //@let (sequence = config.start_num.and_then(|s| Some(s + index as i32));
+        (post_item(layout_data, bbcode, config, tree.post, sequence)) 
+        @if *posts_left > 0 { hr."smaller"; }
+        @if tree.children.len() > 0 {
+            div."replychain" {
+                @for child in &tree.children {
+                    //Note: only the very top level should get sequence numbers, so all inner recursive calls get None sequence
+                    //@let (markup, posts_left) = (walk_post_tree(layout_data, &mut bbcode, config, child, None, posts_left - 1))
+                    (walk_post_tree(layout_data, bbcode, config, child, None, posts_left))
+                }
+            }
+        }
+    }
+}
 
 pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
 {
     let data = &context.layout_data;
     let bbcode = &mut context.bbcode;
     let thread = &config.thread;
+    let mut post_count = config.thread.posts.len() as i32;
+
+    let reply_tree: Vec<ReplyTree> = if config.render_reply_chain 
+    {
+        posts_to_replytree(&thread.posts)
+    }
+    else {
+        // no reply chain is just a simple list of whatever
+        config.thread.posts.iter().map(|m| ReplyTree::new(m)).collect() 
+    };
+
     html!{
         (style(&data.config, "/forpage/forum.css"))
         (script(&data.config, "/forpage/forum.js"))
@@ -193,10 +252,11 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
             (render_page(&data, bbcode, &thread))
         }
         section #"thread-top" data-selected=[config.selected_post_id] {
-            @for (index,post) in thread.posts.iter().enumerate() {
+            @for (index,tree) in reply_tree.iter().enumerate() {
                 @let sequence = config.start_num.and_then(|s| Some(s + index as i32));
-                (post_item(&context.layout_data, &mut context.bbcode, &mut context.bbconsume, &config, post, sequence)) 
-                @if index < thread.posts.len() - 1 { hr."smaller"; }
+                (walk_post_tree(&context.layout_data, &mut context.bbcode, &config, tree, sequence, &mut post_count))
+                //(post_item(&context.layout_data, &mut context.bbcode, &mut context.bbconsume, &config, post, sequence)) 
+                //@if index < thread.posts.len() - 1 { hr."smaller"; }
             }
             @if let Some(pages) = config.pages {
                 div."smallseparate pagelist" {
@@ -259,8 +319,8 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
 }
 
 //WAS consuming bbcode, now i'm not sure. leaving for now
-pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, _bbconsume: &mut BBCode, config: &PostsConfig, 
-    post: &Message, sequence: Option<i32>) -> Markup
+pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &PostsConfig, post: &Message, 
+    sequence: Option<i32>) -> Markup
 {
     let users = &config.users;
     let user = user_or_default(users.get(&post.createUserId.unwrap_or(0)));
@@ -269,26 +329,25 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, _bbconsume: 
     let mut reply_chain_link: Option<String> = None;
     let mut reply_post : Option<&Message> = None;
 
-    //Don't do the (not particularly expensive) calculation of all the reply links if the user didn't ask for it!
-    if config.render_reply_link {
-        if let Some(replies) = get_replydata(post) {
-            //if res.len() > 0 {
-                let query = ThreadQuery {
-                    reply: Some(replies.top),//res.first().copied(),
-                    selected: post.id
-                };
-                match serde_urlencoded::to_string(query) {
-                    Ok(query) => {
-                        reply_chain_link = Some(format!("{}/widget/thread?{}", &layout_data.config.http_root, query)); //, forum_post_hash(post)));
-                    },
-                    Err(error) => println!("ERROR: couldn't encode thread query!: {}", error)
-                }
-                reply_post = config.related.get(&replies.direct);
-                if reply_post.is_none() {
-                    println!("ERROR: couldn't find related post {}!", replies.direct)
-                }
+    if let Some(replies) = get_replydata(post) {
+        reply_post = config.related.get(&replies.direct);
+        if reply_post.is_none() {
+            println!("ERROR: couldn't find related post {}!", replies.direct)
+        }
+        if config.render_reply_link {
+            let query = ThreadQuery {
+                reply: Some(replies.top),
+                selected: post.id
+            };
+            match serde_urlencoded::to_string(query) {
+                Ok(query) => {
+                    reply_chain_link = Some(format!("{}/widget/thread?{}", &layout_data.config.http_root, query)); //, forum_post_hash(post)));
+                },
+                Err(error) => println!("ERROR: couldn't encode thread query!: {}", error)
+            }
         }
     }
+    //}
 
     html! {
         div.(class) #{"post_"(i(&post.id))} {
@@ -304,7 +363,7 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, _bbconsume: 
                 }
                 @if let Some(reply_post) = reply_post {
                     //TODO: can't decide between consuming or not. spoilers are the important bit
-                    (post_reply(layout_data, &mut bbcode.clone(), reply_post, &config.thread.thread, &config.users))
+                    (post_reply(layout_data, bbcode, reply_post, &config.thread.thread, &config.users, config.start_num.is_some()))
                 }
                 //@if let some(reply_link) = reply_link {
                 //    a."reply" href=(reply_link) { ">>"(i()) }
@@ -315,7 +374,7 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, _bbconsume: 
                 div."postfooter mediumseparate" {
                     //div."aside id" { (i(&post.id)) }
                     @if let Some(reply_link) = reply_chain_link {
-                        details."replychain aside" style="display:none" {
+                        details."repliesview aside" style="display:none" {
                             summary { "View conversation" }
                             iframe data-src=(reply_link){}
                         }
@@ -337,12 +396,17 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, _bbconsume: 
     }
 }
 
-pub fn post_reply(layout_data: &MainLayoutData, bbconsume: &mut BBCode, post: &Message, thread: &Content, users: &HashMap<i64, User>) -> Markup// config: &LinkConfig, bbcode: &mut BBCode, post: &Message,  //thread: &Content, selected_post_id: Option<i64>, 
+pub fn post_reply(layout_data: &MainLayoutData, bbcode: &mut BBCode, post: &Message, thread: &Content, users: &HashMap<i64, User>, linkify: bool) -> Markup
 {
     let user = user_or_default(users.get(&post.createUserId.unwrap_or(0)));
     html! {
         div."reply aside" {
-            a."replylink" href=(forum_post_link(&layout_data.config, post, thread)) { "Replying to:" }
+            @if linkify {
+                a."replylink" href=(forum_post_link(&layout_data.config, post, thread)) { "Replying to:" }
+            }
+            @else {
+                span."replylink" { "Replying to:" }
+            }
             //div."replypost" {
             img src=(image_link(&layout_data.config, &user.avatar, 50, true)); 
             a."flatlink username" href=(user_link(&layout_data.config, &user)) { (&user.username) } 
@@ -350,7 +414,7 @@ pub fn post_reply(layout_data: &MainLayoutData, bbconsume: &mut BBCode, post: &M
                 //Ignoring graphemes for now, sorry. In NEARLY all cases, 200 bytes should be enough to fill 
                 //a line, unless you're being ridiculous
                 @let text = if text.len() > 200 { &text[0..200] } else { &text };
-                div."content bbcode" { (PreEscaped(bbconsume.parse_profiled_opt(text, format!("reply-{}",i(&post.id))))) }
+                div."content bbcode" { (PreEscaped(bbcode.parse_profiled_opt(text, format!("reply-{}",i(&post.id))))) }
             }
             //}
         }
