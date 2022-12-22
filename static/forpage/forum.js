@@ -1,5 +1,5 @@
 lazy_iframes();
-make_gallery(page_gallery);
+make_all_galleries();
 
 function lazy_iframes()
 {
@@ -10,6 +10,12 @@ function lazy_iframes()
         el.style = "";
         el.addEventListener("toggle", load_inner_iframe);
     }
+}
+
+function make_all_galleries() {
+    var galleries = document.querySelectorAll(".gallery");
+    for(var i = 0; i < galleries.length; i++)
+        make_gallery(galleries[i]);
 }
 
 function make_gallery(gallery) {

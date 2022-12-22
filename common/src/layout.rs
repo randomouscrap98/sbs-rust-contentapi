@@ -61,7 +61,18 @@ pub fn footer(config: &LinkConfig, about_api: &contentapi::About, current_path: 
 
 /// Basic skeleton to output a blank page with some pre-baked stuff from user settings and required
 /// css/js. NOTE: YOU'LL BE USING THIS FOR ALL WIDGETS!
-pub fn basic_skeleton(data: &MainLayoutData, head_inner: Markup, body_inner: Markup) -> Markup {
+pub fn basic_skeleton(data: &MainLayoutData, head_inner: Markup, body_inner: Markup) -> Markup 
+{
+    //If available, this is MILLISECONDS
+    #[allow(unused_assignments, dead_code, unused_mut)]
+    let mut profile_data: Option<HashMap<String,f64>> = None;
+
+    #[cfg(feature = "profiling")]
+    {
+        profile_data = Some(data.profiler.list_copy().into_iter()
+            .map(|pd| (pd.name, pd.duration.as_secs_f64() * 1000f64)).collect());
+    }
+
     html! {
         (DOCTYPE)
         html lang=(data.user_config.language) {
@@ -77,22 +88,18 @@ pub fn basic_skeleton(data: &MainLayoutData, head_inner: Markup, body_inner: Mar
              data-theme=(data.user_config.theme) 
         { 
             (body_inner) 
+            //Gotta do it HERE so everything has already run!
+            @if let Some(profile_data) = profile_data {
+                script {
+                    "var profiler_data = "(PreEscaped(serde_json::to_string(&profile_data).unwrap_or(String::from("{} /* COULD NOT SERIALIZE */"))))";"
+                }
+            }
         }
     }
 }
 
 
 pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
-    //If available, this is MILLISECONDS
-    #[allow(unused_assignments, dead_code, unused_mut)]
-    let mut profile_data: Option<HashMap<String,f64>> = None;
-
-    #[cfg(feature = "profiling")]
-    {
-        profile_data = Some(main_data.profiler.list_copy().into_iter()
-            .map(|pd| (pd.name, pd.duration.as_secs_f64() * 1000f64)).collect());
-    }
-
     basic_skeleton(main_data, html!{
         title { "SmileBASIC Source" }
         meta name="description" content="A community for sharing programs and getting advice on SmileBASIC applications on the Nintendo DSi, 3DS, and Switch";
@@ -119,12 +126,5 @@ pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
             (page) 
         }
         (footer(&main_data.config, &main_data.about_api, &main_data.current_path ))
-        //Gotta do it HERE so everything has already run!
-        @if let Some(profile_data) = profile_data {
-            script {
-                "var profiler_data = "(PreEscaped(serde_json::to_string(&profile_data).unwrap_or(String::from("{} /* COULD NOT SERIALIZE */"))))";"
-                //(PreEscaped(r#"console.log("Profiling data:", profile_data);"#))
-            }
-        }
     })
 }

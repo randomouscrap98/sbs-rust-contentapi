@@ -387,9 +387,10 @@ pub fn get_finishpost_request(thread_id: i64, extra_uids: Vec<i64>, limit: i32, 
 /// length (other than those imposed by the API)
 pub fn get_reply_request(root_post_id: i64) -> FullRequest 
 {
-    let mut request = get_generic_message_request("!valuelike({{re-top}},@root_post) or id = @root_post", Vec::new(), 0, 0);
-    add_value!(request, "root_post", root_post_id);
-    //add_value!(request, "root_key", vec![format!("re:{}", root_post_id)]);
+    //NOTE: valuein WAY WAY faster than valuelike! always prefer it!
+    let mut request = get_generic_message_request("!valuein(@root_key,@root_post) or id = @root_post", Vec::new(), 0, 0);
+    add_value!(request, "root_key", vec!["re-top"]);
+    add_value!(request, "root_post", vec![root_post_id]);
     request
 }
 
