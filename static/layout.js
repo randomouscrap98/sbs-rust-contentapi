@@ -39,7 +39,7 @@ function upgrade_times()
     var times = document.querySelectorAll('time:not([datetime])');
     for(var i = 0; i < times.length; i++)
     {
-        times[i].setAttribute("datetime", times[i].innerHTML);
+        times[i].setAttribute("datetime", times[i].textContent);
         var date = new Date(times[i].innerHTML);
         times[i].textContent = date.toLocaleDateString();
     }

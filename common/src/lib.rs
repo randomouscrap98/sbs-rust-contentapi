@@ -57,6 +57,7 @@ pub struct MainLayoutData {
     pub config: LinkConfig,     
     pub user_config: UserConfig,    
     pub current_path: String, 
+    pub override_nav_path: Option<String>,
     pub user: Option<contentapi::User>,
     pub user_token: Option<String>,
     pub about_api: contentapi::About, 

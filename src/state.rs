@@ -61,6 +61,7 @@ impl RequestContext {
             config: state.link_config.clone(),
             user_config, //Local settings
             current_path: String::from(path.as_str()),
+            override_nav_path: None,
             user: context.get_me_safe().await,
             user_token: token,
             about_api: context.get_about().await?,

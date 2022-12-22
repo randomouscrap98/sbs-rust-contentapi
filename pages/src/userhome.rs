@@ -31,7 +31,7 @@ pub fn render(data: MainLayoutData, private: Option<contentapi::UserPrivate>, us
                         table data-special=(s(&user.special)) data-type=(user.r#type) {
                             tr { td { b { "Email:"} } td."spoilertext"{(email)} } 
                             tr { td { b { "User ID:"} } td {(user.id)} }
-                            tr { td { b { "Joined:"} } td { time {(user.createDate.to_string())} } }
+                            tr { td { b { "Joined:"} } td { time {(user.createDate.to_rfc3339())} } }
                             tr { td { b { "Avatar:"} } td {(user.avatar)} }
                             tr { td { b { "Admin:"} } td {(b(user.admin))} }//{{{#if user.admin}}true{{else}}false{{/if}}</td></tr>
                         }
