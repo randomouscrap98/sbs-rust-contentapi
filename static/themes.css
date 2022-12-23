@@ -12,6 +12,8 @@
     /* Header-only colors (but MAY be reused in other elements? */
     --bg_header: #222;
     --tc_header: #BBB;
+    --bg_alert: #4e1d48;
+    /*--bg_alert: darkslateblue;*/
 
     /* Special text and bg */
     --bg_altsection: rgba(127,127,127,0.1);
@@ -51,6 +53,7 @@ body[data-theme="sbs-dark"] {
     /* Header-only colors (but MAY be reused in other elements? */
     --bg_header: #2a4167; /*rgb(51, 85, 139);*/
     --tc_header: #edfaff; /*rgb(225, 247, 255);*/
+    --bg_alert: linen;
 
     /* Special text and bg */
     --bg_altsection: rgba(100,180,255,0.1);
@@ -96,6 +99,7 @@ body[data-theme="sbs-blue"] {
     /* Header-only colors (but MAY be reused in other elements? */
     --bg_header: #222;
     --tc_header: #FFF;
+    --bg_alert: cyan;
 
     /* Special text and bg */
     --bg_altsection: rgba(127,127,127,0.2);
@@ -121,6 +125,7 @@ body[data-theme="sbs-blue"] {
     /* Header-only colors (but MAY be reused in other elements? */
     --bg_header: #000;
     --tc_header: #FFF;
+    --bg_alert: darkblue;
 
     /* Special text and bg */
     --bg_altsection: rgba(127,127,127,0.4);

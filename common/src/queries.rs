@@ -11,7 +11,7 @@ pub async fn get_system_any(context: &mut ApiContext, ty: &str) -> Result<Option
     add_value!(request, "littype", ty);
     let alert_request = build_request!(
         RequestType::content,
-        String::from("id,name,text,parentId,hash"),
+        String::from("id,name,text,parentId,hash,contentType,literalType"),
         String::from("contentType = @type and literalType = @littype"),
         String::from("id") // Combined with 'pop', even if there are multiple alerts, we always get the last one
     );

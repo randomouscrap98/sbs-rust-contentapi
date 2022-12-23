@@ -13,6 +13,9 @@
     /* Header-only colors (but MAY be reused in other elements? */
     --bg_header: #444;
     --tc_header: #EEE;
+    --bg_alert: beige;
+    /*color: black;
+    background: beige;*/
 
     /* Special text and bg */
     --bg_altsection: rgba(127,127,127,0.1);

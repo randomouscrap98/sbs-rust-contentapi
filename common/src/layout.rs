@@ -52,6 +52,12 @@ pub fn header(data: &MainLayoutData) -> Markup {
                 div."alert" { (PreEscaped(alert)) }
             }
         }
+        @else {
+            div."alert" { 
+                b."error" {"This is a preview website!"} " Changes made may get reset and will " b{"not"} " carry over to the final version! "
+                "Original website still up at " a href="https://old.smilebasicsource.com" {"https://old.smilebasicsource.com"}
+             }//"This is a test alert " a href="#" { "OK?" } span."error" { " ERROR OR SOMETHING"} }
+        }
     }
 }
 
@@ -127,12 +133,12 @@ pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
     }, html! {
         (header(&main_data))
         main { 
-            section {
+            /*section {
                 p { 
                     span."error" { "This is a preview website! Changes will not carry over or be saved in the end! " }
                     "Original website still up at " a href="https://old.smilebasicsource.com" { "https://old.smilebasicsource.com" }
                 }
-            }
+            }*/
             (page) 
         }
         (footer(&main_data))

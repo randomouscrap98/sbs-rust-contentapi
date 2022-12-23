@@ -13,7 +13,7 @@ pub fn render(data: MainLayoutData) -> String
                 @if user.admin {
                     p { "Coming soon?" }
                 }
-                else {
+                @else {
                     p."error" { "You must be an admin to use this page!" }
                 }
             }

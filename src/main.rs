@@ -147,8 +147,14 @@ async fn main()
         };
     }
 
-    let get_index_route = warp_get!(warp::path::end(), 
-        |context:RequestContext| warp::reply::html(pages::index::render(context.layout_data)));
+    let get_index_route = warp_get_async!(warp::path::end(), 
+        |context:RequestContext| async move {
+            let gc = context.global_state.clone();
+            handle_response(
+                errwrap!(pages::index::get_render(context.into()).await)?,
+                &gc.link_config)
+        }
+    );
 
     let get_about_route = warp_get!(warp::path!("about"),
         |context:RequestContext| warp::reply::html(pages::about::render(context.layout_data)));
