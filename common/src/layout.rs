@@ -27,6 +27,12 @@ pub fn header(data: &MainLayoutData) -> Markup {
                     (main_nav_link(data,"Activity","/activity",None))
                     (main_nav_link(data,"Browse","/search",None))
                     (main_nav_link(data,"Forums","/forum",None))
+                    @if let Some(user) = &data.user {
+                        @if user.admin {
+                            //We were already using 'admin', so keep using it! 
+                            (main_nav_link(data,"Admin","/admin",None))
+                        }
+                    }
                 }
             }
             div #"header-user" {
@@ -39,6 +45,11 @@ pub fn header(data: &MainLayoutData) -> Markup {
                 @else {
                     (main_nav_link(data,"Login","/login",None))
                 }
+            }
+        }
+        @if let Some(alert) = &data.raw_alert {
+            @if alert.len() > 0 {
+                div."alert" { (PreEscaped(alert)) }
             }
         }
     }

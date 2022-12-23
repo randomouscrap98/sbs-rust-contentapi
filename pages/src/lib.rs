@@ -17,6 +17,7 @@ pub mod forum_category;
 pub mod forum_thread;
 pub mod sessionsettings;
 pub mod page;
+pub mod admin;
 
 //Email errors are weird with their true/false return. 
 macro_rules! email_errors {

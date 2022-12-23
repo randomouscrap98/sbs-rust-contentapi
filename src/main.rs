@@ -153,6 +153,9 @@ async fn main()
     let get_about_route = warp_get!(warp::path!("about"),
         |context:RequestContext| warp::reply::html(pages::about::render(context.layout_data)));
 
+    let get_admin_route = warp_get!(warp::path!("admin"),
+        |context:RequestContext| warp::reply::html(pages::admin::render(context.layout_data)));
+
     let get_login_route = warp_get!(warp::path!("login"),
         |context:RequestContext| warp::reply::html(pages::login::render(context.layout_data, None, None, None)));
 
@@ -414,6 +417,7 @@ async fn main()
         .or(get_forum_thread_route)
         .or(get_forum_post_route)
         .or(get_about_route)
+        .or(get_admin_route)
         .or(get_user_route)
         .or(get_userhome_route)
         .or(post_userhome_multi_route(&state_filter, &form_filter)) //Multiplexed! Login OR send recovery!
