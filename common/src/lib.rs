@@ -271,6 +271,23 @@ pub fn user_or_default(user: Option<&User>) -> User {
     }
 }
 
+pub fn get_user_or_default(uid: Option<i64>, users: &HashMap<i64, User>) -> User {
+    user_or_default(users.get(&uid.unwrap_or(0)))
+    //user_or_default(users.get(&uid.unwrap_or(0)))
+}
+
+pub fn content_or_default(content: Option<&Content>) -> Content {
+    if let Some(c) = content {
+        c.clone()
+    }
+    else {
+        let mut result = Content::default();
+        result.hash = Some(String::from("#"));
+        result.name = Some(String::from("???"));
+        result.createUserId = Some(0);
+        result
+    }
+}
 
 // ---------------------
 // *    FRAGMENTS      *

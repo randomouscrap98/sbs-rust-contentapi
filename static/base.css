@@ -322,6 +322,17 @@ input[type="file"] {
 .content .code .function { color: var(--code_function); } 
 .content .code { color: var(--code_fg); background-color: var(--code_bg); }
 
+.postpreview {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Hide some big elements */
+.postpreview pre, .postpreview blockquote, .postpreview .spoiler, .postpreview img 
+.postpreview ul, .postpreview ol {
+    display: none;
+}
 
 /* ------------------------
    *     PAGE CARDS       *

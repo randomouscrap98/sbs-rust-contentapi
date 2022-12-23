@@ -18,8 +18,11 @@ pub fn render(data: MainLayoutData, activity: Vec<SbsActivity>) -> String {
         }
         section {
             div."activitylist" {
-                @for a in &activity {
+                @for (index, a) in activity.iter().enumerate() {
                     (activity_item(&data.config, a))
+                    @if index < activity.len() - 1 {
+                        hr."smaller";
+                    }
                 }
             }
             div."activitynav" {
@@ -32,13 +35,18 @@ pub fn render(data: MainLayoutData, activity: Vec<SbsActivity>) -> String {
 pub fn activity_item(config: &LinkConfig, item: &SbsActivity) -> Markup {
     html!(
         div."activity" {
-            div."main" {
-                img src=(image_link(config, &item.user.avatar, 100, true));
-                a."username" href=(user_link(config, item.user)) { (item.user.username) }
-                span."action" { (PreEscaped(&item.action_text)) }
+            div."activityleft" {
+                img."avatar" src=(image_link(config, &item.user.avatar, 100, true));
             }
-            @if let Some(extra) = &item.extra_text {
-                div."extra" { (PreEscaped(extra)) }
+            div."activityright" {
+                div."main" {
+                    a."username flatlink" href=(user_link(config, item.user)) { (item.user.username) }
+                    span."action" { (PreEscaped(&item.action_text)) }
+                    time."aside" datetime=(dd(&item.date)) { (timeago(&item.date)) } 
+                }
+                @if let Some(extra) = &item.extra_text {
+                    div."aside extra postpreview" { (PreEscaped(extra)) }
+                }
             }
         }
     )
@@ -71,11 +79,17 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     let mut request = FullRequest::new();
     //let mut inverted = false;
 
-    add_value!(request, "allowed_types", common::forum::ALLOWEDTYPES);
+    //Note: the allowed list of types for activity is NOT the same as the allowed list of types for
+    //displaying as a thread! We don't want to scare people by putting private threads in the activity
+    add_value!(request, "allowed_types", vec![
+        SBSContentType::program.to_string(), 
+        SBSContentType::resource.to_string(),
+        SBSContentType::forumthread.to_string()
+    ]); //common::forum::ALLOWEDTYPES);
 
     let mut user_query = String::new();
-    let mut message_query = String::from("!basiccomments() and content_literalType in @allowed_types");
-    let mut activity_query = String::from("!basichistory() and literalType in @allowed_types");
+    let mut message_query = String::from("!basiccomments() and !literaltypein(@allowed_types)");
+    let mut activity_query = String::from("!basichistory() and !literaltypein(@allowed_types)");
     let mut order_cd = "createDate_desc";
     let mut order_d = "date_desc";
 
@@ -87,7 +101,7 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     else if let Some(end) = query.end {
         add_value!(request, "end", dd(&end));
         //inverted = true; //Need to both invert the queries and the resulting data
-        order_cd = "createDate";
+        order_cd = "id";
         order_d = "date";
         //Strictly greater than, it's the first date from the next page
         "> @end"
@@ -114,13 +128,13 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     request.requests.push(user_request);
 
     let mut message_request = build_request!(
-        RequestType::user,
+        RequestType::message,
         String::from("*"), //query, order, limit
         message_query,
         order_cd.to_string(),
         per_page
     );
-    message_request.expensive = true;
+    //message_request.expensive = true;
     message_request.name = Some(String::from(POSTACTIVITYKEY));
     request.requests.push(message_request);
 
@@ -135,10 +149,17 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     activity_request.name = Some(String::from(ACTIVITYKEY));
     request.requests.push(activity_request);
 
+    let content_request = build_request!(
+        RequestType::content,
+        String::from("id,name,hash,literalType"), //query, order, limit
+        format!("id in @{}.contentId or id in @{}.contentId", POSTACTIVITYKEY, ACTIVITYKEY)
+    );
+    request.requests.push(content_request);
+
     let user_request = build_request!(
         RequestType::user,
         String::from("*"), //query, order, limit
-        format!("id in {}.id or id in {}.createUserId or id in {}.userId", USERACTIVITYKEY, POSTACTIVITYKEY, ACTIVITYKEY)
+        format!("id in @{}.id or id in @{}.createUserId or id in @{}.userId", USERACTIVITYKEY, POSTACTIVITYKEY, ACTIVITYKEY)
     );
     request.requests.push(user_request);
 
@@ -151,6 +172,19 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
 //pub async fn get_activity<'a>(context: &mut PageContext, query: &ActivityQuery, per_page: i32) -> Result<Vec<SbsActivity<'a>>, Error>
 //{
 //}
+macro_rules! getdef {
+    ($default:ident,$map:ident,$idfield:expr) => {
+        {
+            let mut this_thing = &$default;
+            if let Some(id) = &$idfield {
+                if let Some(item) = &$map.get(id) {
+                    this_thing = item;
+                }
+            }
+            this_thing
+        }
+    };
+}
 
 pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page: i32) -> Result<Response, Error>
 {
@@ -161,10 +195,38 @@ pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page
     let user_activity = cast_result_required::<User>(&response, USERACTIVITYKEY)?;
     let post_activity = cast_result_required::<Message>(&response, POSTACTIVITYKEY)?;
     let content_activity = cast_result_required::<Message>(&response, ACTIVITYKEY)?;
+    let content_raw = cast_result_required::<Content>(&response, "content")?;
     let users_raw = cast_result_required::<User>(&response, "user")?;
     let users = map_users(users_raw);
+    let content = map_content(content_raw);
 
-    let result : Vec<SbsActivity> = Vec::new();
+    let mut result : Vec<SbsActivity> = Vec::new();
 
-    Ok(Response::Render(render(context.layout_data, result)))
+    for newuser in &user_activity {
+        result.push(SbsActivity { 
+            date: newuser.createDate, 
+            user: newuser, 
+            action_text: String::from("created an account!"), 
+            extra_text: None
+        })
+    }
+
+    let default_user = user_or_default(None);
+    let default_content = content_or_default(None);
+
+    for post in &post_activity 
+    {
+        let this_user = getdef!(default_user, users, post.createUserId);
+        let this_content = getdef!(default_content, content, post.contentId);
+        result.push(SbsActivity { 
+            date: post.createDate.unwrap_or_default(), 
+            user: this_user,
+            action_text: format!("posted on {}", activity_link(s(&this_content.name), &forum_post_link(&context.layout_data.config, post, &this_content)).into_string()), 
+            extra_text: Some(context.bbcode.parse_profiled_opt(s(&post.text), format!("post-{}", i(&post.id))))
+        })
+    }
+
+    result.sort_by(|a, b| b.date.partial_cmp(&a.date).unwrap());
+
+    Ok(Response::Render(render(context.layout_data, result.into_iter().take(per_page as usize).collect())))
 }

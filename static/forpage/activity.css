@@ -1,0 +1,41 @@
+.activity {
+    display: flex;
+    align-items: flex-start;
+}
+
+.activityleft {
+    flex: none;
+}
+
+.activityright {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
+}
+
+.activity .main {
+    display: flex;
+    /*align-items: top; /* Don't want stretch! */
+    flex: 1;
+}
+
+.activity .avatar {
+    width: 2.5em;
+    border-radius: 0.4em;
+    margin-right: var(--space_small);
+}
+
+.activity .username {
+    margin-right: 0.3em;
+}
+
+.activity time {
+    margin-left: auto;
+}
+
+.activity .extra {
+    font-style: italic;
+    margin-top: 0.5em;
+}

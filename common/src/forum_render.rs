@@ -446,8 +446,8 @@ pub fn post_reply(layout_data: &MainLayoutData, bbcode: &mut BBCode, post: &Mess
             @if let Some(text) = &post.text {
                 //Ignoring graphemes for now, sorry. In NEARLY all cases, 200 bytes should be enough to fill 
                 //a line, unless you're being ridiculous
-                @let text = if text.len() > 200 { &text[0..200] } else { &text };
-                div."content bbcode" { (PreEscaped(bbcode.parse_profiled_opt(text, format!("reply-{}",i(&post.id))))) }
+                //@let text = if text.len() > 200 { &text[0..200] } else { &text };
+                div."content bbcode postpreview" { (PreEscaped(bbcode.parse_profiled_opt(text, format!("reply-{}",i(&post.id))))) }
             }
             //}
         }
