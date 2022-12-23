@@ -252,7 +252,7 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
                     (threadicon(&data.config, &thread))
                     span {
                         @if let Some(user) = config.users.get(&thread.thread.createUserId.unwrap_or(0)) {
-                            a."flatlink" href=(user_link(&data.config, user)){ (user.username) }
+                            a."flatlink" target="_top" href=(user_link(&data.config, user)){ (user.username) }
                         }
                     }
                     span {
@@ -273,7 +273,7 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
             @if let Some(pages) = config.pages {
                 div."smallseparate pagelist" {
                     @for page in pages {
-                        a."current"[page.current] href={(forum_thread_link(&data.config, &thread.thread))"?page="(page.page)"#thread-top"} { (page.text) }
+                        a."current"[page.current] target="_top" href={(forum_thread_link(&data.config, &thread.thread))"?page="(page.page)"#thread-top"} { (page.text) }
                     }
                 }
             }
@@ -377,7 +377,6 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
             }
         }
     }
-    //}
 
     html! {
         div.(class) #{"post_"(i(&post.id))} {
@@ -389,23 +388,19 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
             }
             div."postright" {
                 div."postheader" {
-                    a."flatlink username" href=(user_link(&layout_data.config, &user)) { (&user.username) } 
+                    a."flatlink username" target="_top" href=(user_link(&layout_data.config, &user)) { (&user.username) } 
                     @if let Some(sequence) = sequence {
                         a."sequence" target="_top" title=(i(&post.id)) href=(forum_post_link(&layout_data.config, post, &config.thread.thread)){ "#" (sequence) } 
                     }
                 }
                 @if let Some(reply_post) = reply_post {
                     //TODO: can't decide between consuming or not. spoilers are the important bit
-                    (post_reply(layout_data, bbcode, reply_post, &config.thread.thread, &config.users, config.start_num.is_some()))
+                    (post_reply(layout_data, bbcode, reply_post, &config.thread.thread, &config.users))
                 }
-                //@if let some(reply_link) = reply_link {
-                //    a."reply" href=(reply_link) { ">>"(i()) }
-                //}
                 @if let Some(text) = &post.text {
                     div."content bbcode" { (PreEscaped(bbcode.parse_profiled_opt(text, format!("post-{}",i(&post.id))))) }
                 }
                 div."postfooter mediumseparate" {
-                    //div."aside id" { (i(&post.id)) }
                     @if let Some(reply_link) = reply_chain_link {
                         details."repliesview aside" style="display:none" {
                             summary { "View conversation" }
@@ -418,7 +413,7 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
                             time."aside" datetime=(d(&post.editDate)) { 
                                 "Edited "(timeago_o(&post.editDate))" by "
                                 @if let Some(edit_user) = users.get(&edit_user_id) {
-                                    a."flatlink" href=(user_link(&layout_data.config,&edit_user)){ (&edit_user.username) }
+                                    a."flatlink" target="_top" href=(user_link(&layout_data.config,&edit_user)){ (&edit_user.username) }
                                 }
                             }
                         }
@@ -429,18 +424,12 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
     }
 }
 
-pub fn post_reply(layout_data: &MainLayoutData, bbcode: &mut BBCode, post: &Message, thread: &Content, users: &HashMap<i64, User>, linkify: bool) -> Markup
+pub fn post_reply(layout_data: &MainLayoutData, bbcode: &mut BBCode, post: &Message, thread: &Content, users: &HashMap<i64, User>) -> Markup
 {
     let user = user_or_default(users.get(&post.createUserId.unwrap_or(0)));
     html! {
         div."reply aside" {
-            @if linkify {
-                a."replylink" href=(forum_post_link(&layout_data.config, post, thread)) { "Replying to:" }
-            }
-            @else {
-                span."replylink" { "Replying to:" }
-            }
-            //div."replypost" {
+            a."replylink" target="_top" href=(forum_post_link(&layout_data.config, post, thread)) { "Replying to:" }
             img src=(image_link(&layout_data.config, &user.avatar, 50, true)); 
             a."flatlink username" href=(user_link(&layout_data.config, &user)) { (&user.username) } 
             @if let Some(text) = &post.text {
@@ -449,7 +438,6 @@ pub fn post_reply(layout_data: &MainLayoutData, bbcode: &mut BBCode, post: &Mess
                 //@let text = if text.len() > 200 { &text[0..200] } else { &text };
                 div."content bbcode postpreview" { (PreEscaped(bbcode.parse_profiled_opt(text, format!("reply-{}",i(&post.id))))) }
             }
-            //}
         }
     }
 }

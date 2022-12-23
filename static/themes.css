@@ -107,3 +107,49 @@ body[data-theme="sbs-blue"] {
 
     --line_width: 2.5px;
 }
+
+[data-theme="sbs-dark-contrast"] {
+    /* Main colors */
+    --tc_main: #FFF;
+    --tc_aside: #CCC;
+    --bg_section: #000;
+    --color_border: #AAA;
+    --color_divider: #999;
+    --tc_flatlink: #00ffee;
+    --tc_link: #ffe852;
+
+    /* Header-only colors (but MAY be reused in other elements? */
+    --bg_header: #000;
+    --tc_header: #FFF;
+
+    /* Special text and bg */
+    --bg_altsection: rgba(127,127,127,0.4);
+    --bg_activeselect: #ea3dff;
+    --tc_activeselect: #000;
+    --tc_error: rgb(255, 70, 70);
+    --bg_error: rgba(255,0,0,0.05);
+    --tc_success: lime;
+
+    --line_width: 2.5px;
+}
+
+body[data-theme="sbs-dark-contrast"] {
+    background-color: #222;
+    background-blend-mode: multiply;
+}
+
+[data-theme="sbs-dark-contrast"] header { 
+    border-bottom: var(--line_width) solid var(--color_border);
+}
+[data-theme="sbs-dark-contrast"] footer { 
+    border-top: var(--line_width) solid var(--color_border);
+}
+
+[data-theme="sbs-dark-contrast"] input:not(.notheme), [data-theme="sbs-dark-contrast"] select, 
+[data-theme="sbs-dark-contrast"] textarea {
+   filter: invert(0.95);
+}
+
+[data-theme="sbs-dark-contrast"] .sysicon { 
+    filter: invert(0.8);
+}

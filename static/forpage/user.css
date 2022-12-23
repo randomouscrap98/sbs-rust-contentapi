@@ -22,7 +22,7 @@
     margin: 1em 0;
 }
 /* This isn't ULTRA MINIMAL size (that's 30em), but enough to not have everything on one line */
-@media screen and (max-width: 40em)
+@media screen and (max-width: 35em)
 {
     #pageuser {
         flex-wrap: wrap;
@@ -31,6 +31,7 @@
     }
     #pageuser > #infoblock {
         align-items: center;
+        width: 100%;
     }
     #pageuser > img {
         margin: 0;
