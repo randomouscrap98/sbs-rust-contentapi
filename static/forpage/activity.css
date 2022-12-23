@@ -17,6 +17,7 @@
 
 .activity .main {
     display: flex;
+    flex-wrap: wrap;
     /*align-items: top; /* Don't want stretch! */
     flex: 1;
 }
@@ -27,7 +28,7 @@
     margin-right: var(--space_small);
 }
 
-.activity .username {
+.activity .main > :not(:last-child) {
     margin-right: 0.3em;
 }
 
@@ -37,5 +38,6 @@
 
 .activity .extra {
     font-style: italic;
-    margin-top: 0.5em;
+    margin-top: 0.6em;
+    margin-left: 0.1em;
 }

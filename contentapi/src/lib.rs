@@ -56,6 +56,17 @@ impl UserType {
     pub const USER: i8 = 1i8;
 }
 
+pub enum UserAction { }
+
+#[allow(dead_code)]
+impl UserAction {
+    //Make the fields just fields so they have integer values
+    pub const CREATE: i8 = 1i8;
+    pub const READ: i8 = 2i8;
+    pub const UPDATE: i8 = 4i8;
+    pub const DELETE: i8 = 8i8;
+}
+
 enum_type!{
     RequestType => {
         user,
@@ -227,6 +238,23 @@ pub struct Message
     //pub deleted: bool,
 }
 
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+#[serde(default)]
+pub struct Activity
+{
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contentId: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub userId: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action: Option<i8>
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct UserPrivate

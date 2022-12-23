@@ -329,7 +329,7 @@ input[type="file"] {
 }
 
 /* Hide some big elements */
-.postpreview pre, .postpreview blockquote, .postpreview .spoiler, .postpreview img 
+.postpreview pre, .postpreview blockquote, .postpreview .spoiler, .postpreview img,
 .postpreview ul, .postpreview ol {
     display: none;
 }

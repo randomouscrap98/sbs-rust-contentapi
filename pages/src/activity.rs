@@ -41,7 +41,11 @@ pub fn activity_item(config: &LinkConfig, item: &SbsActivity) -> Markup {
             div."activityright" {
                 div."main" {
                     a."username flatlink" href=(user_link(config, item.user)) { (item.user.username) }
-                    span."action" { (PreEscaped(&item.action_text)) }
+                    span { (item.action_text) }
+                    @if let Some((href, text)) = &item.activity_href {
+                        (activity_link(text, href))
+                    }
+                    //span."action" { (PreEscaped(&item.action_text)) }
                     time."aside" datetime=(dd(&item.date)) { (timeago(&item.date)) } 
                 }
                 @if let Some(extra) = &item.extra_text {
@@ -69,6 +73,7 @@ pub struct SbsActivity<'a> {
     pub date: DateTime<Utc>,
     pub user: &'a User,
     pub action_text: String, //This is RAW, WITH whatever links you need!
+    pub activity_href: Option<(String,String)>,
     pub extra_text: Option<String>,
 }
 
@@ -194,7 +199,7 @@ pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page
 
     let user_activity = cast_result_required::<User>(&response, USERACTIVITYKEY)?;
     let post_activity = cast_result_required::<Message>(&response, POSTACTIVITYKEY)?;
-    let content_activity = cast_result_required::<Message>(&response, ACTIVITYKEY)?;
+    let content_activity = cast_result_required::<Activity>(&response, ACTIVITYKEY)?;
     let content_raw = cast_result_required::<Content>(&response, "content")?;
     let users_raw = cast_result_required::<User>(&response, "user")?;
     let users = map_users(users_raw);
@@ -207,6 +212,7 @@ pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page
             date: newuser.createDate, 
             user: newuser, 
             action_text: String::from("created an account!"), 
+            activity_href: None,
             extra_text: None
         })
     }
@@ -221,8 +227,39 @@ pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page
         result.push(SbsActivity { 
             date: post.createDate.unwrap_or_default(), 
             user: this_user,
-            action_text: format!("posted on {}", activity_link(s(&this_content.name), &forum_post_link(&context.layout_data.config, post, &this_content)).into_string()), 
+            action_text: String::from("posted on"), 
+            activity_href: Some((forum_post_link(&context.layout_data.config, post, &this_content),String::from(s(&this_content.name)))),
             extra_text: Some(context.bbcode.parse_profiled_opt(s(&post.text), format!("post-{}", i(&post.id))))
+        })
+    }
+
+    for activity in &content_activity 
+    {
+        let this_user = getdef!(default_user, users, activity.userId);
+        let this_content = getdef!(default_content, content, activity.contentId);
+
+        let action_text = format!("{} {}",
+            match activity.action.unwrap_or_else(||0) {
+                UserAction::CREATE => "created",
+                UserAction::UPDATE => "edited",
+                UserAction::DELETE => "deleted",
+                _ => "did SOMETHING UNKNOWN(??)"
+            },
+            {
+                //let lit_type = this_content.literalType.as_ref().and_then(|lt| Some(lt.clone())).unwrap_or_else(||String::new());
+                if this_content.literalType == Some(SBSContentType::program.to_string()) { "program" }
+                else if this_content.literalType == Some(SBSContentType::forumthread.to_string()) { "thread" }
+                else if this_content.literalType == Some(SBSContentType::resource.to_string()) { "page" }
+                else { "content" }
+            }
+        );
+
+        result.push(SbsActivity { 
+            date: activity.date.unwrap_or_default(), 
+            user: this_user,
+            action_text, //: String::from("posted on"), 
+            activity_href: Some((forum_thread_link(&context.layout_data.config, &this_content),String::from(s(&this_content.name)))),
+            extra_text: activity.message.clone()
         })
     }
 
