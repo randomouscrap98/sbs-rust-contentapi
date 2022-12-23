@@ -3,6 +3,7 @@ pub mod layout;
 pub mod pagination;
 pub mod submission;
 pub mod forum_render;
+pub mod queries;
 
 use std::collections::HashMap;
 
@@ -62,6 +63,7 @@ pub struct MainLayoutData {
     pub user: Option<contentapi::User>,
     pub user_token: Option<String>,
     pub about_api: contentapi::About, 
+    pub raw_alert: Option<String>,
 
     #[cfg(feature = "profiling")]
     pub profiler: onestop::OneList<onestop::OneDuration>

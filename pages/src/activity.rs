@@ -22,9 +22,9 @@ pub fn render(data: MainLayoutData, activity: Vec<SbsActivity>, query: ActivityQ
     };
     layout(&data, html!{
         (style(&data.config, "/forpage/activity.css"))
-        section {
+        /*section {
             h1 { "Activity" }
-        }
+        }*/
         section {
             div."activitylist" {
                 @for (index, a) in activity.iter().enumerate() {

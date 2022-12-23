@@ -37,7 +37,7 @@ impl RequestContext {
         let profiler = onestop::OneList::<onestop::OneDuration>::new(); //One profiler per request
 
         #[cfg(feature = "profiling")]
-        let context = ApiContext::new_with_profiler(
+        let mut context = ApiContext::new_with_profiler(
             state.config.api_endpoint.clone(), 
             token.clone(),
             profiler.clone()
@@ -65,6 +65,7 @@ impl RequestContext {
             user: context.get_me_safe().await,
             user_token: token,
             about_api: context.get_about().await?,
+            raw_alert: (common::queries::get_system_alert(&mut context).await?).and_then(|x| x.text),
 
             #[cfg(feature = "profiling")]
             profiler: profiler.clone()

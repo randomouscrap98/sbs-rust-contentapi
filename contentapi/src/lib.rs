@@ -94,6 +94,8 @@ enum_type!{
         resource,
         directmessage,
         directmessages,
+        alert,
+        frontpage,
     }
 }
 
