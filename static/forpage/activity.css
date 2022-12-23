@@ -41,3 +41,10 @@
     margin-top: 0.6em;
     margin-left: 0.1em;
 }
+
+.activitynav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: var(--space_medium);
+}

@@ -10,7 +10,16 @@ pub static POSTACTIVITYKEY: &str = "post_activity";
 pub static USERACTIVITYKEY: &str = "user_activity";
 pub static ACTIVITYKEY: &str = "activity";
 
-pub fn render(data: MainLayoutData, activity: Vec<SbsActivity>) -> String {
+pub fn render(data: MainLayoutData, activity: Vec<SbsActivity>, query: ActivityQuery) -> String
+{
+    let prev_query = ActivityQuery {
+        start: None,
+        end: activity.first().and_then(|a| Some(a.date))
+    };
+    let next_query = ActivityQuery {
+        start: activity.last().and_then(|a| Some(a.date)),
+        end: None
+    };
     layout(&data, html!{
         (style(&data.config, "/forpage/activity.css"))
         section {
@@ -25,8 +34,11 @@ pub fn render(data: MainLayoutData, activity: Vec<SbsActivity>) -> String {
                     }
                 }
             }
-            div."activitynav" {
-
+            div."activitynav smallseparate" {
+                @if query.start.is_some() {
+                    a."coolbutton" href={(data.config.http_root) "/activity?" (serde_urlencoded::to_string(prev_query).unwrap_or_default())} { "Newer" }
+                }
+                a."coolbutton" href={(data.config.http_root) "/activity?" (serde_urlencoded::to_string(next_query).unwrap_or_default())} { "Older" }
             }
         }
     }).into_string()
@@ -60,7 +72,7 @@ pub fn activity_link(text: &str, href: &str) -> Markup {
     html!( a."flatlink" href=(href) { (text) })
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(default)]
 pub struct ActivityQuery {
     /// Used when moving forward through activity: the "next" button
@@ -150,7 +162,6 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
         order_d.to_string(), //Activity has a stupid specially named date field
         per_page
     );
-    //activity_request.expensive = true;
     activity_request.name = Some(String::from(ACTIVITYKEY));
     request.requests.push(activity_request);
 
@@ -168,15 +179,10 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     );
     request.requests.push(user_request);
 
-    //(request, inverted)
     request
 
-    //add_value!(request, "");
 }
 
-//pub async fn get_activity<'a>(context: &mut PageContext, query: &ActivityQuery, per_page: i32) -> Result<Vec<SbsActivity<'a>>, Error>
-//{
-//}
 macro_rules! getdef {
     ($default:ident,$map:ident,$idfield:expr) => {
         {
@@ -193,7 +199,6 @@ macro_rules! getdef {
 
 pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page: i32) -> Result<Response, Error>
 {
-    //let (request,inverted) = get_activity_request(query, per_page);
     let request = get_activity_request(&query, per_page);
     let response = context.api_context.post_request_profiled_opt(&request, "activity-main").await?;
 
@@ -265,5 +270,5 @@ pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page
 
     result.sort_by(|a, b| b.date.partial_cmp(&a.date).unwrap());
 
-    Ok(Response::Render(render(context.layout_data, result.into_iter().take(per_page as usize).collect())))
+    Ok(Response::Render(render(context.layout_data, result.into_iter().take(per_page as usize).collect(), query)))
 }
