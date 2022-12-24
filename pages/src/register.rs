@@ -1,4 +1,6 @@
 
+use std::convert::Infallible;
+
 use super::*;
 use common::*;
 use common::render::*;
@@ -29,7 +31,7 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, username: Optio
 
 
 
-pub async fn post_render(context: PageContext, registration: &contentapi::forms::Register) -> Response 
+pub async fn post_render(context: PageContext, registration: &contentapi::forms::Register) -> Result<Response, Infallible>
 {
     let email = registration.email.clone(); //make a copy for later
     let username = registration.username.clone();
@@ -42,16 +44,16 @@ pub async fn post_render(context: PageContext, registration: &contentapi::forms:
             let errors = email_errors!(context.api_context.post_email_sendregistration(&email).await);
             if errors.len() == 0 { 
                 //On success, we show the user the confirmation page with their information
-                Response::Render(registerconfirm::render(context.layout_data, None, None, Some(email), Some(userresult), false))
+                Ok(Response::Render(registerconfirm::render(context.layout_data, None, None, Some(email), Some(userresult), false)))
             }
             else {
                 //Oh but if the email fails, we need to tell them about it. 
-                Response::Render(render(context.layout_data, Some(errors), Some(username), Some(email)))
+                Ok(Response::Render(render(context.layout_data, Some(errors), Some(username), Some(email))))
             }
         },
         Err(error) => {
             //On failure, we re-render the registration page, show errors
-            Response::Render(render(context.layout_data, Some(vec![error.to_user_string()]), Some(username), Some(email)))
+            Ok(Response::Render(render(context.layout_data, Some(vec![error.to_user_string()]), Some(username), Some(email))))
         } 
     }
 }

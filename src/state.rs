@@ -21,9 +21,10 @@ pub struct GlobalState {
 /// require the api_about in MainLayoutData, which requires the api_context.
 pub struct RequestContext {
     pub global_state: Arc<GlobalState>,
-    pub bbcode: BBCode, //Clones are cheap?
-    pub api_context: ApiContext,
-    pub layout_data: MainLayoutData,
+    pub page_context: PageContext,
+    //pub bbcode: BBCode, //Clones are cheap?
+    //pub api_context: ApiContext,
+    //pub layout_data: MainLayoutData,
 
     #[cfg(feature = "profiling")]
     pub profiler: onestop::OneList<onestop::OneDuration>,
@@ -74,11 +75,13 @@ impl RequestContext {
         #[cfg(feature = "profiling")]
         return Ok(RequestContext 
         {
+            page_context: PageContext { 
+                layout_data,
+                api_context: context,
+                bbcode: BBCode { matchers: state.bbcode.matchers.clone(), profiler: profiler.clone() },
+            },
             //Custom construct bbcode so we copy the matchers but NOT the profiler!
-            bbcode: BBCode { matchers: state.bbcode.matchers.clone(), profiler: profiler.clone() },
             global_state: state,
-            api_context: context,
-            layout_data,
             profiler
         });
 
@@ -91,16 +94,21 @@ impl RequestContext {
             layout_data,
         });
     }
+
+    //pub fn into_strip(self) -> (PageContext, Arc<GlobalState>) {
+    //    let gc = self.global_state.clone();
+    //    (self.into(), gc)
+    //}
 }
 
-impl From<RequestContext> for PageContext {
-    fn from(context: RequestContext) -> Self {
-        let mut consumer = context.bbcode.clone();
-        consumer.to_consumer();
-        Self {
-            layout_data: context.layout_data,
-            api_context: context.api_context,
-            bbcode: context.bbcode
-        } 
-    }
-}
+//impl From<RequestContext> for PageContext {
+//    fn from(context: RequestContext) -> Self {
+//        let mut consumer = context.bbcode.clone();
+//        consumer.to_consumer();
+//        Self {
+//            layout_data: context.layout_data,
+//            api_context: context.api_context,
+//            bbcode: context.bbcode
+//        } 
+//    }
+//}

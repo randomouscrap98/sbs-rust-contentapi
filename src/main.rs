@@ -1,5 +1,4 @@
 use std::{net::SocketAddr, sync::Arc};
-//use std::collections::HashMap;
 
 use bbscope::BBCode;
 use chrono::SecondsFormat;
@@ -23,7 +22,7 @@ static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
 
 
-//Silly thing to limit a route by a single flag present (must be i8)
+/// Silly thing to limit a route by a single flag present (must be i8)
 macro_rules! qflag {
     ($flag:ident) => {
         {
@@ -43,7 +42,6 @@ config::create_config!{
         api_endpoint: String,
         http_root: String,
         api_fileraw : String,
-        //token_cookie_key: String,
         default_cookie_expire: i32,
         long_cookie_expire: i32,
         default_imagebrowser_count: i32,
@@ -57,6 +55,35 @@ config::create_config!{
         body_maxsize: i32, //this can be used for a lot of things, I don't really care
         host_address: String,
     }
+}
+
+macro_rules! std_resp {
+    ($render:expr,$context:expr) => {
+        async move {
+            handle_response(errwrap!($render.await)?, &$context.global_state.link_config)
+        }
+    };
+}
+
+macro_rules! cf {
+    ($ctx:ident.$setting:ident) => {
+        $ctx.global_state.config.$setting
+    };
+}
+
+macro_rules! gs {
+    ($ctx:ident.$setting:ident) => {
+        $ctx.global_state.$setting
+    };
+}
+
+macro_rules! pc {
+    ($ctx:ident) => {
+        $ctx.page_context
+    };
+    ($ctx:ident.$setting:ident) => {
+        $ctx.page_context.$setting
+    };
 }
 
 
@@ -80,15 +107,11 @@ async fn main()
         BBCode::from_matchers(matchers)
     };
 
-    //let mut bbconsume = bbcode.clone();
-    //bbconsume.to_consumer();
-
     //Set up the SINGULAR global state, which will be passed around with a counting reference.
     //So when you see "clone" on this, it's not actually cloning all the data, it's just making
     //a new pointer and incrementing a count.
     let global_state = Arc::new(GlobalState {
         bbcode,
-        //bbconsume,
         link_config : {
             let root = config.http_root.clone();
             LinkConfig {
@@ -147,45 +170,47 @@ async fn main()
         };
     }
 
-    let get_index_route = warp_get_async!(warp::path::end(), 
-        |context:RequestContext| async move {
-            let gc = context.global_state.clone();
-            handle_response(
-                errwrap!(pages::index::get_render(context.into()).await)?,
-                &gc.link_config)
-        }
+    let get_index_route = warp_get_async!(
+        warp::path::end(), 
+        |context:RequestContext| std_resp!(pages::index::get_render(pc!(context)), context)
     );
 
     let get_about_route = warp_get!(warp::path!("about"),
-        |context:RequestContext| warp::reply::html(pages::about::render(context.layout_data)));
+        |context:RequestContext| warp::reply::html(pages::about::render(pc!(context.layout_data))));
 
     let get_admin_route = warp_get!(warp::path!("admin"),
-        |context:RequestContext| warp::reply::html(pages::admin::render(context.layout_data)));
+        |context:RequestContext| warp::reply::html(pages::admin::render(pc!(context.layout_data))));
 
     let get_login_route = warp_get!(warp::path!("login"),
-        |context:RequestContext| warp::reply::html(pages::login::render(context.layout_data, None, None, None)));
+        |context:RequestContext| warp::reply::html(pages::login::render(pc!(context.layout_data), None, None, None)));
+
+    let get_register_route = warp_get!(warp::path!("register"),
+        |context:RequestContext| warp::reply::html(pages::register::render(pc!(context.layout_data), None, None, None)));
+
+    let get_registerconfirm_route = warp_get!(warp::path!("register"/"confirm"),
+        |context:RequestContext| warp::reply::html(pages::registerconfirm::render(pc!(context.layout_data), None, None, None, None, false)));
+
+    let get_recover_route = warp_get!(warp::path!("recover"),
+        |context:RequestContext| warp::reply::html(pages::recover::render(pc!(context.layout_data), None, None)));
+
+    let get_sessionsettings_route = warp_get!(warp::path!("sessionsettings"),
+        |context:RequestContext| warp::reply::html(pages::sessionsettings::render(pc!(context.layout_data), None)));
+
+    let get_bbcodepreview_route = warp_get!(warp::path!("widget" / "bbcodepreview"),
+        |context:RequestContext| warp::reply::html(pages::widget_bbcodepreview::render(pc!(context.layout_data), &gs!(context.bbcode), None)));
+
+
 
     let get_logout_route = warp_get_async!(warp::path!("logout"),
         |context:RequestContext| async move {
             //Logout is a Set-Cookie to empty string with Max-Age set to 0, then redirect to root
-            handle_response_with_token(common::Response::Redirect(String::from("/")),
-                &context.global_state.link_config, Some(String::from("")), 0)
+            handle_response_with_token(
+                common::Response::Redirect(String::from("/")),
+                &context.global_state.link_config, 
+                Some(String::from("")), 
+                0
+            )
         });
-
-    let get_register_route = warp_get!(warp::path!("register"),
-        |context:RequestContext| warp::reply::html(pages::register::render(context.layout_data, None, None, None)));
-
-    let get_registerconfirm_route = warp_get!(warp::path!("register"/"confirm"),
-        |context:RequestContext| warp::reply::html(pages::registerconfirm::render(context.layout_data, None, None, None, None, false)));
-
-    let get_recover_route = warp_get!(warp::path!("recover"),
-        |context:RequestContext| warp::reply::html(pages::recover::render(context.layout_data, None, None)));
-
-    //let get_activity_route = warp_get!(warp::path!("activity"),
-    //    |context:RequestContext| warp::reply::html(pages::activity::render(context.layout_data)));
-
-    let get_sessionsettings_route = warp_get!(warp::path!("sessionsettings"),
-        |context:RequestContext| warp::reply::html(pages::sessionsettings::render(context.layout_data, None)));
 
     let post_sessionsettings_route = warp::post()
         .and(warp::path!("sessionsettings"))
@@ -193,17 +218,17 @@ async fn main()
         .and(warp::body::form::<common::UserConfig>())
         .and(state_filter.clone())
         .and_then(|form: common::UserConfig, mut context: RequestContext| {
+            let mut errors: Option<Vec<String>> = None;
+            let mut cookie_raw: Option<String> = None;
+            match serde_json::to_string(&form) {
+                Ok(cookie) => cookie_raw = Some(String::from(cookie)),
+                Err(error) => errors = Some(vec![error.to_string()])
+            }
+            context.page_context.layout_data.user_config = form; //Is this safe? idk
             async move {
                 let gc = context.global_state.clone();
-                let mut errors: Option<Vec<String>> = None;
-                let mut cookie_raw: Option<String> = None;
-                match serde_json::to_string(&form) {
-                    Ok(cookie) => cookie_raw = Some(String::from(cookie)),
-                    Err(error) => errors = Some(vec![error.to_string()])
-                }
-                context.layout_data.user_config = form; //Is this safe? idk
                 handle_response_with_anycookie(
-                    common::Response::Render(pages::sessionsettings::render(context.layout_data, errors)),
+                    common::Response::Render(pages::sessionsettings::render(context.page_context.layout_data, errors)),
                     &gc.link_config, 
                     SETTINGSCOOKIE,
                     cookie_raw,
@@ -213,162 +238,85 @@ async fn main()
         })
         .boxed();
 
-    let get_bbcodepreview_route = warp_get!(warp::path!("widget" / "bbcodepreview"),
-        |context:RequestContext| warp::reply::html(pages::widget_bbcodepreview::render(context.layout_data, &context.global_state.bbcode, None)));
-
     let post_bbcodepreview_route = warp::post()
         .and(warp::path!("widget" / "bbcodepreview"))
         .and(form_filter.clone())
         .and(warp::body::form::<common::forms::BasicText>())
         .and(state_filter.clone())
         .map(|form: common::forms::BasicText, context: RequestContext| {
-            warp::reply::html(pages::widget_bbcodepreview::render(context.layout_data, &context.global_state.bbcode, Some(form.text)))
+            warp::reply::html(pages::widget_bbcodepreview::render(context.page_context.layout_data, &context.global_state.bbcode, Some(form.text)))
         })
         .boxed();
 
     let get_search_route = warp_get_async!(
-            warp::path!("search")
-                .and(warp::query::<common::forms::PageSearch>()),
-        |search: common::forms::PageSearch, context:RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                handle_response(
-                    errwrap!(pages::search::get_render(
-                        context.into(),
-                        search,
-                        gc.config.default_display_pages
-                        ).await)?,
-                    &gc.link_config
-                )
-            }
-        });
+        warp::path!("search").and(warp::query::<common::forms::PageSearch>()),
+        |search, context:RequestContext| 
+            std_resp!(pages::search::get_render(pc!(context), search, cf!(context.default_display_pages)), context)
+    );
 
     let get_activity_route = warp_get_async!(
-        warp::path!("activity")
-            .and(warp::query::<pages::activity::ActivityQuery>()),
-        |query: pages::activity::ActivityQuery, context:RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                handle_response(
-                    errwrap!(pages::activity::get_render(
-                        context.into(),
-                        query,
-                        gc.config.default_activity_count
-                        ).await)?,
-                    &gc.link_config
-                )
-            }
-        });
-       // warp::reply::html(pages::activity::render(context.layout_data)));
+        warp::path!("activity").and(warp::query::<pages::activity::ActivityQuery>()),
+        |query, context:RequestContext| 
+            std_resp!(pages::activity::get_render(pc!(context), query, cf!(context.default_activity_count)), context)
+    );
 
 
     #[derive(Deserialize, Debug)]
     struct SimplePage { page: Option<i32> }
 
     let get_forum_category_route = warp_get_async!(
-        warp::path!("forum" / "category" / String)
-            .and(warp::query::<SimplePage>()),
-        |hash: String, page_struct: SimplePage, context:RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                handle_response(
-                    errwrap!(pages::forum_category::get_hash_render(
-                        context.into(),
-                        hash, 
-                        gc.config.default_display_threads, 
-                        page_struct.page).await)?,
-                    &gc.link_config
-                )
-            }
-        }); 
+        warp::path!("forum" / "category" / String).and(warp::query::<SimplePage>()),
+        |hash: String, page_struct: SimplePage, context:RequestContext| 
+            std_resp!(
+                pages::forum_category::get_hash_render(pc!(context), hash, cf!(context.default_display_threads), page_struct.page), 
+                context
+            )
+    ); 
 
     let get_forum_thread_route = warp_get_async!(
-        warp::path!("forum" / "thread" / String)
-            .and(warp::query::<SimplePage>()),
-        |hash: String, page_struct: SimplePage, context:RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                handle_response(
-                    errwrap!(pages::forum_thread::get_hash_render(
-                        context.into(),
-                        hash, 
-                        gc.config.default_display_posts, 
-                        page_struct.page).await)?,
-                    &gc.link_config
-                )
-            }
-        }); 
+        warp::path!("forum" / "thread" / String).and(warp::query::<SimplePage>()),
+        |hash: String, page_struct: SimplePage, context:RequestContext| 
+            std_resp!(
+                pages::forum_thread::get_hash_render(pc!(context), hash, cf!(context.default_display_posts), page_struct.page),
+                context
+            )
+    ); 
 
     let get_forum_post_route = warp_get_async!(
         warp::path!("forum" / "thread" / String / i64),
-        |hash: String, post_id: i64, context:RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                handle_response(
-                    errwrap!(pages::forum_thread::get_hash_postid_render(
-                        context.into(),
-                        hash, 
-                        post_id,
-                        gc.config.default_display_posts).await)?,
-                    &gc.link_config
-                )
-            }
-        }); 
+        |hash: String, post_id: i64, context:RequestContext| 
+            std_resp!(
+                pages::forum_thread::get_hash_postid_render(pc!(context), hash, post_id, cf!(context.default_display_posts)),
+                context
+            )
+    ); 
 
+    let get_user_route = warp_get_async!(
+        warp::path!("user" / String),
+        |username: String, context:RequestContext| 
+            std_resp!(pages::user::get_render(pc!(context), username), context)
+    ); 
 
-    let get_user_route = warp_get_async!(warp::path!("user" / String),
-        |username: String, context:RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                handle_response(
-                    errwrap!(pages::user::get_render(context.into(), username).await)?,
-                    &gc.link_config
-                )
-            }
-        }); 
-
-    let get_userhome_route = warp_get_async!(warp::path!("userhome"),
-        |context:RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                handle_response(
-                    errwrap!(pages::userhome::get_render(context.into()).await)?,
-                    &gc.link_config
-                )
-            }
-        }); 
+    let get_userhome_route = warp_get_async!(
+        warp::path!("userhome"),
+        |context:RequestContext| 
+            std_resp!(pages::userhome::get_render(pc!(context)), context)
+    ); 
 
     let get_imagebrowser_route = warp_get_async!(
-        warp::path!("widget" / "imagebrowser")
-            .and(warp::query::<pages::widget_imagebrowser::Search>()),
-                //.or(warp::any().map(|| pages::widget_imagebrowser::Search::default()))
-                //.unify()),
-        |search:pages::widget_imagebrowser::Search, context:RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                handle_response(
-                    errwrap!(pages::widget_imagebrowser::query_render(
-                        context.into(),
-                        search, 
-                        gc.config.default_imagebrowser_count).await)?,
-                    &gc.link_config)
-            }
-        });
+        warp::path!("widget" / "imagebrowser").and(warp::query::<pages::widget_imagebrowser::Search>()),
+        |search, context:RequestContext| 
+            std_resp!(
+                pages::widget_imagebrowser::query_render(pc!(context), search, cf!(context.default_imagebrowser_count)),
+                context
+            )
+    );
 
     let get_widgetthread_route = warp_get_async!(
-        warp::path!("widget" / "thread")
-            .and(warp::query::<common::forms::ThreadQuery>()),
-                //.or(warp::any().map(|| pages::widget_thread::Search::default()))
-                //.unify()),
-        |search:common::forms::ThreadQuery, context:RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                handle_response(
-                    errwrap!(pages::widget_thread::get_render(context.into(), search).await)?,
-                    &gc.link_config
-                )
-            }
-        });
+        warp::path!("widget" / "thread").and(warp::query::<common::forms::ThreadQuery>()),
+        |search, context:RequestContext| 
+            std_resp!(pages::widget_thread::get_render(pc!(context), search), context)
+    );
 
     let post_recover_route = warp::post()
         .and(warp::path!("recover"))
@@ -378,39 +326,25 @@ async fn main()
         .and_then(|form: contentapi::forms::UserSensitive, context: RequestContext| {
             async move {
                 let gc = context.global_state.clone();
-                let (response, token) = pages::recover::post_render(context.into(), &form).await;
+                let (response, token) = pages::recover::post_render(pc!(context), &form).await;
                 handle_response_with_token(response, &gc.link_config, token, gc.config.default_cookie_expire as i64)
             }
-        })
-        .boxed();
+        }).boxed();
 
     let post_register_route = warp::post()
         .and(warp::path!("register"))
         .and(form_filter.clone())
         .and(warp::body::form::<contentapi::forms::Register>())
         .and(state_filter.clone())
-        .and_then(|form: contentapi::forms::Register, context: RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                let response = pages::register::post_render(context.into(), &form).await;
-                handle_response(response, &gc.link_config)
-            }
-        })
-        .boxed();
+        .and_then(|form, context: RequestContext| 
+            std_resp!(pages::register::post_render(pc!(context), &form), context) 
+        ).boxed();
     
-    //let log = warp::log("warp");
-    let legacy_page_pid = warp::get()
-        .and(warp::path!("page"))
-        .and(warp::query::<pages::page::PageQuery>())
-        .and(state_filter.clone())
-        .and_then(|query: pages::page::PageQuery, context:RequestContext| async move {
-            let gc = context.global_state.clone();
-            handle_response(
-                errwrap!(pages::page::get_pid_redirect(context.into(), query).await)?,
-                &gc.link_config //common::Response::Redirect(format!("forum?ftid={}",pid.pid)), &context.global_state.link_config)
-            )
-        })
-        .boxed();
+    let legacy_page_pid = warp_get_async!(
+        warp::path!("page").and(warp::query::<pages::page::PageQuery>()),
+        |query, context:RequestContext| 
+            std_resp!(pages::page::get_pid_redirect(pc!(context), query), context)
+    );
         
     warp::serve(
             fs_static_route
@@ -444,28 +378,9 @@ async fn main()
         .or(post_bbcodepreview_route)
         .or(legacy_page_pid)
         .recover(handle_rejection)
-        //.with(log)
     ).run(address).await;
 }
 
-
-//fn get_legacy_page_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter<(impl Reply,)> 
-//{
-//    //Simple legacy redirect
-//    //http://http//smilebasicsource.com/page?pid=325
-//    warp::get()
-//        .and(warp::path!("page"))
-//        .and(warp::query::<PagePid>())
-//        .and(state_filter.clone())
-//        .and_then(|pid: PagePid, context:RequestContext| async move {
-//            let gc = context.global_state.clone();
-//            handle_response(
-//                errwrap!(pages::page::get_pid_redirect(context.into(), pid.pid).await)?,
-//                &gc.link_config //common::Response::Redirect(format!("forum?ftid={}",pid.pid)), &context.global_state.link_config)
-//            )
-//        })
-//        .boxed()
-//}
 
 /// 'GET':/forum is a heavily multiplexed route, since it could either be the root, the old fcid
 /// threadlist, the old ftid post list, or the old fpid direct link to post
@@ -473,18 +388,12 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
 {
     let forum_main = warp::any()
         .and(state_filter.clone())
-        .and_then(|context:RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                handle_response(
-                    errwrap!(pages::forum_main::get_render(
-                        context.into(),
-                        &gc.config.forum_category_order,
-                        gc.config.default_category_threads).await)?,
-                    &gc.link_config
-                )
-            }
-        }); 
+        .and_then(|context:RequestContext| 
+            std_resp!(
+                pages::forum_main::get_render(pc!(context), &cf!(context.forum_category_order), cf!(context.default_category_threads)),
+                context
+            )
+        ); 
     
     //struct doesn't need to escape this function!
     #[allow(dead_code)]
@@ -497,19 +406,12 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
     let forum_fcid = warp::any()
         .and(warp::query::<FcidPage>())
         .and(state_filter.clone())
-        .and_then(|fcid_page: FcidPage, context:RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                handle_response(
-                    errwrap!(pages::forum_category::get_fcid_render(
-                        context.into(),
-                        fcid_page.fcid,
-                        gc.config.default_display_threads, 
-                        fcid_page.page).await)?,
-                    &gc.link_config
-                )
-            }
-        }); 
+        .and_then(|fcid_page: FcidPage, context:RequestContext| 
+            std_resp!(
+                pages::forum_category::get_fcid_render(pc!(context), fcid_page.fcid, cf!(context.default_display_threads), fcid_page.page),
+                context
+            ) 
+        ); 
     
     //Don't forget to add the other stuff!
     #[allow(dead_code)]
@@ -522,19 +424,12 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
     let forum_ftid = warp::any()
         .and(warp::query::<FtidPage>())
         .and(state_filter.clone())
-        .and_then(|ftid_page: FtidPage, context:RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                handle_response(
-                    errwrap!(pages::forum_thread::get_ftid_render(
-                        context.into(),
-                        ftid_page.ftid,
-                        gc.config.default_display_posts, 
-                        ftid_page.page).await)?,
-                    &gc.link_config
-                )
-            }
-        }); 
+        .and_then(|ftid_page: FtidPage, context:RequestContext| 
+            std_resp!(
+                pages::forum_thread::get_ftid_render(pc!(context), ftid_page.ftid, cf!(context.default_display_posts), ftid_page.page),
+                context
+            )
+        ); 
 
     #[allow(dead_code)]
     #[derive(Deserialize, Debug)]
@@ -545,18 +440,12 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
     let forum_fpid = warp::any()
         .and(warp::query::<Fpid>())
         .and(state_filter.clone())
-        .and_then(|fpid: Fpid, context:RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                handle_response(
-                    errwrap!(pages::forum_thread::get_fpid_render(
-                        context.into(),
-                        fpid.fpid,
-                        gc.config.default_display_posts).await)?,
-                    &gc.link_config
-                )
-            }
-        }); 
+        .and_then(|fpid: Fpid, context:RequestContext| 
+            std_resp!(
+                pages::forum_thread::get_fpid_render(pc!(context), fpid.fpid, cf!(context.default_display_posts)),
+                context
+            )
+        ); 
 
     warp::get()
         .and(warp::path!("forum"))
@@ -579,7 +468,7 @@ fn post_login_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_fi
                 gc.config.default_cookie_expire, 
                 gc.config.long_cookie_expire);
             async move {
-                let (response,token) = pages::login::post_login_render(context.into(), &login).await;
+                let (response,token) = pages::login::post_login_render(pc!(context), &login).await;
                 handle_response_with_token(response, &gc.link_config, token, login.expireSeconds)
             }
         }).boxed();
@@ -592,7 +481,7 @@ fn post_login_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_fi
         .and_then(|_query, form: common::forms::EmailGeneric, context: RequestContext| {
             async move {
                 let gc = context.global_state.clone();
-                let response = pages::login::post_login_recover(context.into(), &form).await;
+                let response = pages::login::post_login_recover(pc!(context), &form).await;
                 handle_response(response, &gc.link_config)
             }
         }).boxed();
@@ -614,10 +503,10 @@ fn post_registerconfirm_multi_route(state_filter: &BoxedFilter<(RequestContext,)
     let registerconfirm_post = warp::any()
         .and(warp::body::form::<contentapi::forms::RegisterConfirm>())
         .and(state_filter.clone())
-        .and_then(|form: contentapi::forms::RegisterConfirm, context: RequestContext| {
+        .and_then(|form, context: RequestContext| {
             async move {
                 let gc = context.global_state.clone();
-                let (response,token) = pages::registerconfirm::post_render(context.into(), &form).await;
+                let (response,token) = pages::registerconfirm::post_render(pc!(context), &form).await;
                 handle_response_with_token(response, &gc.link_config, token, gc.config.default_cookie_expire as i64)
             }
         })
@@ -628,13 +517,9 @@ fn post_registerconfirm_multi_route(state_filter: &BoxedFilter<(RequestContext,)
         .and(qflag!(resend)) 
         .and(warp::body::form::<common::forms::EmailGeneric>())
         .and(state_filter.clone())
-        .and_then(|_query, form: common::forms::EmailGeneric, context: RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                let response = pages::registerconfirm::post_email_render(context.into(), &form).await;
-                handle_response(response, &gc.link_config)
-            }
-        }).boxed();
+        .and_then(|_query, form: common::forms::EmailGeneric, context: RequestContext| 
+            std_resp!(pages::registerconfirm::post_email_render(pc!(context), &form), context)
+        ).boxed();
 
     warp::post()
         .and(warp::path!("register"/"confirm"))
@@ -653,40 +538,27 @@ fn post_userhome_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form
     let userhome_post = warp::any()
         .and(warp::body::form::<pages::userhome::UserUpdate>())
         .and(state_filter.clone())
-        .and_then(|form: pages::userhome::UserUpdate, context: RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                let response = errwrap!(pages::userhome::post_info_render(context.into(), form).await)?;
-                handle_response(response, &gc.link_config)
-            }
-        })
-        .boxed();
+        .and_then(|form, context: RequestContext| 
+            std_resp!(pages::userhome::post_info_render(pc!(context), form), context)
+        ).boxed();
 
     // Secondary endpoint: user bio updates
     let userhome_bio_post = warp::any()
         .and(qflag!(bio)) 
         .and(warp::body::form::<pages::userhome::UserBio>())
         .and(state_filter.clone())
-        .and_then(|_query, form: pages::userhome::UserBio, context: RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                let response = errwrap!(pages::userhome::post_bio_render(context.into(), form).await)?;
-                handle_response(response, &gc.link_config)
-            }
-        }).boxed();
+        .and_then(|_query, form, context: RequestContext| 
+            std_resp!(pages::userhome::post_bio_render(pc!(context), form), context)
+        ).boxed();
 
     // Tertiary endpoint: user sensitive updates
     let userhome_sensitive_post = warp::any()
         .and(qflag!(sensitive)) 
         .and(warp::body::form::<contentapi::forms::UserSensitive>())
         .and(state_filter.clone())
-        .and_then(|_query, form: contentapi::forms::UserSensitive, context: RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                let response = errwrap!(pages::userhome::post_sensitive_render(context.into(), form).await)?;
-                handle_response(response, &gc.link_config)
-            }
-        }).boxed();
+        .and_then(|_query, form, context: RequestContext| 
+            std_resp!(pages::userhome::post_sensitive_render(pc!(context), form), context) 
+        ).boxed();
 
     warp::post()
         .and(warp::path!("userhome"))
