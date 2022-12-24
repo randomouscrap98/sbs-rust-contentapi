@@ -4,6 +4,7 @@ use contentapi::*;
 use contentapi::conversion::*;
 use contentapi::endpoints::*;
 
+use crate::constants::*;
 
 pub async fn get_system_any(context: &mut ApiContext, ty: &str) -> Result<Option<Content>, Error> {
     let mut request = FullRequest::new();
@@ -23,10 +24,10 @@ pub async fn get_system_any(context: &mut ApiContext, ty: &str) -> Result<Option
 
 /// Returns the system alert; these should be in HTML format!
 pub async fn get_system_alert(context: &mut ApiContext) -> Result<Option<Content>, Error> {
-    get_system_any(context, &SBSContentType::alert.to_string()).await
+    get_system_any(context, SBSPageType::ALERT).await
 }
 
 /// Returns the frontpage; this shoudl be in HTML format!
 pub async fn get_system_frontpage(context: &mut ApiContext) -> Result<Option<Content>, Error> {
-    get_system_any(context, &SBSContentType::frontpage.to_string()).await
+    get_system_any(context, SBSPageType::FRONTPAGE).await
 }

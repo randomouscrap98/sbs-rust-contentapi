@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
 use super::*;
+use crate::constants::*;
+
 use contentapi::conversion::*;
 use contentapi::*;
 
@@ -9,12 +11,19 @@ use contentapi::*;
 pub static THREADFIELDS : &str = "id,name,lastCommentId,literalType,contentType,hash,parentId,commentCount,createDate,createUserId,values,permissions";
 //Need values to know the stickies
 pub static CATEGORYFIELDS: &str = "id,hash,name,description,literalType,contentType,values";
+
+//Note: these are keys for the REQUESTS, not anything else!
 pub static THREADKEY: &str = "thread";
 pub static CATEGORYKEY: &str = "category";
 pub static PREMESSAGEKEY: &str = "premessage";
 pub static PREMESSAGEINDEXKEY: &str = "premessage_index";
 
-pub const ALLOWEDTYPES: &[&str] = &["forumthread","program","resource","directmessage"];
+pub const ALLOWEDTYPES: &[&str] = &[
+    SBSPageType::FORUMTHREAD,
+    SBSPageType::PROGRAM,
+    SBSPageType::RESOURCE,
+    SBSPageType::DIRECTMESSAGE
+];
 
 struct Keygen();
 
@@ -157,8 +166,8 @@ pub fn get_category_request(hash: Option<String>, fcid: Option<i64>) -> FullRequ
         //This is the "general" case, where yes, we actually do want to limit to categories. Otherwise,
         //if you pass a hash... it'll just work, regardless if it's a category or not.
         add_value!(request, "category_literals", vec![
-            SBSContentType::forumcategory.to_string(),
-            SBSContentType::submissions.to_string()
+            SBSPageType::FORUMCATEGORY,
+            SBSPageType::SUBMISSIONS
         ]);
         real_query.push_str(" and literalType in @category_literals");
     }

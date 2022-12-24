@@ -26,7 +26,13 @@ string_const!{ SBSValue => {
 string_const!{ SBSPageType => {
     (PROGRAM:"program"),
     (RESOURCE:"resource"),
-    (CATEGORY:"category")
+    (CATEGORY:"category"),
+    (FORUMCATEGORY:"forumcategory"),
+    (FORUMTHREAD:"forumthread"),
+    (DIRECTMESSAGE:"directmessage"),
+    (ALERT:"alert"),
+    (FRONTPAGE:"frontpage"),
+    (SUBMISSIONS:"submissions")
 }}
 
 
@@ -48,12 +54,12 @@ pub const SBSSYSTEMS: &[(&str,&str)] = &[
     ("switch", "Nintendo Switch")
 ]; 
 
-pub const SBSPAGETYPES: &[(&str,&str)] = &[
+pub const SEARCHPAGETYPES: &[(&str,&str)] = &[
     (SBSPageType::PROGRAM, "Programs"), 
     (SBSPageType::RESOURCE, "Resources")
 ];
 
-pub const SBSPAGEORDERS: &[(&str,&str)] = &[
+pub const SEARCHPAGEORDERS: &[(&str,&str)] = &[
     (POPSCORE1SORT, "Popular"), 
     ("id_desc", "Created (newest)"), 
     ("id", "Created (oldest)"),

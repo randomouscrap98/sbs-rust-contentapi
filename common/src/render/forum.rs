@@ -220,13 +220,13 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
 {
     let thread = &config.thread;
 
-    let is_pagetype = thread.thread.literalType == Some(SBSContentType::program.to_string()) ||
-            thread.thread.literalType == Some(SBSContentType::resource.to_string());
+    let is_pagetype = thread.thread.literalType.as_deref() == Some(SBSPageType::PROGRAM) ||
+            thread.thread.literalType.as_deref() == Some(SBSPageType::RESOURCE);
 
     if is_pagetype {
         context.layout_data.override_nav_path = Some("/search");
     }
-    else if thread.thread.literalType == Some(SBSContentType::directmessage.to_string()) {
+    else if thread.thread.literalType.as_deref() == Some(SBSPageType::DIRECTMESSAGE) {
         context.layout_data.override_nav_path = Some("/userhome");
     }
 
@@ -311,7 +311,7 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
     html!{
         section {
             //First check is if it's a program, then we float this box to the right
-            @if thread.thread.literalType == Some(SBSContentType::program.to_string()) {
+            @if thread.thread.literalType.as_deref() == Some(SBSPageType::PROGRAM) {
                 div."programinfo" {
                     @if let Some(images) = values.get(SBSValue::IMAGES).and_then(|k| k.as_array()) {
                         div."gallery" #"page_gallery" /*data-index="0"*/ data-images=(images_to_attr(&data.links, &images)) {

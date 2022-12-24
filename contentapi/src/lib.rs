@@ -114,7 +114,7 @@ string_enum!{ RequestType => {
     message_engagement
 }}
 
-string_enum!{ SBSContentType => {
+/*string_enum!{ SBSContentType => {
     forumcategory,
     forumthread,
     submissions,
@@ -124,7 +124,7 @@ string_enum!{ SBSContentType => {
     directmessages,
     alert,
     frontpage
-}}
+}}*/
 
 
 // -----------------------------
