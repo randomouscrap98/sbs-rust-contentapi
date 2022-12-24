@@ -4,7 +4,9 @@ use contentapi::{*, conversion::map_users};
 
 use common::*;
 use common::submissions::*;
-use common::layout::*;
+use common::constants::*;
+use common::render::layout::*;
+use common::render::submissions::*;
 use maud::*;
 
 pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, User>, search: Search,
@@ -13,16 +15,16 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
     //Need to split category search into parts 
     //let search_system = match &search.system { Some(system) => system, None => };
     layout(&data, html!{
-        (style(&data.config, "/forpage/search.css"))
-        (script(&data.config, "/forpage/search.js"))
+        (data.links.style("/forpage/search.css"))
+        (data.links.script("/forpage/search.js"))
         section {
             //Don't include an action so it just posts to the same url but with the form as params...?
             form."smallseparate" method="GET" id="searchform" {
                 label."inline" for="search-type" {
                     span{"Type: "}
                     select #"search-type" name="subtype" {
-                        @for (value,text) in SubmissionType::list() {
-                            option value=(value) selected[Some(value) == search.subtype.as_deref()] { (text) }
+                        @for (value,text) in SEARCHPAGETYPES {
+                            option value=(value) selected[Some(*value) == search.subtype.as_deref()] { (text) }
                         }
                     }
                 }
@@ -40,12 +42,12 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                         }
                     }
                 }
-                @if search.subtype.as_deref() == Some(PROGRAMTYPE) {
+                @if search.subtype.as_deref() == Some(SBSPageType::PROGRAM) {
                     label."inline" for="search-system" {
                         span{"System: "}
                         select #"search-system" name="system" {
-                            @for (value,text) in SubmissionSystem::list() {
-                                option value=(value) selected[value == search.system] { (text) }
+                            @for (value,text) in SBSSYSTEMS {
+                                option value=(value) selected[*value == search.system] { (text) }
                             }
                         }
                     }
@@ -53,8 +55,8 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                 label."inline" for="search-order" {
                     span{"Order: "}
                     select #"search-order" name="order" {
-                        @for (value,text) in SubmissionOrder::list() {
-                            option value=(value) selected[value == search.order] { (text) }
+                        @for (value,text) in SEARCHPAGEORDERS {
+                            option value=(value) selected[*value == search.order] { (text) }
                         }
                     }
                 }
@@ -62,7 +64,7 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                     span { "Search: " }
                     input."" #"search-text" type="text" name="search" value=[&search.search];
                 }
-                @if search.subtype.as_deref() == Some(PROGRAMTYPE) {
+                @if search.subtype.as_deref() == Some(SBSPageType::PROGRAM) {
                     label."inline" for="search-removed" {
                         span { "Show removed: " }
                         input."" #"search-text" type="checkbox" name="removed" checked[search.removed] value="true";
@@ -81,7 +83,7 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
             div."cardslist" {
                 //Or maybe in here
                 @for page in &pages {
-                    (page_card(&data.config, page, &users))
+                    (page_card(&data.links, page, &users))
                 }
             }
             //Generic pagelist generation (just need data)
@@ -101,10 +103,10 @@ fn page_navigation(data: &MainLayoutData, search: &Search) -> Markup {
     html! {
         div."smallseparate browsepagenav" {
             @if let Ok(prevlink) = serde_urlencoded::to_string(searchprev) {
-                a."coolbutton" href={(self_link(&data))"?"(prevlink)} {"Previous"}
+                a."coolbutton" href={(data.current())"?"(prevlink)} {"Previous"}
             }
             @if let Ok(nextlink) = serde_urlencoded::to_string(searchnext) {
-                a."coolbutton" href={(self_link(&data))"?"(nextlink)} {"Next"}
+                a."coolbutton" href={(data.current())"?"(nextlink)} {"Next"}
             }
         }
     }
@@ -133,7 +135,7 @@ pub async fn get_render(context: PageContext, search: Search, per_page: i32) -> 
             id: c.id.unwrap_or(0),
             name: c.name.unwrap_or_else(|| String::from("")), //Only evaluated on failure
             forcontent: c.values
-                .and_then(|v| v.get(FORCONTENTKEY).and_then(|v2| v2.as_str()).and_then(|v3| Some(String::from(v3))))
+                .and_then(|v| v.get(SBSValue::FORCONTENT).and_then(|v2| v2.as_str()).and_then(|v3| Some(String::from(v3))))
                 .unwrap_or_else(|| String::from(""))
         }
     }).collect::<Vec<Category>>();

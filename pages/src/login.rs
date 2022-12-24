@@ -1,6 +1,8 @@
 use super::*;
 use common::*;
-use common::layout::*;
+use common::forms::*;
+use common::render::*;
+use common::render::layout::*;
 use contentapi;
 use maud::*;
 
@@ -11,7 +13,7 @@ pub fn render(data: MainLayoutData, login_errors: Option<Vec<String>>, recover_e
     layout(&data, html!{
         section {
             h1{"Login"}
-            form method="POST" action={(data.config.http_root)"/login"} {
+            form method="POST" action={(data.links.http_root)"/login"} {
                 (errorlist(login_errors))
                 label for="login_username"{"Username:"}
                 input #"login_username" type="text" required="" name="username";
@@ -26,7 +28,7 @@ pub fn render(data: MainLayoutData, login_errors: Option<Vec<String>>, recover_e
             hr;
             h2{"Password expired / forgotten?"}
             p.""{"Send an email with a temporary recovery code, which you can use to reset your password"}
-            form method="POST" action={(data.config.http_root)"/login?recover=1"} {
+            form method="POST" action={(data.links.http_root)"/login?recover=1"} {
                 (errorlist(recover_errors))
                 label for="recover_email" {"Email"}
                 input #"recover_email" type="text" name="email" required="" value=[email];
@@ -34,12 +36,12 @@ pub fn render(data: MainLayoutData, login_errors: Option<Vec<String>>, recover_e
             }
             p."aside"{
                 "Already have the recovery code? Go to the " 
-                a href={(data.config.http_root)"/recover"} {"recovery page"}
+                a href={(data.links.http_root)"/recover"} {"recovery page"}
                 "."
             }
             hr;
             h2{"New to SmileBASIC Source?"}
-            p { a href={(data.config.http_root)"/register"}{"Click here"} " to register" }
+            p { a href={(data.links.http_root)"/register"}{"Click here"} " to register" }
         }
     }).into_string()
 }

@@ -4,21 +4,22 @@ use contentapi::conversion::*;
 use contentapi::endpoints::ApiContext;
 
 use common::*;
-use common::layout::*;
+use common::render::*;
+use common::render::layout::*;
 use common::forum::*;
 use maud::*;
 
 pub fn render(data: MainLayoutData, categories: Vec<ForumCategory>) -> String {
     layout(&data, html!{
-        (style(&data.config, "/forpage/forum.css"))
+        (data.links.style("/forpage/forum.css"))
         section { h1 { "Forum Topics" } }
         section {
             @for (index, category_container) in categories.iter().enumerate() {
                 @let category = &category_container.category;
                 div."category" {
                     div."categoryinfo" {
-                        h1 { a."flatlink" title={"ID: "(i(&category.id))} href=(forum_category_link(&data.config, &category)) {(s(&category.name))} }
-                        p."aside" {(s(&category.description))}
+                        h1 { a."flatlink" title={"ID: "(i(&category.id))} href=(data.links.forum_category(&category)) {(opt_s!(category.name))} }
+                        p."aside" {(opt_s!(category.description))}
                     }
                     div."foruminfo aside mediumseparate" {
                         div { b{"Threads: "} (category_container.threads_count) }
@@ -27,7 +28,7 @@ pub fn render(data: MainLayoutData, categories: Vec<ForumCategory>) -> String {
                                 @if let Some(post) = thread.posts.get(0) {
                                     b { time datetime=(d(&post.createDate)) { (timeago_o(&post.createDate)) } }
                                     ": "
-                                    a."flatlink" title={"ID: "(i(&thread.thread.id))} href=(forum_post_link(&data.config, post, &thread.thread)) { (s(&thread.thread.name)) } 
+                                    a."flatlink" title={"ID: "(i(&thread.thread.id))} href=(data.links.forum_post(post, &thread.thread)) { (opt_s!(thread.thread.name)) } 
                                 }
                             }
                         }
@@ -45,7 +46,7 @@ async fn build_categories_with_threads(mut context: ApiContext, categories_clean
     Result<Vec<ForumCategory>, Error> 
 {
     //Next request: get the complicated dataset for each category (this somehow includes comments???)
-    let thread_request = get_thread_request(&categories_cleaned, limit, skip, false); //context.config.default_category_threads, 0);
+    let thread_request = get_thread_request(&categories_cleaned, limit, skip, false); 
     let thread_result = context.post_request_profiled_opt(&thread_request, "threads").await?;
 
     let messages_raw = cast_result_required::<Message>(&thread_result, "message")?;
