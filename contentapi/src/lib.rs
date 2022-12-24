@@ -23,9 +23,15 @@ macro_rules! enum_type {
 
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(f, "{}", self.to_literal())
+            }
+        }
+
+        impl $name {
+            fn to_literal(&self) -> &'static str {
                 match self {
                 $(
-                    Self::$item => { write!(f, stringify!($item)) },
+                    Self::$item => stringify!($item),
                 )*
                 }
             }

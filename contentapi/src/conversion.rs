@@ -46,39 +46,3 @@ pub fn map_content(content: Vec<Content>) -> HashMap<i64, Content> {
 pub fn map_messages(messages: Vec<Message>) -> HashMap<i64, Message> {
     messages.into_iter().map(|u| (u.id.unwrap_or_else(|| 0), u)).collect::<HashMap<i64, Message>>()
 }
-
-//This gets rid of our dependency on serde_qs
-//pub fn list_to_querystring(list: Vec<(String, Option<impl Display>)>) -> String {
-//    if list.len() == 0 {
-//        String::new()
-//    }
-//    else {
-//        format!("?{}", list.iter()
-//            .map(|(key,value)| urlencoding::encode(&i.to_string()).into_owned())
-//            .collect::<Vec<String>>()
-//            .join("&")
-//        )
-//    }
-//}
-//
-//#[cfg(test)]
-//mod tests {
-//    use super::*;
-//
-//    macro_rules! querystring_tests {
-//        ($($name:ident: $value:expr;)*) => {
-//        $(
-//            #[test]
-//            fn $name() {
-//                let (input, expected) = $value;
-//                assert_eq!(list_to_querystring(input), String::from(expected));
-//            }
-//        )*
-//        }
-//    }
-//
-//    querystring_tests! {
-//        empty: (Vec::<String>::new(), "");
-//        single: (vec![("wow", None)], "");
-//    }
-//}

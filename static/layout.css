@@ -87,9 +87,9 @@ nav .headertab.current {
 .alert {
     padding: var(--space_small);
     border-bottom: var(--line_width) solid var(--color_border);
-    /*color: black;*/
     color: var(--tc_main);
-    background: var(--bg_alert); /*beige;*/
+    background: var(--bg_alert); 
+    line-height: var(--reg_lineheight);
 }
 
 #header-user, #footer-spacer {
