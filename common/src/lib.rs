@@ -153,7 +153,7 @@ pub fn base_image_link(config: &LinkConfig, hash: &str) -> String {
 }
 
 pub fn image_link(config: &LinkConfig, hash: &str, size: i64, crop: bool) -> String {
-    let query = contentapi::QueryImage { 
+    let query = contentapi::forms::QueryImage { 
         size : if size > 0 { Some(size as i64) } else { None },
         crop : if crop { Some(crop) } else { None }
     };

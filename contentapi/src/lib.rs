@@ -11,10 +11,27 @@ pub mod endpoints;
 pub mod forms;
 pub mod conversion;
 
+/// Create the values for ['Content'] or ['Message'] from a simple list of key : value pairs
+#[macro_export]
+macro_rules! make_values {
+    ($($field_name:literal : $field_value:expr),*$(,)?) => {
+        vec![$((String::from($field_name), serde_json::to_value($field_value)?))*]
+            .into_iter().collect::<std::collections::HashMap<String, serde_json::Value>>()
+    };
+}
 
-macro_rules! enum_type {
+/// Add a single value to an existing values hash from [`Content`] or [`Message`]
+#[macro_export]
+macro_rules! add_value {
+    ($request:expr, $key:literal, $value:expr) => {
+        $request.values.insert(String::from($key), $value.into());
+    }
+}
+
+/// Create a string enum, used for various human readable types from the API
+macro_rules! string_enum {
     ($name:ident => {
-        $($item:ident,)*
+        $($item:ident),*$(,)?
     }) => {
         #[allow(dead_code)] //man, idk if i'll use ALL of them but I WANT them
         pub enum $name {
@@ -27,6 +44,7 @@ macro_rules! enum_type {
             }
         }
 
+        /// Convert enum to string literal; prefer this function over display
         impl $name {
             fn to_literal(&self) -> &'static str {
                 match self {
@@ -39,78 +57,79 @@ macro_rules! enum_type {
     };
 }
 
+/// Create a in "integer" enum, used for codified values from the API
+macro_rules! byte_enum {
+    ($name:ident => {
+        $(($item:ident : $val:literal)),*$(,)?
+    }) => {
+        #[allow(dead_code)] //man, idk if i'll use ALL of them but I WANT them
+        pub enum $name { }
+
+        impl $name {
+        $(
+            pub const $item: i8 = $val;
+        )*
+        }
+    };
+}
+
 // --------------------
 // *    CONSTANTS     *
 // --------------------
 
-pub enum ContentType { }
+byte_enum!{ ContentType => {
+    (PAGE:1i8),
+    (MODULE:2i8),
+    (FILE:3i8),
+    (USERPAGE:4i8),
+    (SYSTEM:5i8)
+}}
 
-#[allow(dead_code)]
-impl ContentType {
-    //Make the fields just fields so they have integer values
-    pub const PAGE: i8 = 1i8;
-    pub const MODULE: i8 = 2i8;
-    pub const FILE: i8 = 3i8;
-    pub const USERPAGE: i8 = 4i8;
-    pub const SYSTEM: i8 = 5i8;
-}
+byte_enum!{ UserType => {
+    (USER:1i8)
+}}
 
-pub enum UserType { }
+byte_enum!{ UserAction => {
+    (CREATE:1i8),
+    (READ:2i8),
+    (UPDATE:4i8),
+    (DELETE:8i8)
+}}
 
-#[allow(dead_code)]
-impl UserType {
-    pub const USER: i8 = 1i8;
-}
+string_enum!{ RequestType => {
+    user,
+    content,
+    message,
+    activity,
+    watch,
+    adminlog,
+    uservariable,
+    message_aggregate,
+    activity_aggregate,
+    content_engagement,
+    ban,
+    keyword_aggregate,
+    message_engagement
+}}
 
-pub enum UserAction { }
-
-#[allow(dead_code)]
-impl UserAction {
-    //Make the fields just fields so they have integer values
-    pub const CREATE: i8 = 1i8;
-    pub const READ: i8 = 2i8;
-    pub const UPDATE: i8 = 4i8;
-    pub const DELETE: i8 = 8i8;
-}
-
-enum_type!{
-    RequestType => {
-        user,
-        content,
-        message,
-        activity,
-        watch,
-        adminlog,
-        uservariable,
-        message_aggregate,
-        activity_aggregate,
-        content_engagement,
-        ban,
-        keyword_aggregate,
-        message_engagement,
-    }
-}
-
-enum_type!{
-    SBSContentType => {
-        forumcategory,
-        forumthread,
-        submissions,
-        program,
-        resource,
-        directmessage,
-        directmessages,
-        alert,
-        frontpage,
-    }
-}
+string_enum!{ SBSContentType => {
+    forumcategory,
+    forumthread,
+    submissions,
+    program,
+    resource,
+    directmessage,
+    directmessages,
+    alert,
+    frontpage
+}}
 
 
 // -----------------------------
 // *     RESULTS FROM API      *
 // -----------------------------
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct About
 {
     pub version: String,
@@ -119,7 +138,7 @@ pub struct About
     pub contact: String
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct SpecialCount
 {
     pub specialCount: i32
@@ -195,22 +214,6 @@ pub struct Content //Remember, these are files, pages, threads etc. Lovely!
     pub lastRevisionId: Option<i64>
 }
 
-#[macro_export]
-macro_rules! make_values {
-    ($($field_name:literal : $field_value:expr),*$(,)*) => {
-        vec![$((String::from($field_name), serde_json::to_value($field_value)?))*]
-            .into_iter().collect::<std::collections::HashMap<String, serde_json::Value>>()
-    };
-}
-
-#[macro_export]
-macro_rules! add_value {
-    ($request:expr, $key:literal, $value:expr) => {
-        $request.values.insert(String::from($key), $value.into());
-    }
-}
-//pub use add_value;
-
 
 //#[serde_with::skip_serializing_none] //MUST COME BEFORE
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
@@ -281,17 +284,6 @@ pub struct RequestResult
     pub requestUser: Option<i64>
 }
 
-
-// -----------------------------
-// *     QUERY PARAMETERS      *
-// -----------------------------
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct QueryImage
-{
-    pub size: Option<i64>,
-    pub crop: Option<bool>
-}
 
 
 // ---------------------
