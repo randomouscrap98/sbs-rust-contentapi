@@ -1,4 +1,4 @@
-use super::*;
+use super::super::*;
 
 //Render basic navigation link with only text as the body
 pub fn main_nav_link(data: &MainLayoutData, text: &str, href: &str, id: Option<&str>) -> Markup {

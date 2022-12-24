@@ -17,8 +17,8 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>) -> String
                 {
                     span{"Theme:"}
                     select #"settings-theme" name="theme" {
-                        @for (key,value) in UserConfig::all_themes() {
-                            option value=(key) selected[data.user_config.theme == key] { (value) }
+                        @for (key,value) in constants::USERTHEMES {
+                            option value=(key) selected[&data.user_config.theme == key] { (value) }
                         }
                     }
                 }

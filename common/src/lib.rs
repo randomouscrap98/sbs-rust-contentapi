@@ -1,98 +1,32 @@
 pub mod forum;
-pub mod layout;
+pub mod render;
 pub mod pagination;
 pub mod submission;
-pub mod forum_render;
 pub mod queries;
+pub mod constants;
+pub mod data;
+pub mod forms;
+pub mod links;
 
 use std::collections::HashMap;
 
 use bbscope::BBCode;
 use chrono::{SecondsFormat, Utc};
-use contentapi::{self, endpoints::{ApiError, ApiContext}, Content, Message, User, UserType};
+use contentapi::{self, endpoints::{ApiError}, Content, Message, User, UserType};
 use serde::{Serialize, Deserialize};
 use serde_urlencoded;
 use maud::{Markup, html, PreEscaped, DOCTYPE};
 
-#[derive(Clone, Debug)]
-pub struct LinkConfig {
-    pub http_root: String,
-    pub static_root: String,
-    pub resource_root: String,
-    pub file_root: String,
-    pub file_upload_root: String,
-    pub cache_bust: String
-}
+use data::*;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(default)]
-pub struct UserConfig {
-    pub language: String,
-    pub compact: bool,
-    pub theme: String
-}
-
-impl Default for UserConfig {
-    fn default() -> Self {
-        Self {
-            language: String::from("en"),
-            compact: false,
-            theme: String::from("sbs")
-        }
-    }
-}
-
-impl UserConfig {
-    pub fn all_themes() -> Vec<(&'static str,&'static str)> {
-        vec![
-            ("sbs", "SBS (default)"),
-            ("sbs-dark", "SBS Dark"),
-            ("sbs-blue", "SBS Blue"),
-            ("sbs-contrast", "SBS High Contrast"),
-            ("sbs-dark-contrast", "SBS Dark High Contrast")
-        ]
-    }
-}
-
-#[derive(Debug)]
-pub struct MainLayoutData {
-    pub config: LinkConfig,     
-    pub user_config: UserConfig,    
-    pub current_path: String, 
-    pub override_nav_path: Option<&'static str>,
-    pub user: Option<contentapi::User>,
-    pub user_token: Option<String>,
-    pub about_api: contentapi::About, 
-    pub raw_alert: Option<String>,
-
-    #[cfg(feature = "profiling")]
-    pub profiler: onestop::OneList<onestop::OneDuration>
-}
-
-/// A basic context for use in page rendering. Even if a page doesn't strictly need all
-/// the items inside this context, it just makes it easier to pass them all to every page
-/// render consistently. However, do NOT use this on the baseline rendering functions!
-pub struct PageContext {
-    pub layout_data: MainLayoutData,
-    pub api_context: ApiContext,
-    pub bbcode: BBCode,
-    pub bbconsume: BBCode
-}
-
-// ------------------------
-// *     GENERIC FORMS    *
-// ------------------------
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct EmailGeneric
-{
-    pub email: String
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct BasicText
-{
-    pub text: String
+#[macro_export]
+macro_rules! opt_s {
+    ($str:expr,$def:literal) => {
+        if let Some(ref thing) = $str { thing } else { $def }
+    };
+    ($str:expr) => {
+        if let Some(ref thing) = $str { thing } else { "" }
+    };
 }
 
 // -------------------------------------
@@ -147,62 +81,6 @@ impl Error {
 // ------------------------
 // *    LINK FUNCTIONS    *
 // ------------------------
-
-pub fn base_image_link(config: &LinkConfig, hash: &str) -> String { 
-    image_link(config, hash, 0, false)
-}
-
-pub fn image_link(config: &LinkConfig, hash: &str, size: i64, crop: bool) -> String {
-    let query = contentapi::forms::QueryImage { 
-        size : if size > 0 { Some(size as i64) } else { None },
-        crop : if crop { Some(crop) } else { None }
-    };
-    match serde_urlencoded::to_string(&query) {
-        Ok(querystring) => format!("{}/{}?{}", config.file_root, hash, querystring),
-        Err(error) => {
-            println!("Serde_qs failed? Not printing link for {}. Error: {}", hash, error);
-            format!("#ERRORFOR-{}",hash)
-        }
-    }
-}
-
-/// This SHOULD work anywhere...
-pub fn self_link(data: &MainLayoutData) -> String {
-    format!("{}{}", data.config.http_root, data.current_path)
-}
-
-pub fn user_link(config: &LinkConfig, user: &User) -> String {
-    format!("{}/user/{}", config.http_root, user.username)
-}
-
-pub fn page_link(config: &LinkConfig, page: &Content) -> String {
-    format!("{}/page/{}", config.http_root, s(&page.hash))
-}
-
-pub fn forum_category_link(config: &LinkConfig, category: &Content) -> String {
-    forum_category_link_unsafe(config, s(&category.hash))
-}
-
-/// Create a category link using the current link system, which only uses the hash AVOID AS MUCH AS POSSIBLE!
-/// The implementation of the links may change!
-pub fn forum_category_link_unsafe(config: &LinkConfig, hash: &str) -> String {
-    format!("{}/forum/category/{}", config.http_root, hash) //s(&category.hash))
-}
-
-pub fn forum_thread_link(config: &LinkConfig, thread: &Content) -> String {
-    format!("{}/forum/thread/{}", config.http_root, s(&thread.hash))
-}
-
-pub fn forum_post_hash(post: &Message) -> String {
-    let post_id = post.id.unwrap_or(0);
-    format!("#post_{}", post_id)
-}
-
-pub fn forum_post_link(config: &LinkConfig, post: &Message, thread: &Content) -> String {
-    let post_id = post.id.unwrap_or(0);
-    format!("{}/forum/thread/{}/{}{}", config.http_root, s(&thread.hash), post_id, forum_post_hash(post))
-}
-
 // ----------------------------
 // *     FORMAT FUNCTIONS     *
 // ----------------------------

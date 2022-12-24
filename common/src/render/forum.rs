@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
-use super::*;
 use contentapi::*;
+use maud::*;
+
+use super::super::*;
 use forum::*;
 use submission::*;
 use pagination::*;
-use maud::*;
 
 
 // ----------------------------
@@ -21,14 +22,14 @@ pub struct ForumPathItem {
 impl ForumPathItem {
     pub fn from_category(category: &Content) -> Self {
         Self {
-            link: format!("/forum/category/{}", if let Some(ref hash) = category.hash { hash } else { "" }),
-            title: if let Some(ref name) = category.name { name.clone() } else { String::from("NOTFOUND") }
+            link: format!("/forum/category/{}", opt_s!(category.hash)),
+            title: String::from(opt_s!(category.name, "NOTFOUND"))
         }
     }
     pub fn from_thread(thread: &Content) -> Self {
         Self {
-            link: format!("/forum/thread/{}", if let Some(ref hash) = thread.hash { hash } else { "" }),
-            title: if let Some(ref name) = thread.name { name.clone() } else { String::from("NOTFOUND") }
+            link: format!("/forum/thread/{}", opt_s!(thread.hash)),
+            title: String::from(opt_s!(thread.name, "NOTFOUND"))
         }
     }
     pub fn root() -> Self {

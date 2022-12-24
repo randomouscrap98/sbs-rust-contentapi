@@ -7,7 +7,7 @@ use super::*;
 // -----------------------------
 
 /// Query string sent to /file/raw to change thumbnail received
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct QueryImage
 {
     pub size: Option<i64>,
