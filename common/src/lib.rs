@@ -2,21 +2,19 @@ pub mod forum;
 pub mod render;
 pub mod pagination;
 pub mod submissions;
-pub mod queries;
+pub mod admin;
 pub mod constants;
-pub mod data;
 pub mod forms;
 pub mod links;
 
 use std::collections::HashMap;
 
-use bbscope::BBCode;
-use contentapi::{self, endpoints::{ApiError}, Content,  User, UserType};
+use maud::*;
 use serde::{Serialize, Deserialize};
 use serde_urlencoded;
-use maud::{Markup, html, PreEscaped, DOCTYPE};
 
-use data::*;
+use bbscope::BBCode;
+use contentapi::*;
 
 #[macro_export]
 macro_rules! opt_s {
@@ -28,6 +26,57 @@ macro_rules! opt_s {
     };
 }
 
+#[derive(Clone, Debug)]
+pub struct LinkConfig {
+    pub http_root: String,
+    pub static_root: String,
+    pub resource_root: String,
+    pub file_root: String,
+    pub file_upload_root: String,
+    pub cache_bust: String
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
+pub struct UserConfig {
+    pub language: String,
+    pub compact: bool,
+    pub theme: String
+}
+
+impl Default for UserConfig {
+    fn default() -> Self {
+        Self {
+            language: String::from("en"),
+            compact: false,
+            theme: String::from("sbs")
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct MainLayoutData {
+    pub links: LinkConfig,     
+    pub user_config: UserConfig,    
+    pub current_path: String, 
+    pub override_nav_path: Option<&'static str>,
+    pub user: Option<contentapi::User>,
+    pub user_token: Option<String>,
+    pub about_api: contentapi::About, 
+    pub raw_alert: Option<String>,
+
+    #[cfg(feature = "profiling")]
+    pub profiler: onestop::OneList<onestop::OneDuration>
+}
+
+/// A basic context for use in page rendering. Even if a page doesn't strictly need all
+/// the items inside this context, it just makes it easier to pass them all to every page
+/// render consistently. However, do NOT use this on the baseline rendering functions!
+pub struct PageContext {
+    pub layout_data: MainLayoutData,
+    pub api_context: endpoints::ApiContext,
+    pub bbcode: BBCode
+}
 
 // -------------------------------------
 // *     Response/Error from pages     *
@@ -47,8 +96,8 @@ pub enum Error {
     Other(String) //Something "general" happened, who the heck knows?
 }
 
-impl From<ApiError> for Error {
-    fn from(error: ApiError) -> Self {
+impl From<endpoints::ApiError> for Error {
+    fn from(error: endpoints::ApiError) -> Self {
         Error::Api(error) 
     }
 }
@@ -66,7 +115,6 @@ impl From<Box<dyn std::error::Error>> for Error {
 }
 
 impl Error {
-    //pub fn other(message: &str)
     pub fn to_user_string(&self) -> String {
         match self {
             Self::Api(error) => error.to_user_string(),
