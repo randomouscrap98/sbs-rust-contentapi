@@ -1,8 +1,9 @@
 use common::*;
-use common::layout::*;
+use common::render::*;
+use common::render::layout::*;
 use contentapi::*;
 use contentapi::endpoints::*;
-use contentapi::forms::UserSensitive;
+use contentapi::forms::*;
 use maud::*;
 use serde::Deserialize;
 
@@ -22,13 +23,13 @@ pub fn render(data: MainLayoutData, private: Option<contentapi::UserPrivate>, us
     }
     layout(&data, html!{
         @if let Some(user) = &data.user {
-            (style(&data.config, "/forpage/userhome.css"))
+            (data.links.style("/forpage/userhome.css"))
             section {
                 h1 {(user.username)}
                 div #"userhomeinfo" {
-                    img src=(image_link(&data.config, &user.avatar, 300, true));
+                    img src=(data.links.image(&user.avatar, &QueryImage::avatar(300)));
                     div #"infoblock" {
-                        table data-special=(s(&user.special)) data-type=(user.r#type) {
+                        table data-special=(opt_s!(&user.special)) data-type=(user.r#type) {
                             tr { td { b { "Email:"} } td."spoilertext"{(email)} } 
                             tr { td { b { "User ID:"} } td {(user.id)} }
                             tr { td { b { "Joined:"} } td { time {(user.createDate.to_rfc3339())} } }
@@ -37,17 +38,17 @@ pub fn render(data: MainLayoutData, private: Option<contentapi::UserPrivate>, us
                         }
                         //Might turn this into a collbutton
                         div."smallseparate" #"userlinks" {
-                            a."flatlink" #"publiclink" href={(data.config.http_root)"/user/"(user.username)} {"User page"}
+                            a."flatlink" #"publiclink" href={(data.links.http_root)"/user/"(user.username)} {"User page"}
                             span{"/"}
-                            a."flatlink" #"privatethreadslink" href=(forum_category_link_unsafe(&data.config, "private-threads")) {"Private Threads"}
+                            a."flatlink" #"privatethreadslink" href=(data.links.forum_category_unsafe("private-threads")) {"Private Threads"}
                             span{"/"}
-                            a."flatlink" #"logoutlink" href={(data.config.http_root)"/logout"} {"Logout"}
+                            a."flatlink" #"logoutlink" href={(data.links.http_root)"/logout"} {"Logout"}
                         }
                     }
                 }
                 hr;
                 h3 #"update-userbio" {"Update bio:"}
-                form method="POST" action={(data.config.http_root)"/userhome?bio=1#update-userbio"} {
+                form method="POST" action={(data.links.http_root)"/userhome?bio=1#update-userbio"} {
                     (errorlist(bio_errors))
                     input type="hidden" name="id" value=(bio_id);
                     textarea #"update_userbio" type="text" name="text"{(bio_text)}
@@ -55,7 +56,7 @@ pub fn render(data: MainLayoutData, private: Option<contentapi::UserPrivate>, us
                 }
                 hr;
                 h3 #"update-user"{"Update info:"}
-                form method="POST" action={(data.config.http_root)"/userhome#update-user"} { 
+                form method="POST" action={(data.links.http_root)"/userhome#update-user"} { 
                     (errorlist(update_errors))
                     label for="update_username"{"Username:"}
                     input #"update_username" type="text" name="username" value=(user.username);
@@ -66,12 +67,12 @@ pub fn render(data: MainLayoutData, private: Option<contentapi::UserPrivate>, us
                 }
             }
             section {
-                iframe."imagebrowser" src={(data.config.http_root)"/widget/imagebrowser"} {}
+                iframe."imagebrowser" src={(data.links.http_root)"/widget/imagebrowser"} {}
             }
             section {
                 h3 #"update-sensitive"{"Update sensitive info"}
                 p{"Only set the fields you want to change, except 'current password', which is required"}
-                form method="POST" action={(data.config.http_root)"/userhome?sensitive=1#update-sensitive"} autocomplete="off" {
+                form method="POST" action={(data.links.http_root)"/userhome?sensitive=1#update-sensitive"} autocomplete="off" {
                     (errorlist(private_errors))
                     //<label for="sensitive_username">New Username:</label>
                     //<input id="sensitve_username" type="text" autocomplete="new-password" name="username" value="">

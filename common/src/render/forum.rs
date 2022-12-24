@@ -4,8 +4,9 @@ use contentapi::*;
 use contentapi::forms::*;
 use maud::*;
 
-use super::*; //Render stuff
-use super::super::*;
+use crate::*;
+use crate::forms::*;
+use crate::render::*;
 use crate::constants::*;
 use crate::forum::*;
 use crate::pagination::*;
@@ -76,14 +77,6 @@ pub fn threadicon(config: &LinkConfig, thread: &ForumThread) -> Markup { //neutr
 // ----------------------------
 // *     BIG JUNK (THReAD)    *
 // ----------------------------
-
-// Unfortunately need this in here so the post knows how to render the iframe
-#[derive(Serialize, Deserialize, Default)]
-#[serde(default)]
-pub struct ThreadQuery {
-    pub reply: Option<i64>,
-    pub selected: Option<i64>
-}
 
 /// Render a single post on a thread.
 pub struct PostsConfig {

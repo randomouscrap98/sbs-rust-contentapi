@@ -2,10 +2,14 @@
 use std::collections::HashMap;
 
 use bbscope::BBCode;
-use contentapi::*; //{User, Content, add_value, build_request, FullRequest, RequestType};
+use contentapi::*; 
+use contentapi::forms::*;
 
 use common::*;
-use common::layout::*;
+use common::forms::*;
+use common::render::*;
+use common::render::layout::*;
+use common::render::submissions::*;
 use common::submissions::*;
 use maud::*;
 
@@ -19,12 +23,12 @@ pub struct UserPackage {
 pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: Option<UserPackage>) -> String 
 {
     layout(&data, html!{
-        (style(&data.config, "/forpage/user.css"))
+        (data.links.style("/forpage/user.css"))
         @if let Some(user_package) = user_package {
             @let user = user_package.user;
             section {
                 div #"pageuser" {
-                    img src={(image_link(&data.config, &user.avatar, 300, true))};
+                    img src={(data.links.image(&user.avatar, &QueryImage::avatar(300)))};
                     div #"infoblock" {
                         h1 {(user.username)}
                         div."aside mediumseparate" #"userinfo" {
@@ -34,7 +38,7 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: Option<Use
                         }
                         //If the user has no bio, that's ok! 
                         @if let Some(userpage) = user_package.userpage {
-                            div."content" #"userbio" { (PreEscaped(bbcode.parse_profiled_opt(s(&userpage.text), format!("userpage-{}", i(&userpage.id))))) } 
+                            div."content" #"userbio" { (PreEscaped(bbcode.parse_profiled_opt(opt_s!(userpage.text), format!("userpage-{}", i(&userpage.id))))) } 
                         }
                     }
                 }
@@ -47,7 +51,7 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: Option<Use
                 @else {
                     div."cardslist" {
                         @for page in &user_package.submissions {
-                            (page_card(&data.config, page, &user_package.users))
+                            (page_card(&data.links, page, &user_package.users))
                         }
                     }
                 }
@@ -91,7 +95,7 @@ pub async fn get_render(context: PageContext, username: String) -> Result<Respon
     let package: Option<UserPackage> = if let Some(user) = user {
         //OK we did the standard user request. we COULD'VE merged these two, but it's just easier to 
         //make a second request for their submissions!
-        let mut search = Search::default(); //Search { search: N, order: (), subtype: (), system: (), category: (), user_id: (), removed: (), page: () }
+        let mut search = PageSearch::default();
         search.user_id = Some(user.id);
         let request = get_search_request(&search, 0); //Just ask for as much as possible
 

@@ -3,13 +3,14 @@ use std::collections::HashMap;
 use contentapi::{*, conversion::map_users};
 
 use common::*;
+use common::forms::*;
 use common::submissions::*;
 use common::constants::*;
 use common::render::layout::*;
 use common::render::submissions::*;
 use maud::*;
 
-pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, User>, search: Search,
+pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, User>, search: PageSearch,
     categories: Vec<Category>) -> String 
 {
     //Need to split category search into parts 
@@ -95,7 +96,7 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
 
 // TODO: Make this generic across imagebrowse and here? Search has to impl some trait with get/set 
 // page functions and clone, and .browsepagenav might need to go in base.css
-fn page_navigation(data: &MainLayoutData, search: &Search) -> Markup {
+fn page_navigation(data: &MainLayoutData, search: &PageSearch) -> Markup {
     let mut searchprev = search.clone();
     let mut searchnext = search.clone();
     searchprev.page = searchprev.page - 1;
@@ -119,7 +120,7 @@ pub struct Category {
     pub forcontent: String
 }
 
-pub async fn get_render(context: PageContext, search: Search, per_page: i32) -> Result<Response, Error> 
+pub async fn get_render(context: PageContext, search: PageSearch, per_page: i32) -> Result<Response, Error> 
 {
     let request = get_search_request(&search, per_page);
 

@@ -1,7 +1,9 @@
 use common::*;
-use common::layout::*;
+use common::render::*;
+use common::render::layout::*;
 
 use contentapi::*;
+use contentapi::forms::*;
 use contentapi::endpoints::*;
 use maud::*;
 use serde::{Serialize, Deserialize};
@@ -15,22 +17,22 @@ pub fn render(data: MainLayoutData, search: Search, images: Vec<Image>, previews
     basic_skeleton(&data, html! {
         title { "SmileBASIC Source Image Browser" }
         meta name="description" content="Simple image browser widget";
-        (style(&data.config, "/forpage/imagebrowser.css"))
-        (script(&data.config, "/forpage/imagebrowser.js"))
+        (data.links.style("/forpage/imagebrowser.css"))
+        (data.links.script("/forpage/imagebrowser.js"))
     }, html! {
         //Might as well not show the upload form if user isn't logged in
         @if let Some(_user) = &data.user {
             h3 { "Upload file:" }
             //This doesn't need an action since it's self posting but just in case...
-            form method="POST" action=(data.config.file_upload_root) enctype="multipart/form-data" {
+            form method="POST" action=(data.links.file_upload_root) enctype="multipart/form-data" {
                 (errorlist(errors))
                 @if let Some(error) = &search.error {
                     (errorlist(Some(vec![error.clone()])))
                 }
                 input #"fileinput" type="file" name="file" class="largeinput" accept="image/*";
                 input type="hidden" name="token" value=[&data.user_token];
-                input type="hidden" name="errorUrl" value={(self_link(&data))"?error={{error}}"};
-                input type="hidden" name="successUrl" value={(self_link(&data))"?preview={{hash}}"};
+                input type="hidden" name="errorUrl" value={(data.current())"?error={{error}}"};
+                input type="hidden" name="successUrl" value={(data.current())"?preview={{hash}}"};
                 input type="submit" value="Upload";
             }
             hr;
@@ -69,7 +71,7 @@ pub fn render(data: MainLayoutData, search: Search, images: Vec<Image>, previews
                 //Used to have h4 Preview images
                 div."imagelist" {
                     @if previews.len() > 0 {
-                        (image_list(&data.config, previews, imagesize))
+                        (image_list(&data.links, previews, imagesize))
                     }
                     @else {
                         p."aside" {"No images returned for preview!"}
@@ -80,7 +82,7 @@ pub fn render(data: MainLayoutData, search: Search, images: Vec<Image>, previews
             //Used to have img navigation here
             div."imagelist" {
                 @if images.len() > 0 {
-                    (image_list(&data.config, images, imagesize))
+                    (image_list(&data.links, images, imagesize))
                 }
                 @else {
                     p."aside" {"No images!"}
@@ -95,8 +97,8 @@ fn image_list(config: &LinkConfig, images: Vec<Image>, size: i64) -> Markup {
     html! {
         @for image in images {
             div."imagepreview" {
-                a href=(base_image_link(config, &image.hash)) target="_blank" {
-                    img src=(image_link(config, &image.hash, size as i64, false));
+                a href=(config.image_default(&image.hash)) target="_blank" {
+                    img src=(config.image(&image.hash, &QueryImage{ size: Some(size), crop: None }));
                 }
                 input."hover" readonly value=(image.hash) title=(image.hash);
             }
@@ -112,10 +114,10 @@ fn image_navigation(data: &MainLayoutData, search: Search) -> Markup {
     html! {
         div."smallseparate browsepagenav" {
             @if let Ok(prevlink) = serde_urlencoded::to_string(searchprev) {
-                a."coolbutton" href={(self_link(&data))"?"(prevlink)} {"Previous"}
+                a."coolbutton" href={(data.current())"?"(prevlink)} {"Previous"}
             }
             @if let Ok(nextlink) = serde_urlencoded::to_string(searchnext) {
-                a."coolbutton" href={(self_link(&data))"?"(nextlink)} {"Next"}
+                a."coolbutton" href={(data.current())"?"(nextlink)} {"Next"}
             }
         }
     }

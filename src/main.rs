@@ -219,17 +219,17 @@ async fn main()
     let post_bbcodepreview_route = warp::post()
         .and(warp::path!("widget" / "bbcodepreview"))
         .and(form_filter.clone())
-        .and(warp::body::form::<common::BasicText>())
+        .and(warp::body::form::<common::forms::BasicText>())
         .and(state_filter.clone())
-        .map(|form: common::BasicText, context: RequestContext| {
+        .map(|form: common::forms::BasicText, context: RequestContext| {
             warp::reply::html(pages::widget_bbcodepreview::render(context.layout_data, &context.global_state.bbcode, Some(form.text)))
         })
         .boxed();
 
     let get_search_route = warp_get_async!(
             warp::path!("search")
-                .and(warp::query::<common::submission::Search>()),
-        |search: common::submission::Search, context:RequestContext| {
+                .and(warp::query::<common::forms::PageSearch>()),
+        |search: common::forms::PageSearch, context:RequestContext| {
             async move {
                 let gc = context.global_state.clone();
                 handle_response(
@@ -357,10 +357,10 @@ async fn main()
 
     let get_widgetthread_route = warp_get_async!(
         warp::path!("widget" / "thread")
-            .and(warp::query::<common::forum_render::ThreadQuery>()),
+            .and(warp::query::<common::forms::ThreadQuery>()),
                 //.or(warp::any().map(|| pages::widget_thread::Search::default()))
                 //.unify()),
-        |search:common::forum_render::ThreadQuery, context:RequestContext| {
+        |search:common::forms::ThreadQuery, context:RequestContext| {
             async move {
                 let gc = context.global_state.clone();
                 handle_response(
@@ -587,9 +587,9 @@ fn post_login_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_fi
     // The secondary endpoint, to send account recovery emails
     let recover_email_post = warp::any()
         .and(qflag!(recover)) 
-        .and(warp::body::form::<common::EmailGeneric>())
+        .and(warp::body::form::<common::forms::EmailGeneric>())
         .and(state_filter.clone())
-        .and_then(|_query, form: common::EmailGeneric, context: RequestContext| {
+        .and_then(|_query, form: common::forms::EmailGeneric, context: RequestContext| {
             async move {
                 let gc = context.global_state.clone();
                 let response = pages::login::post_login_recover(context.into(), &form).await;
@@ -626,9 +626,9 @@ fn post_registerconfirm_multi_route(state_filter: &BoxedFilter<(RequestContext,)
     // Secondary endpoint: resend confirmation email
     let registerconfirm_email_post = warp::any()
         .and(qflag!(resend)) 
-        .and(warp::body::form::<common::EmailGeneric>())
+        .and(warp::body::form::<common::forms::EmailGeneric>())
         .and(state_filter.clone())
-        .and_then(|_query, form: common::EmailGeneric, context: RequestContext| {
+        .and_then(|_query, form: common::forms::EmailGeneric, context: RequestContext| {
             async move {
                 let gc = context.global_state.clone();
                 let response = pages::registerconfirm::post_email_render(context.into(), &form).await;

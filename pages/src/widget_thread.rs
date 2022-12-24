@@ -1,10 +1,11 @@
 use common::*;
 
 use contentapi::*;
-use forum_render::*;
 use contentapi::conversion::*;
+use common::forms::*;
 use common::forum::*;
-use common::layout::*;
+use common::render::layout::*;
+use common::render::forum::*;
 use maud::*;
 
 
@@ -14,7 +15,7 @@ pub fn render(context: &mut PageContext, config: PostsConfig) -> String {
     basic_skeleton(&context.layout_data, html! {
         title { "SmileBASIC Source Image Browser" }
         meta name="description" content="Simple image browser widget";
-        (style(&context.layout_data.config, "/forpage/forum.css"))
+        (context.layout_data.links.style("/forpage/forum.css"))
         style { r#"
             body { 
                 /* This shrinks the WHOLE page! */
