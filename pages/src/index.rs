@@ -1,5 +1,5 @@
 use common::*;
-use common::layout::*;
+use common::render::layout::*;
 use maud::*;
 
 //This will render the entire index! It's a handler WITH the template in it! Maybe that's kinda weird? who knows...

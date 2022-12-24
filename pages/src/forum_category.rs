@@ -7,59 +7,61 @@ use contentapi::endpoints::ApiContext;
 
 
 use common::*;
+use common::constants::*;
 use common::forum::*;
-use common::forum_render::*;
-use common::layout::*;
+use common::render::*;
+use common::render::forum::*;
+use common::render::layout::*;
 use common::pagination::*;
 use maud::*;
 
 
 pub fn render(mut data: MainLayoutData, category: ForumCategory, path: Vec<ForumPathItem>, pages: Vec<PagelistItem>) -> String 
 {
-    if category.category.literalType == Some(SBSContentType::submissions.to_string()) {
+    if category.category.literalType.as_deref() == Some(SBSPageType::SUBMISSIONS) {
         data.override_nav_path = Some("/search");
     }
-    else if category.category.literalType == Some(SBSContentType::directmessages.to_string()) {
+    else if category.category.literalType.as_deref() == Some(SBSPageType::DIRECTMESSAGES) {
         data.override_nav_path = Some("/userhome");
     }
     layout(&data, html!{
-        (style(&data.config, "/forpage/forum.css"))
+        (data.links.style("/forpage/forum.css"))
         section {
-            h1 { (s(&category.category.name)) }
-            p."aside" {(s(&category.category.description))}
-            (forum_path(&data.config, &path))
+            h1 { (opt_s!(category.category.name)) }
+            p."aside" {(opt_s!(category.category.description))}
+            (forum_path(&data.links, &path))
         }
         section {
             //Assume the stickies list is correct, they always come first no matter what
             @for sticky in &category.stickies {
-                (thread_item(&data.config, sticky, &category.users))
+                (thread_item(&data.links, sticky, &category.users))
                 hr."smaller";
             }
             //Only care about 'unless' in the main list, the only time this DOES work is if there are ONLY stickies
             @for (index,thread) in category.threads.iter().enumerate() {
-                (thread_item(&data.config, thread, &category.users))
+                (thread_item(&data.links, thread, &category.users))
                 @if index < category.threads.len() - 1 {
                     hr."smaller";
                 }
             }
             div."smallseparate pagelist" {
                 @for page in pages {
-                    a."current"[page.current] href={(forum_category_link(&data.config, &category.category))"?page="(page.page)} { (page.text) }
+                    a."current"[page.current] href={(data.links.forum_category(&category.category))"?page="(page.page)} { (page.text) }
                 }
             }
         }
     }).into_string()
 }
 
-pub fn thread_item(config: &LinkConfig, thread: &ForumThread, users: &HashMap<i64, User>) -> Markup {
+pub fn thread_item(links: &LinkConfig, thread: &ForumThread, users: &HashMap<i64, User>) -> Markup {
     html! {
         div."thread" {
             div."threadinfo" {
-                h3 { a."flatlink" href=(forum_thread_link(config, &thread.thread)) { (s(&thread.thread.name)) } }
+                h3 { a."flatlink" href=(links.forum_thread(&thread.thread)) { (opt_s!(thread.thread.name)) } }
             }
             div."foruminfo aside mediumseparate" {
-                (threadicon(config, thread))
-                div { b { "Posts: " } (i(&thread.thread.commentCount.into())) } //{{thread.commentCount}}</div>
+                (threadicon(links, thread))
+                div { b { "Posts: " } (i(&thread.thread.commentCount.into())) }
                 div {
                     b { "Created: " }
                     time datetime=(d(&thread.thread.createDate)) { (timeago_o(&thread.thread.createDate)) }
@@ -67,13 +69,13 @@ pub fn thread_item(config: &LinkConfig, thread: &ForumThread, users: &HashMap<i6
                 @if let Some(post) = thread.posts.get(0) {
                     div {
                         b { "Last: " }
-                        a."flatlink" href=(forum_post_link(config, post, &thread.thread)) {
+                        a."flatlink" href=(links.forum_post(post, &thread.thread)) {
                             time datetime=(d(&post.createDate)) { (timeago_o(&post.createDate)) }
                         }
                         " by "
                         @if let Some(user_id) = post.createUserId {
                             @if let Some(user) = users.get(&user_id) {
-                                a."flatlink" href=(user_link(config, user)) { (user.username) }
+                                a."flatlink" href=(links.user(user)) { (user.username) }
                             }
                         }
                     }

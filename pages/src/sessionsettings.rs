@@ -1,6 +1,7 @@
 
+use common::render::*;
 use common::*;
-use common::layout::*;
+use common::render::layout::*;
 use maud::*;
 
 pub fn render(data: MainLayoutData, errors: Option<Vec<String>>) -> String 
@@ -11,7 +12,7 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>) -> String
     layout(&data, html!{
         section {
             h1 { "Local session settings" }
-            form method="POST" action={(data.config.http_root)"/sessionsettings"} {
+            form method="POST" action={(data.links.http_root)"/sessionsettings"} {
                 (errorlist(errors))
                 label."inline" for="settings-theme" 
                 {

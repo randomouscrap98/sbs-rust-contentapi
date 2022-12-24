@@ -1,14 +1,15 @@
 
 use super::*;
 use common::*;
-use common::layout::*;
+use common::render::*;
+use common::render::layout::*;
 use maud::*;
 
 pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, username: Option<String>, email: Option<String>) -> String {
     layout(&data, html!{
         section {
             h1 { "Register" }
-            form method="POST" action=(data.config.http_root) {
+            form method="POST" action=(data.links.http_root) {
                 (errorlist(errors))
                 label for="register_username" {"Username:"}
                 input #"register_username" type="text" name="username" value=[username];
@@ -18,7 +19,7 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, username: Optio
                 input #"register_email" type="email" name="email" value=[email];
                 p."aside" { 
                     "We only use your email for account recovery and verification. All code is open source, see: "
-                    a href={(data.config.http_root)"/about"} {"About"}
+                    a href={(data.links.http_root)"/about"} {"About"}
                 }
                 input type="submit" value="Register";
             }

@@ -1,5 +1,5 @@
 use common::*;
-use common::layout::*;
+use common::render::layout::*;
 use maud::html;
 
 pub fn render(data: MainLayoutData) -> String {

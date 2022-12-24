@@ -6,7 +6,8 @@ use contentapi::endpoints::*;
 
 use crate::constants::*;
 
-pub async fn get_system_any(context: &mut ApiContext, ty: &str) -> Result<Option<Content>, Error> {
+pub async fn get_system_any(context: &mut ApiContext, ty: &str) -> Result<Option<Content>, Error> 
+{
     let mut request = FullRequest::new();
     add_value!(request, "type", ContentType::SYSTEM);
     add_value!(request, "littype", ty);

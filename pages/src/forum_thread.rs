@@ -1,8 +1,8 @@
 use common::*;
-use common::layout::layout;
+use common::render::layout::*;
 use common::forum::*;
 use common::pagination::*;
-use common::forum_render::*;
+use common::render::forum::*;
 
 use contentapi::*;
 use contentapi::conversion::*;

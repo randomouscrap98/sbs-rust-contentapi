@@ -1,7 +1,8 @@
 use contentapi::forms::UserSensitive;
 
 use common::*;
-use common::layout::*;
+use common::render::*;
+use common::render::layout::*;
 use maud::*;
 
 pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, email: Option<String>) -> String {
@@ -9,7 +10,7 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, email: Option<S
         section {
             h1 {"Recover account"}
             p {"You'll receive an email shortly with the code to recover your account!"}
-            form method="POST" action={(data.config.http_root)"/recover"} { //Must be exact!
+            form method="POST" action={(data.links.http_root)"/recover"} { //Must be exact!
                 (errorlist(errors))
                 label for="recover_email"{"Email (to identify account):"}
                 input #"recover_email" type="email" required="" name="currentEmail" value=[&email];

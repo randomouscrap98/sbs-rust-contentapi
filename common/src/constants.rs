@@ -29,6 +29,7 @@ string_const!{ SBSPageType => {
     (CATEGORY:"category"),
     (FORUMCATEGORY:"forumcategory"),
     (FORUMTHREAD:"forumthread"),
+    (DIRECTMESSAGES:"directmessages"),
     (DIRECTMESSAGE:"directmessage"),
     (ALERT:"alert"),
     (FRONTPAGE:"frontpage"),

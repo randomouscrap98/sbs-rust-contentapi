@@ -44,11 +44,11 @@ pub async fn get_pid_redirect(mut context: PageContext, query: PageQuery) -> Res
 
     let page = pages.pop().ok_or(Error::NotFound(String::from("Could not find page!")))?;
 
-    let mut url = format!("/forum/thread/{}", s(&page.hash));
+    let mut url = format!("/forum/thread/{}", opt_s!(&page.hash));
 
     if let Some(message) = messages.pop() {
         if let Some(id) = message.id {
-            url = format!("{}/{}{}", url, id, forum_post_hash(&message));
+            url = format!("{}/{}{}", url, id, LinkConfig::forum_post_hash(&message));
         }
     }
 

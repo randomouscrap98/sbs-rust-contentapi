@@ -6,11 +6,8 @@ use contentapi::forms::*;
 /// Extend LinkConfig to have additional functionality
 impl LinkConfig {
 
-    pub fn image(&self, hash: &str, query: &QueryImage) -> String {
-        //let query = contentapi::forms::QueryImage { 
-        //    size : if size > 0 { Some(size as i64) } else { None },
-        //    crop : if crop { Some(crop) } else { None }
-        //};
+    pub fn image(&self, hash: &str, query: &QueryImage) -> String 
+    {
         match serde_urlencoded::to_string(&query) {
             Ok(querystring) => format!("{}/{}?{}", self.file_root, hash, querystring),
             Err(error) => {

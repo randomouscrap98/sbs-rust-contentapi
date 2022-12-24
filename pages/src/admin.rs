@@ -1,5 +1,5 @@
 use common::*;
-use common::layout::*;
+use common::render::layout::*;
 //use contentapi::*;
 //use contentapi::conversion::*;
 use maud::*;

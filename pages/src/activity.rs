@@ -1,7 +1,10 @@
 use chrono::{DateTime, Utc};
 use common::*;
-use common::layout::*;
+use common::constants::*;
+use common::render::*;
+use common::render::layout::*;
 use contentapi::*;
+use contentapi::forms::*;
 use contentapi::conversion::*;
 use maud::{html, Markup, PreEscaped};
 use serde::{Serialize, Deserialize};
@@ -21,14 +24,14 @@ pub fn render(data: MainLayoutData, activity: Vec<SbsActivity>, query: ActivityQ
         end: None
     };
     layout(&data, html!{
-        (style(&data.config, "/forpage/activity.css"))
+        (data.links.style("/forpage/activity.css"))
         /*section {
             h1 { "Activity" }
         }*/
         section {
             div."activitylist" {
                 @for (index, a) in activity.iter().enumerate() {
-                    (activity_item(&data.config, a))
+                    (activity_item(&data.links, a))
                     @if index < activity.len() - 1 {
                         hr."smaller";
                     }
@@ -36,23 +39,23 @@ pub fn render(data: MainLayoutData, activity: Vec<SbsActivity>, query: ActivityQ
             }
             div."activitynav smallseparate" {
                 @if query.start.is_some() {
-                    a."coolbutton" href={(data.config.http_root) "/activity?" (serde_urlencoded::to_string(prev_query).unwrap_or_default())} { "Newer" }
+                    a."coolbutton" href={(data.links.http_root) "/activity?" (serde_urlencoded::to_string(prev_query).unwrap_or_default())} { "Newer" }
                 }
-                a."coolbutton" href={(data.config.http_root) "/activity?" (serde_urlencoded::to_string(next_query).unwrap_or_default())} { "Older" }
+                a."coolbutton" href={(data.links.http_root) "/activity?" (serde_urlencoded::to_string(next_query).unwrap_or_default())} { "Older" }
             }
         }
     }).into_string()
 }
 
-pub fn activity_item(config: &LinkConfig, item: &SbsActivity) -> Markup {
+pub fn activity_item(links: &LinkConfig, item: &SbsActivity) -> Markup {
     html!(
         div."activity" {
             div."activityleft" {
-                img."avatar" src=(image_link(config, &item.user.avatar, 100, true));
+                img."avatar" src=(links.image(&item.user.avatar, &QueryImage::avatar(100)));
             }
             div."activityright" {
                 div."main" {
-                    a."username flatlink" href=(user_link(config, item.user)) { (item.user.username) }
+                    a."username flatlink" href=(links.user(item.user)) { (item.user.username) }
                     span { (item.action_text) }
                     @if let Some((href, text)) = &item.activity_href {
                         (activity_link(text, href))
@@ -99,9 +102,9 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     //Note: the allowed list of types for activity is NOT the same as the allowed list of types for
     //displaying as a thread! We don't want to scare people by putting private threads in the activity
     add_value!(request, "allowed_types", vec![
-        SBSContentType::program.to_string(), 
-        SBSContentType::resource.to_string(),
-        SBSContentType::forumthread.to_string()
+        SBSPageType::PROGRAM, 
+        SBSPageType::RESOURCE,
+        SBSPageType::FORUMTHREAD
     ]); //common::forum::ALLOWEDTYPES);
 
     let mut user_query = String::new();
@@ -233,8 +236,8 @@ pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page
             date: post.createDate.unwrap_or_default(), 
             user: this_user,
             action_text: String::from("posted on"), 
-            activity_href: Some((forum_post_link(&context.layout_data.config, post, &this_content),String::from(s(&this_content.name)))),
-            extra_text: Some(context.bbcode.parse_profiled_opt(s(&post.text), format!("post-{}", i(&post.id))))
+            activity_href: Some((context.layout_data.links.forum_post(post, &this_content),String::from(opt_s!(this_content.name)))),
+            extra_text: Some(context.bbcode.parse_profiled_opt(opt_s!(post.text), format!("post-{}", i(&post.id))))
         })
     }
 
@@ -252,9 +255,9 @@ pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page
             },
             {
                 //let lit_type = this_content.literalType.as_ref().and_then(|lt| Some(lt.clone())).unwrap_or_else(||String::new());
-                if this_content.literalType == Some(SBSContentType::program.to_string()) { "program" }
-                else if this_content.literalType == Some(SBSContentType::forumthread.to_string()) { "thread" }
-                else if this_content.literalType == Some(SBSContentType::resource.to_string()) { "page" }
+                if this_content.literalType.as_deref() == Some(SBSPageType::PROGRAM) { "program" }
+                else if this_content.literalType.as_deref() == Some(SBSPageType::FORUMTHREAD) { "thread" }
+                else if this_content.literalType.as_deref() == Some(SBSPageType::RESOURCE) { "page" }
                 else { "content" }
             }
         );
@@ -263,7 +266,7 @@ pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page
             date: activity.date.unwrap_or_default(), 
             user: this_user,
             action_text, //: String::from("posted on"), 
-            activity_href: Some((forum_thread_link(&context.layout_data.config, &this_content),String::from(s(&this_content.name)))),
+            activity_href: Some((context.layout_data.links.forum_thread(&this_content),String::from(opt_s!(this_content.name)))),
             extra_text: activity.message.clone()
         })
     }

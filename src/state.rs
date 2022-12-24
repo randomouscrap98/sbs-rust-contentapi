@@ -58,7 +58,7 @@ impl RequestContext {
 
         let layout_data = MainLayoutData 
         {
-            config: state.link_config.clone(),
+            links: state.link_config.clone(),
             user_config, //Local settings
             current_path: String::from(path.as_str()),
             override_nav_path: None,
@@ -100,8 +100,7 @@ impl From<RequestContext> for PageContext {
         Self {
             layout_data: context.layout_data,
             api_context: context.api_context,
-            bbcode: context.bbcode,
-            bbconsume: consumer
+            bbcode: context.bbcode
         } 
     }
 }
