@@ -29,6 +29,7 @@ macro_rules! add_value {
 }
 
 /// Create a string enum, used for various human readable types from the API
+#[macro_export]
 macro_rules! string_enum {
     ($name:ident => {
         $($item:ident),*$(,)?
@@ -58,6 +59,7 @@ macro_rules! string_enum {
 }
 
 /// Create a in "integer" enum, used for codified values from the API
+#[macro_export]
 macro_rules! byte_enum {
     ($name:ident => {
         $(($item:ident : $val:literal)),*$(,)?

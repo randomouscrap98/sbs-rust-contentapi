@@ -1,5 +1,7 @@
 use super::super::*;
 
+use contentapi::forms::*;
+
 //Render basic navigation link with only text as the body
 pub fn main_nav_link(data: &MainLayoutData, text: &str, href: &str, id: Option<&str>) -> Markup {
     main_nav_link_raw(data, PreEscaped(String::from(text)), href, id)
@@ -14,7 +16,7 @@ pub fn main_nav_link_raw(data: &MainLayoutData, body: Markup, href: &str, id: Op
     };
     if compare_path.starts_with(href) { class.push_str(" current"); }
     html! {
-        a.(class) href={(data.config.http_root) (href)} id=[id] { (body) }
+        a.(class) href={(data.links.http_root) (href)} id=[id] { (body) }
     }
 }
 
@@ -22,8 +24,8 @@ pub fn header(data: &MainLayoutData) -> Markup {
     html! {
         header."controlbar" {
             nav {
-                a."plainlink" #"homelink" href={(data.config.http_root)"/"}{
-                    img src={(data.config.resource_root)"/favicon.ico"};
+                a."plainlink" #"homelink" href={(data.links.http_root)"/"}{
+                    img src={(data.links.resource_root)"/favicon.ico"};
                     (main_nav_link(data,"Activity","/activity",None))
                     (main_nav_link(data,"Browse","/search",None))
                     (main_nav_link(data,"Forums","/forum",None))
@@ -39,7 +41,7 @@ pub fn header(data: &MainLayoutData) -> Markup {
                 @if let Some(user) = &data.user {
                     (main_nav_link_raw(data,html! {
                         span { (user.username) }
-                        img src=(image_link(&data.config, &user.avatar, 100, true));
+                        img src=(data.links.image(&user.avatar, &QueryImage::avatar(100)));
                     },"/userhome",None))
                 }
                 @else {
@@ -93,10 +95,10 @@ pub fn basic_skeleton(data: &MainLayoutData, head_inner: Markup, body_inner: Mar
         (DOCTYPE)
         html lang=(data.user_config.language) {
             head {
-                (basic_meta(&data.config))
-                (style(&data.config, "/base.css"))
-                (style(&data.config, "/themes.css"))
-                (script(&data.config, "/base.js"))
+                (data.links.basic_meta())
+                (data.links.style("/base.css"))
+                (data.links.style("/themes.css"))
+                (data.links.script("/base.js"))
                 (head_inner)
             }
         }
@@ -119,14 +121,14 @@ pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
     basic_skeleton(main_data, html!{
         title { "SmileBASIC Source" }
         meta name="description" content="A community for sharing programs and getting advice on SmileBASIC applications on the Nintendo DSi, 3DS, and Switch";
-        (style(&main_data.config, "/layout.css"))
-        (script(&main_data.config, "/sb-highlight.js"))
+        (main_data.links.style("/layout.css"))
+        (main_data.links.script("/sb-highlight.js"))
         //MUST come after, it uses sb-highlight!
-        (script(&main_data.config, "/layout.js"))
+        (main_data.links.script("/layout.js"))
         style { (PreEscaped(r#"
             body {
                 background-repeat: repeat;
-                background-image: url(""#))(main_data.config.resource_root)(PreEscaped(r#"/sb-tile.png")
+                background-image: url(""#))(main_data.links.resource_root)(PreEscaped(r#"/sb-tile.png")
             }
             "#))
         }

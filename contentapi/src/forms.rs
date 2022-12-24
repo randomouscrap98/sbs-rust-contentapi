@@ -14,6 +14,11 @@ pub struct QueryImage
     pub crop: Option<bool>
 }
 
+impl QueryImage {
+    pub fn avatar(size: i64) -> Self {
+        QueryImage { size: Some(size), crop: Some(true) }
+    }
+}
 
 // -----------------------
 // *    ACTUAL FORMS     *

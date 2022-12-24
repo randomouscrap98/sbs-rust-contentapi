@@ -33,7 +33,7 @@ impl Default for UserConfig {
 
 #[derive(Debug)]
 pub struct MainLayoutData {
-    pub config: LinkConfig,     
+    pub links: LinkConfig,     
     pub user_config: UserConfig,    
     pub current_path: String, 
     pub override_nav_path: Option<&'static str>,

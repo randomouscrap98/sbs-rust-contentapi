@@ -62,7 +62,7 @@ impl MainLayoutData
     /// Get a plain path (no query) pointing to this current request. This SHOULD work anywhere...
     /// but how often do you REALLY want this one?
     pub fn current(&self, data: &MainLayoutData) -> String {
-        format!("{}{}", data.config.http_root, data.current_path)
+        format!("{}{}", data.links.http_root, data.current_path)
     }
 }
 

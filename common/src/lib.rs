@@ -1,7 +1,7 @@
 pub mod forum;
 pub mod render;
 pub mod pagination;
-pub mod submission;
+pub mod submissions;
 pub mod queries;
 pub mod constants;
 pub mod data;
@@ -11,8 +11,7 @@ pub mod links;
 use std::collections::HashMap;
 
 use bbscope::BBCode;
-use chrono::{SecondsFormat, Utc};
-use contentapi::{self, endpoints::{ApiError}, Content, Message, User, UserType};
+use contentapi::{self, endpoints::{ApiError}, Content,  User, UserType};
 use serde::{Serialize, Deserialize};
 use serde_urlencoded;
 use maud::{Markup, html, PreEscaped, DOCTYPE};
@@ -28,6 +27,7 @@ macro_rules! opt_s {
         if let Some(ref thing) = $str { thing } else { "" }
     };
 }
+
 
 // -------------------------------------
 // *     Response/Error from pages     *
@@ -78,61 +78,13 @@ impl Error {
 }
 
 
-// ------------------------
-// *    LINK FUNCTIONS    *
-// ------------------------
-// ----------------------------
-// *     FORMAT FUNCTIONS     *
-// ----------------------------
-
-pub fn timeago(time: &chrono::DateTime<chrono::Utc>) -> String {
-    let duration = chrono::Utc::now().signed_duration_since(*time); //timeago::format()
-    match duration.to_std() {
-        Ok(stdur) => {
-            timeago::format(stdur, timeago::Style::HUMAN)
-        },
-        Err(error) => {
-            format!("PARSE-ERR({}):{}", duration, error)
-        }
-    }
-}
-
-pub fn timeago_o(time: &Option<chrono::DateTime<chrono::Utc>>) -> String {
-    if let Some(time) = time {
-        timeago(time)
-    }
-    else {
-        String::from("???")
-    }
-}
+// --------------------------
+// *    Helper utilities    *
+// --------------------------
 
 pub fn is_empty(string: &Option<String>) -> bool {
     if let Some(s) = string { s.is_empty() }
     else { true }
-}
-
-pub fn s(string: &Option<String>) -> &str {
-    if let Some(s) = string { &s }
-    else { "" }
-}
-
-pub fn b(boolean: bool) -> &'static str {
-    if boolean { "true" }
-    else { "false" }
-}
-
-pub fn d(date: &Option<chrono::DateTime<Utc>>) -> String {
-    if let Some(date) = date { dd(date) }
-    else { String::from("NODATE") }
-}
-
-pub fn dd(date: &chrono::DateTime<Utc>) -> String {
-    date.to_rfc3339_opts(SecondsFormat::Secs, true)
-}
-
-pub fn i(int: &Option<i64>) -> String {
-    if let Some(int) = int { format!("{}", int) }
-    else { String::from("??") }
 }
 
 pub fn user_or_default(user: Option<&User>) -> User {
@@ -168,45 +120,4 @@ pub fn content_or_default(content: Option<&Content>) -> Content {
         result.createUserId = Some(0);
         result
     }
-}
-
-// ---------------------
-// *    FRAGMENTS      *
-// ---------------------
-
-pub fn style(config: &LinkConfig, link: &str) -> Markup {
-    html! {
-        link rel="stylesheet" href={(config.static_root) (link) "?" (config.cache_bust) } { }
-    }
-}
-
-pub fn script(config: &LinkConfig, link: &str) -> Markup {
-    html! {
-        script src={(config.static_root) (link) "?" (config.cache_bust) } defer { }
-    }
-}
-
-pub fn errorlist(errors: Option<Vec<String>>) -> Markup {
-    html! {
-        div."errorlist" {
-            @if let Some(errors) = errors {
-                @for error in errors {
-                    div."error" {(error)}
-                }
-            }
-        }
-    }
-}
-
-
-// Produce some metadata for the header that any page can use (even widgets)
-pub fn basic_meta(config: &LinkConfig) -> Markup{
-    html! {
-        //Can I have comments in html markup?
-        meta charset="UTF-8";
-        meta name="rating" content="general";
-        meta name="viewport" content="width=device-width";
-        //[] is for optional, {} is for concatenate values
-        link rel="icon" type="image/svg+xml" sizes="any" href={(config.resource_root) "/favicon.svg"};
-    } 
 }

@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 
 use contentapi::*;
+use contentapi::forms::*;
 use maud::*;
 
+use super::*; //Render stuff
 use super::super::*;
-use forum::*;
-use submission::*;
-use pagination::*;
+use crate::constants::*;
+use crate::forum::*;
+use crate::pagination::*;
+use crate::render::submissions;
 
 
 // ----------------------------
@@ -61,7 +64,7 @@ pub fn forum_path(config: &LinkConfig, path: &Vec<ForumPathItem>) -> Markup {
 pub fn threadicon(config: &LinkConfig, thread: &ForumThread) -> Markup { //neutral: bool, sticky: bool, locked: bool) -> Markup {
     html! {
         div."threadicon smallseparate" {
-            @if thread.neutral { (submission::pageicon(config, &thread.thread)) }
+            @if thread.neutral { (submissions::pageicon(config, &thread.thread)) }
             @if thread.sticky { span title="Pinned" {"📌"} }
             @if thread.locked { span title="Locked (No posting)" {"🔒"} }
             @if thread.private { span title="Private (Only participants can view)" {"🤫"} }
@@ -241,19 +244,19 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
     };
 
     html!{
-        (style(&data.config, "/forpage/forum.css"))
-        (script(&data.config, "/forpage/forum.js"))
+        (data.links.style("/forpage/forum.css"))
+        (data.links.script("/forpage/forum.js"))
         @if config.render_header {
             section {
-                h1 { (s(&thread.thread.name)) }
+                h1 { (opt_s!(thread.thread.name)) }
                 @if let Some(path) = &config.path {
-                    (forum_path(&data.config, &path))
+                    (forum_path(&data.links, &path))
                 }
                 div."foruminfo smallseparate aside" {
-                    (threadicon(&data.config, &thread))
+                    (threadicon(&data.links, &thread))
                     span {
                         @if let Some(user) = config.users.get(&thread.thread.createUserId.unwrap_or(0)) {
-                            a."flatlink" target="_top" href=(user_link(&data.config, user)){ (user.username) }
+                            a."flatlink" target="_top" href=(data.links.user(user)){ (user.username) }
                         }
                     }
                     span {
@@ -274,7 +277,7 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
             @if let Some(pages) = config.pages {
                 div."smallseparate pagelist" {
                     @for page in pages {
-                        a."current"[page.current] target="_top" href={(forum_thread_link(&data.config, &thread.thread))"?page="(page.page)"#thread-top"} { (page.text) }
+                        a."current"[page.current] target="_top" href={(data.links.forum_thread(&thread.thread))"?page="(page.page)"#thread-top"} { (page.text) }
                     }
                 }
             }
@@ -287,7 +290,7 @@ fn images_to_attr(config: &LinkConfig, images: &Vec<serde_json::Value>) -> Strin
     serde_json::to_string(
         &images.iter().map(|i| {
             match i.as_str() {
-                Some(string) => base_image_link(config, string),
+                Some(string) => config.image_default(string),
                 None => {
                     println!("ERROR: IMAGE HASH NOT STRING: {}", i);
                     String::new()
@@ -310,29 +313,29 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
             //First check is if it's a program, then we float this box to the right
             @if thread.thread.literalType == Some(SBSContentType::program.to_string()) {
                 div."programinfo" {
-                    @if let Some(images) = values.get(IMAGESKEY).and_then(|k| k.as_array()) {
-                        div."gallery" #"page_gallery" /*data-index="0"*/ data-images=(images_to_attr(&data.config, &images)) {
+                    @if let Some(images) = values.get(SBSValue::IMAGES).and_then(|k| k.as_array()) {
+                        div."gallery" #"page_gallery" /*data-index="0"*/ data-images=(images_to_attr(&data.links, &images)) {
                             //we now have the images: we just need the first one (it's a hash?)
                             @if let Some(image) = images.get(0).and_then(|i| i.as_str()) {
-                                img src=(base_image_link(&data.config, image));
+                                img src=(data.links.image_default(image));
                             }
                         }
                     }
                     div."extras mediumseparate" {
-                        @if let Some(key) = values.get(DOWNLOADKEYKEY).and_then(|k| k.as_str()) {
+                        @if let Some(key) = values.get(SBSValue::DOWNLOADKEY).and_then(|k| k.as_str()) {
                             span."smallseparate" {
                                 b { "Download:" }
                                 span."key" { (key) }
-                                (threadicon(&data.config, &thread))
+                                (threadicon(&data.links, &thread))
                             }
                         }
-                        @if let Some(version) = values.get(VERSIONKEY).and_then(|k| k.as_str()) {
+                        @if let Some(version) = values.get(SBSValue::VERSION).and_then(|k| k.as_str()) {
                             span."smallseparate" {
                                 b { "Version:" }
                                 span."version" { (version) }
                             }
                         }
-                        @if let Some(size) = values.get(SIZEKEY).and_then(|k| k.as_str()) {
+                        @if let Some(size) = values.get(SBSValue::SIZE).and_then(|k| k.as_str()) {
                             span."smallseparate" {
                                 b { "Size:" }
                                 span."size" { (size) }
@@ -372,7 +375,7 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
             };
             match serde_urlencoded::to_string(query) {
                 Ok(query) => {
-                    reply_chain_link = Some(format!("{}/widget/thread?{}", &layout_data.config.http_root, query)); //, forum_post_hash(post)));
+                    reply_chain_link = Some(format!("{}/widget/thread?{}", &layout_data.links.http_root, query)); //, forum_post_hash(post)));
                 },
                 Err(error) => println!("ERROR: couldn't encode thread query!: {}", error)
             }
@@ -382,16 +385,16 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
     html! {
         div.(class) #{"post_"(i(&post.id))} {
             div."postleft" {
-                img."avatar" src=(image_link(&layout_data.config, &user.avatar, 100, true)); 
+                img."avatar" src=(layout_data.links.image(&user.avatar, &QueryImage::avatar(100))); 
                 @if config.thread.private {
                     div."private" { "PRIVATE" }
                 }
             }
             div."postright" {
                 div."postheader" {
-                    a."flatlink username" target="_top" href=(user_link(&layout_data.config, &user)) { (&user.username) } 
+                    a."flatlink username" target="_top" href=(layout_data.links.user(&user)) { (&user.username) } 
                     @if let Some(sequence) = sequence {
-                        a."sequence" target="_top" title=(i(&post.id)) href=(forum_post_link(&layout_data.config, post, &config.thread.thread)){ "#" (sequence) } 
+                        a."sequence" target="_top" title=(i(&post.id)) href=(layout_data.links.forum_post(post, &config.thread.thread)){ "#" (sequence) } 
                     }
                 }
                 @if let Some(reply_post) = reply_post {
@@ -414,7 +417,7 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
                             time."aside" datetime=(d(&post.editDate)) { 
                                 "Edited "(timeago_o(&post.editDate))" by "
                                 @if let Some(edit_user) = users.get(&edit_user_id) {
-                                    a."flatlink" target="_top" href=(user_link(&layout_data.config,&edit_user)){ (&edit_user.username) }
+                                    a."flatlink" target="_top" href=(layout_data.links.user(&edit_user)){ (&edit_user.username) }
                                 }
                             }
                         }
@@ -430,9 +433,9 @@ pub fn post_reply(layout_data: &MainLayoutData, bbcode: &mut BBCode, post: &Mess
     let user = user_or_default(users.get(&post.createUserId.unwrap_or(0)));
     html! {
         div."reply aside" {
-            a."replylink" target="_top" href=(forum_post_link(&layout_data.config, post, thread)) { "Replying to:" }
-            img src=(image_link(&layout_data.config, &user.avatar, 50, true)); 
-            a."flatlink username" href=(user_link(&layout_data.config, &user)) { (&user.username) } 
+            a."replylink" target="_top" href=(layout_data.links.forum_post(post, thread)) { "Replying to:" }
+            img src=(layout_data.links.image(&user.avatar, &QueryImage::avatar(50))); 
+            a."flatlink username" href=(layout_data.links.user(&user)) { (&user.username) } 
             @if let Some(text) = &post.text {
                 //Ignoring graphemes for now, sorry. In NEARLY all cases, 200 bytes should be enough to fill 
                 //a line, unless you're being ridiculous

@@ -6,7 +6,7 @@ use contentapi::*; //{User, Content, add_value, build_request, FullRequest, Requ
 
 use common::*;
 use common::layout::*;
-use common::submission::*;
+use common::submissions::*;
 use maud::*;
 
 pub struct UserPackage {

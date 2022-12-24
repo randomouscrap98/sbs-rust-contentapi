@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use contentapi::{*, conversion::map_users};
 
 use common::*;
-use common::submission::*;
+use common::submissions::*;
 use common::layout::*;
 use maud::*;
 
