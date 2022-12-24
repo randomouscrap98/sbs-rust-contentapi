@@ -9,7 +9,7 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, username: Optio
     layout(&data, html!{
         section {
             h1 { "Register" }
-            form method="POST" action=(data.links.http_root) {
+            form method="POST" action={(data.links.http_root)"/register"} {
                 (errorlist(errors))
                 label for="register_username" {"Username:"}
                 input #"register_username" type="text" name="username" value=[username];
