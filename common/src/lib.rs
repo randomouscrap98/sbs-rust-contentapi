@@ -41,7 +41,8 @@ pub struct LinkConfig {
 pub struct UserConfig {
     pub language: String,
     pub compact: bool,
-    pub theme: String
+    pub theme: String,
+    //pub shadows: bool
 }
 
 impl Default for UserConfig {
@@ -49,7 +50,8 @@ impl Default for UserConfig {
         Self {
             language: String::from("en"),
             compact: false,
-            theme: String::from("sbs")
+            theme: String::from("sbs"),
+            //shadows: false
         }
     }
 }

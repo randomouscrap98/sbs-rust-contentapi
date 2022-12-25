@@ -27,6 +27,10 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>) -> String
                     span { "Compact mode: " }
                     input."" #"settings-compact" type="checkbox" name="compact" checked[settings.compact] value="true";
                 }
+                //label."inline" for="settings-shadows" {
+                //    span { "Shadows: " }
+                //    input."" #"settings-shadows" type="checkbox" name="shadows" checked[settings.shadows] value="true";
+                //}
                 input type="submit" value="Save";
             }
             p."aside" { "These settings are persisted in a cookie and only available on this device" }

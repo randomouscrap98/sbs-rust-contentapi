@@ -104,6 +104,7 @@ pub fn basic_skeleton(data: &MainLayoutData, head_inner: Markup, body_inner: Mar
         }
         body data-compact[data.user_config.compact]
              data-theme=(data.user_config.theme) 
+             //data-shadows[data.user_config.shadows]
         { 
             (body_inner) 
             //Gotta do it HERE so everything has already run!
