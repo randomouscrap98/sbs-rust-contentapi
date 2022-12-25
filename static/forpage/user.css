@@ -21,6 +21,21 @@
 #pageuser #userbio {
     margin: 1em 0;
 }
+
+.badges {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.badge {
+    width: 1em;
+    flex: none;
+    margin-right: 0.3em;
+    margin-bottom: 0.3em;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+}
+
 /* This isn't ULTRA MINIMAL size (that's 30em), but enough to not have everything on one line */
 @media screen and (max-width: 35em)
 {

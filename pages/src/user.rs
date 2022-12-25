@@ -2,6 +2,7 @@
 use std::collections::HashMap;
 
 use bbscope::BBCode;
+//use common::constants::SBSPageType;
 use contentapi::*; 
 use contentapi::forms::*;
 
@@ -17,7 +18,8 @@ pub struct UserPackage {
     pub user: User,
     pub userpage: Option<Content>,
     pub users: HashMap<i64, User>,
-    pub submissions: Vec<Content>
+    pub submissions: Vec<Content>,
+    pub badges: Vec<Content>
 }
 
 pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: Option<UserPackage>) -> String 
@@ -56,6 +58,17 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: Option<Use
                     }
                 }
             }
+            @if user_package.badges.len() > 0 {
+                section {
+                    h2 { "Legacy badges:" }
+                    div."badges" {
+                        @for ref badge in user_package.badges {
+                            img."badge" title=(opt_s!(badge.name)) src=(data.links.image_default(opt_s!(badge.hash)));
+                        }
+                    }
+                    p."aside" {"Don't worry if you don't have these!"}
+                }
+            }
         }
         @else {
             section {
@@ -72,6 +85,8 @@ pub async fn get_render(context: PageContext, username: String) -> Result<Respon
     //Go get the user and their userpage
     let mut request = FullRequest::new();
     add_value!(request, "username", username);
+    add_value!(request, "relationtype", UserRelationType::ASSIGNCONTENT);
+    add_value!(request, "file", ContentType::FILE);
 
     request.requests.push(build_request!(
         RequestType::user, 
@@ -85,11 +100,26 @@ pub async fn get_render(context: PageContext, username: String) -> Result<Respon
         String::from("!userpage(@user.id)")
     )); 
 
+    request.requests.push(build_request!(
+        RequestType::userrelation, 
+        String::from("*"), //ok do we really need it ALL?
+        String::from("userId = @user.id AND type = @relationtype") //Unfortunately, we don't do anything else with assigned content in sbs
+    )); 
+
+    let mut badge_request = build_request!(
+        RequestType::content, 
+        String::from("id,name,description,contentType,hash,literalType"), 
+        String::from("id in @userrelation.relatedId and contentType = @file") //Unfortunately, we don't do anything else with assigned content in sbs
+    ); 
+    badge_request.name = Some(String::from("badges"));
+    request.requests.push(badge_request);
+
     let result = context.api_context.post_request(&request).await?;
 
     //Now try to parse two things out of it
     let mut users_raw = contentapi::conversion::cast_result_required::<User>(&result, "user")?;
     let mut content_raw = contentapi::conversion::cast_result_required::<Content>(&result, "content")?;
+    let badges_raw = contentapi::conversion::cast_result_required::<Content>(&result, "badges")?;
 
     let user = users_raw.pop();
     let package: Option<UserPackage> = if let Some(user) = user {
@@ -104,6 +134,7 @@ pub async fn get_render(context: PageContext, username: String) -> Result<Respon
         Some(UserPackage {
             user,
             userpage: content_raw.pop(),
+            badges: badges_raw,
             submissions: conversion::cast_result_safe::<Content>(&result, "content")?,
             users: conversion::map_users(conversion::cast_result_safe::<User>(&result, "user")?)
         })

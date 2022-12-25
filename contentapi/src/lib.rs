@@ -88,7 +88,13 @@ byte_enum!{ ContentType => {
 }}
 
 byte_enum!{ UserType => {
-    (USER:1i8)
+    (USER:1i8),
+    (GROUP:2i8)
+}}
+
+byte_enum!{ UserRelationType => {
+    (INGROUP:1i8),
+    (ASSIGNCONTENT:2i8)
 }}
 
 byte_enum!{ UserAction => {
@@ -111,7 +117,8 @@ string_enum!{ RequestType => {
     content_engagement,
     ban,
     keyword_aggregate,
-    message_engagement
+    message_engagement,
+    userrelation
 }}
 
 /*string_enum!{ SBSContentType => {
