@@ -73,29 +73,31 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: Option<Use
             }
             @if let Some(current_user) = &data.user {
                 @if current_user.admin {
-                    section {
+                    section #"admincontrols" {
                         h2 { "Admin controls:" }
-                        form #"banform" method="POST" action={(data.links.http_root)"/user/"(user.username)"?ban=1#banform"} {
-                            (errorlist(ban_errors))
-                            label for="ban_hours"{"Ban hours:"}
-                            input #"ban_hours" type="text" required="" name="hours";
-                            label for="ban_reason"{"Reason (shown to user):"}
-                            input."largeinput" #"ban_reason" type="text" required="" name="reason";
-                            input type="hidden" name="user_id" value=(user.id);
-                            input type="submit" value="Ban";
-                        }
                         @if let Some(ban) = &user_package.ban {
-                            hr;
-                            p."error" { 
-                                "ALREADY BANNED for: "  
-                                time datetime=(dd(&ban.expireDate)) { (timeago_future(&ban.expireDate)) }
-                            }
-                            form #"unbanform" method="POST" action={(data.links.http_root)"/user/"(user.username)"?unban=1#unbanform"} {
+                            form #"unbanform" method="POST" action={(data.links.http_root)"/user/"(user.username)"?unban=1#admincontrols"} {
                                 (errorlist(unban_errors))
-                                label for="unban_reason"{"Reason (for admin logs):"}
+                                p."error" { 
+                                    "ALREADY BANNED for: "  
+                                    time datetime=(dd(&ban.expireDate)) { (timeago_future(&ban.expireDate)) }
+                                    " - " (opt_s!(ban.message))
+                                }
+                                label for="unban_reason"{"Unban Reason (for admin logs):"}
                                 input."largeinput" #"unban_reason" type="text" required="" name="new_reason";
                                 input type="hidden" name="id" value=(ban.id);
                                 input type="submit" value="Unban";
+                            }
+                        }
+                        @else {
+                            form #"banform" method="POST" action={(data.links.http_root)"/user/"(user.username)"?ban=1#admincontrols"} {
+                                (errorlist(ban_errors))
+                                label for="ban_hours"{"Ban hours:"}
+                                input #"ban_hours" type="text" required="" name="hours";
+                                label for="ban_reason"{"Ban Reason (shown to user):"}
+                                input."largeinput" #"ban_reason" type="text" required="" name="reason";
+                                input type="hidden" name="user_id" value=(user.id);
+                                input type="submit" value="Ban";
                             }
                         }
                     }

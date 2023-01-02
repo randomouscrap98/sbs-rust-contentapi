@@ -606,7 +606,7 @@ fn post_user_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_fil
 {
     let base_route = warp::post().and(warp::path!("user" / String)).and(form_filter.clone());
 
-    let user_ban_route = base_route
+    let user_ban_route = base_route.clone()
         .and(qflag!(ban)) 
         .and(warp::body::form::<common::forms::BanForm>())
         .and(state_filter.clone())
@@ -614,5 +614,13 @@ fn post_user_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_fil
             std_resp!(pages::user::post_ban(pc!(context), username, form), context)
         ).boxed();
 
-    user_ban_route
+    let user_unban_route = base_route.clone()
+        .and(qflag!(unban)) 
+        .and(warp::body::form::<common::forms::UnbanForm>())
+        .and(state_filter.clone())
+        .and_then(|username, _query, form, context: RequestContext| 
+            std_resp!(pages::user::post_unban(pc!(context), username, form), context)
+        ).boxed();
+
+    user_ban_route.or(user_unban_route).boxed()
 }

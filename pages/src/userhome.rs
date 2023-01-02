@@ -192,6 +192,9 @@ pub async fn post_userbio(data: &MainLayoutData, context: &ApiContext, form: &Us
                 content.parentId = parent.id;
                 content.contentType = Some(ContentType::USERPAGE);
                 content.name = Some(format!("{}'s userpage", user.username));
+                content.permissions = Some(make_permissions! {
+                    "0": "CR" //Create so people can post on your "wall" (idk if that'll ever happen)
+                });
                 content.values = Some(make_values! {
                     "markup": "bbcode"
                 });

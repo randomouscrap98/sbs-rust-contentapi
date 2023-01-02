@@ -20,6 +20,14 @@ macro_rules! make_values {
     };
 }
 
+#[macro_export]
+macro_rules! make_permissions {
+    ($($field_name:literal : $field_value:expr),*$(,)?) => {
+        vec![$((String::from($field_name), String::from($field_value)))*]
+            .into_iter().collect::<std::collections::HashMap<String, String>>()
+    };
+}
+
 /// Add a single value to an existing values hash from [`Content`] or [`Message`]
 #[macro_export]
 macro_rules! add_value {
