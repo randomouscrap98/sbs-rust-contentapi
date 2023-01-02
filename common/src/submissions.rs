@@ -12,8 +12,17 @@ pub fn get_search_request(search: &PageSearch, per_page: i32) -> FullRequest
     add_value!(request, "type", ContentType::PAGE);
     add_value!(request, "systemtype", ContentType::SYSTEM);
     add_value!(request, "forcontent", SBSValue::FORCONTENT);
+    add_value!(request, "submissions_type", SBSPageType::SUBMISSIONS);
 
-    let mut query = String::from("contentType = @type and !notdeleted()"); 
+    let mut parent_request = build_request!(
+        RequestType::content, 
+        String::from("id,literalType"), 
+        String::from("literalType = @submissions_type")
+    ); 
+    parent_request.name = Some("submissions".to_string());
+    request.requests.push(parent_request);
+
+    let mut query = String::from("contentType = @type and !notdeleted() and parentId in @submissions.id"); 
 
     if let Some(stext) = &search.search {
         add_value!(request, "text", format!("%{}%", stext));
@@ -58,7 +67,7 @@ pub fn get_search_request(search: &PageSearch, per_page: i32) -> FullRequest
 
     let main_request = build_request!(
         RequestType::content, 
-        String::from("id,hash,contentType,literalType,values,name,description,createUserId,createDate,lastRevisionId,popScore1"), 
+        String::from("id,hash,parentId,contentType,literalType,values,name,description,createUserId,createDate,lastRevisionId,popScore1"), 
         query, 
         search.order.clone(), 
         per_page,

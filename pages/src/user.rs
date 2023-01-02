@@ -168,7 +168,9 @@ pub async fn get_render_internal(context: PageContext, username: String, ban_err
         //OK we did the standard user request. we COULD'VE merged these two, but it's just easier to 
         //make a second request for their submissions!
         let mut search = PageSearch::default();
+        search.subtype = None; //Don't worry about the type, show ALL submissions
         search.user_id = Some(user.id);
+        search.order = "id_desc".to_string(); //not sure...
         let request = get_search_request(&search, 0); //Just ask for as much as possible
 
         let result = context.api_context.post_request(&request).await?;
@@ -212,6 +214,8 @@ pub async fn post_ban(context: PageContext, username: String, ban: BanForm) -> R
             bannedUserId: ban.user_id,
             createUserId: user.id,
             createDate: chrono::Utc::now(),
+            // Users can give arbitrary precision floats for "hours"; we want to capture as much of that as possible by
+            // converting it to whole-number milliseconds (Duration only takes i64)
             expireDate: chrono::Utc::now() + chrono::Duration::milliseconds((ban.hours * 60f64 * 60f64 * 1000f64) as i64),
             message: Some(ban.reason),
             r#type: BanType::PUBLIC //THIS WILL EVENTUALLY BE CONFIGURABLE!
