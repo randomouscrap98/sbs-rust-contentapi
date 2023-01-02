@@ -178,8 +178,10 @@ async fn main()
     let get_about_route = warp_get!(warp::path!("about"),
         |context:RequestContext| warp::reply::html(pages::about::render(pc!(context.layout_data))));
 
-    let get_admin_route = warp_get!(warp::path!("admin"),
-        |context:RequestContext| warp::reply::html(pages::admin::render(pc!(context.layout_data))));
+    let get_admin_route = warp_get_async!(
+        warp::path!("admin"),
+        |context:RequestContext| std_resp!(pages::admin::get_render(pc!(context)), context)
+    );
 
     let get_login_route = warp_get!(warp::path!("login"),
         |context:RequestContext| warp::reply::html(pages::login::render(pc!(context.layout_data), None, None, None)));

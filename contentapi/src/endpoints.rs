@@ -4,6 +4,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 use forms;
+
 use super::*;
 
 //There is some "context" that represents a current user and their client connection,
@@ -228,10 +229,12 @@ macro_rules! make_post_endpoint {
 }
 
 //This is the rest of the implementation, which are all the actual functions you want to call!
-impl ApiContext {
+impl ApiContext 
+{
     make_get_endpoint!{get_about<About>("/status")}
     make_get_endpoint!{get_me<User>("/user/me")}
     make_get_endpoint!{get_userprivate<UserPrivate>("/user/privatedata")}
+    make_get_endpoint!{get_registrationconfig<forms::RegistrationConfig>("/user/registrationconfig")}
 
     make_post_endpoint!{post_login<forms::Login,String>("/user/login")}
     make_post_endpoint!{post_register<forms::Register,User>("/user/register")}
@@ -242,6 +245,7 @@ impl ApiContext {
     make_post_endpoint!{post_request<FullRequest,RequestResult>("/request")}
     make_post_endpoint!{post_userupdate<User,User>("/write/user")}
     make_post_endpoint!{post_content<Content,Content>("/write/content")}
+    make_post_endpoint!{post_registrationconfig<forms::RegistrationConfig,forms::RegistrationConfig>("/user/registrationconfig")}
 
     /// This MAY OR MAY NOT profile depending on your featureset!
     pub async fn post_request_profiled_opt(&mut self, request: &FullRequest, _name: &str) -> Result<RequestResult, ApiError> 

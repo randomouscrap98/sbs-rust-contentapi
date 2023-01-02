@@ -61,3 +61,11 @@ pub struct FileUploadAsObject {
     pub object: Content,
     pub base64blob: String, //This could be a VERY LARGE string!!!
 }
+
+/// Write configuration for registration (like if it's enabled or not; admin only)
+/// Not TECHNICALLY just a form, you can also get this as a result from the API
+/// (but it's in a weird place)
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RegistrationConfig {
+    pub enabled: bool
+}
