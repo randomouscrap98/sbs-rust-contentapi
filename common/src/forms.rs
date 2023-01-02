@@ -18,6 +18,20 @@ pub struct BasicText
     pub text: String
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BanForm
+{
+    pub user_id: i64,
+    pub reason: String,
+    pub hours: f64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UnbanForm
+{
+    pub id: i64,
+    pub new_reason: String,
+}
 
 // ------------------------
 // *    QUERY PARAMS      *

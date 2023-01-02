@@ -10,6 +10,18 @@ use super::*;
 // *     FORMAT FUNCTIONS     *
 // ----------------------------
 
+pub fn timeago_future(time: &chrono::DateTime<chrono::Utc>) -> String {
+    let duration = time.signed_duration_since(chrono::Utc::now());
+    match duration.to_std() {
+        Ok(stdur) => {
+            timeago::format(stdur, timeago::Style::HUMAN).replace(" ago", "")
+        },
+        Err(error) => {
+            format!("PARSE-ERR({}):{}", duration, error)
+        }
+    }
+}
+
 pub fn timeago(time: &chrono::DateTime<chrono::Utc>) -> String {
     let duration = chrono::Utc::now().signed_duration_since(*time);
     match duration.to_std() {

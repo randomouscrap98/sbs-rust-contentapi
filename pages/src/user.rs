@@ -13,8 +13,6 @@ use common::render::layout::*;
 use common::render::submissions::*;
 use common::submissions::*;
 use maud::*;
-use serde::Deserialize;
-use serde::Serialize;
 
 pub struct UserPackage {
     pub user: User,
@@ -25,15 +23,8 @@ pub struct UserPackage {
     pub ban: Option<UserBan>
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct BanForm
-{
-    pub user_id: i64,
-    pub reason: String,
-    pub hours: f64,
-}
-
-pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: Option<UserPackage>) -> String 
+pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: Option<UserPackage>, 
+    ban_errors: Option<Vec<String>>, unban_errors: Option<Vec<String>>) -> String 
 {
     layout(&data, html!{
         (data.links.style("/forpage/user.css"))
@@ -80,23 +71,31 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: Option<Use
                     p."aside" {"Don't worry if you don't have these!"}
                 }
             }
-            @if let Some(user) = &data.user {
-                @if user.admin {
+            @if let Some(current_user) = &data.user {
+                @if current_user.admin {
                     section {
                         h2 { "Admin controls:" }
-                        form #"banform" method="POST" action={(data.links.http_root)"/user?ban=1#banform"} {
+                        form #"banform" method="POST" action={(data.links.http_root)"/user/"(user.username)"?ban=1#banform"} {
+                            (errorlist(ban_errors))
                             label for="ban_hours"{"Ban hours:"}
                             input #"ban_hours" type="text" required="" name="hours";
                             label for="ban_reason"{"Reason (shown to user):"}
-                            input #"ban_reason" type="text" required="" name="reason";
+                            input."largeinput" #"ban_reason" type="text" required="" name="reason";
                             input type="hidden" name="user_id" value=(user.id);
                             input type="submit" value="Ban";
-                            p."aside" { "For now, set ban hours to 0 to unban" }
                         }
                         @if let Some(ban) = &user_package.ban {
+                            hr;
                             p."error" { 
                                 "ALREADY BANNED for: "  
-                                time datetime=(dd(&ban.expireDate)) { (timeago(&ban.expireDate)) }
+                                time datetime=(dd(&ban.expireDate)) { (timeago_future(&ban.expireDate)) }
+                            }
+                            form #"unbanform" method="POST" action={(data.links.http_root)"/user/"(user.username)"?unban=1#unbanform"} {
+                                (errorlist(unban_errors))
+                                label for="unban_reason"{"Reason (for admin logs):"}
+                                input."largeinput" #"unban_reason" type="text" required="" name="new_reason";
+                                input type="hidden" name="id" value=(ban.id);
+                                input type="submit" value="Unban";
                             }
                         }
                     }
@@ -113,7 +112,8 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: Option<Use
 }
 
 
-pub async fn get_render(context: PageContext, username: String) -> Result<Response, Error>
+pub async fn get_render_internal(context: PageContext, username: String, ban_errors: Option<Vec<String>>,
+    unban_errors: Option<Vec<String>>) -> Result<Response, Error>
 {
     //Go get the user and their userpage
     let mut request = FullRequest::new();
@@ -187,6 +187,75 @@ pub async fn get_render(context: PageContext, username: String) -> Result<Respon
     Ok(Response::Render(render(
         context.layout_data, 
         context.bbcode, 
-        package
+        package,
+        ban_errors,
+        unban_errors
     )))
+}
+
+pub async fn get_render(context: PageContext, username: String) -> Result<Response, Error>
+{
+    get_render_internal(context, username, None, None).await
+}
+
+pub async fn post_ban(context: PageContext, username: String, ban: BanForm) -> Result<Response, Error>
+{
+    let mut errors = Vec::new();
+
+    if let Some(user) = &context.layout_data.user 
+    {
+        //Need to convert banform to real ban
+        let real_ban = UserBan {
+            id: 0,
+            bannedUserId: ban.user_id,
+            createUserId: user.id,
+            createDate: chrono::Utc::now(),
+            expireDate: chrono::Utc::now() + chrono::Duration::milliseconds((ban.hours * 60f64 * 60f64 * 1000f64) as i64),
+            message: Some(ban.reason),
+            r#type: BanType::PUBLIC //THIS WILL EVENTUALLY BE CONFIGURABLE!
+        };
+
+        match context.api_context.post_ban(&real_ban).await {
+            Ok(_token) => {} //Don't need the token
+            Err(error) => { errors.push(error.to_user_string()) }
+        };
+    }
+    else {
+        errors.push("Must be logged in to ban users!".to_string());
+    }
+
+    get_render_internal(context, username, Some(errors), None).await
+}
+
+
+pub async fn post_unban(context: PageContext, username: String, unban: UnbanForm) -> Result<Response, Error>
+{
+    let mut errors = Vec::new();
+
+    //Go get the old ban
+    let mut request = FullRequest::new();
+    add_value!(request, "id", unban.id);
+    request.requests.push(build_request!(
+        RequestType::ban, 
+        String::from("*"),
+        String::from("id = @id and !activebans()")
+    )); 
+
+    let result = context.api_context.post_request(&request).await?;
+    let mut bans_raw = contentapi::conversion::cast_result_required::<UserBan>(&result, "ban")?;
+
+    if let Some(mut ban) = bans_raw.pop() {
+        ban.expireDate = ban.createDate; // ALWAYS in the past
+        ban.message = Some(format!("{} - EDIT (UNBANNED): {}", opt_s!(ban.message), unban.new_reason));
+
+        match context.api_context.post_ban(&ban).await {
+            Ok(_token) => {} //Don't need the token
+            Err(error) => { errors.push(error.to_user_string()) }
+        };
+    }
+    else {
+        errors.push(format!("Couldn't find ban with id {}", unban.id));
+    }
+
+    get_render_internal(context, username, None, Some(errors)).await
 }

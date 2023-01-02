@@ -362,6 +362,7 @@ async fn main()
         .or(get_admin_route)
         .or(post_admin_multi_route(&state_filter, &form_filter))
         .or(get_user_route)
+        .or(post_user_multi_route(&state_filter, &form_filter))
         .or(get_userhome_route)
         .or(post_userhome_multi_route(&state_filter, &form_filter)) //Multiplexed! Login OR send recovery!
         .or(get_login_route)
@@ -598,4 +599,20 @@ fn post_admin_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_fi
         .and(admin_registrationconfig_post)
         .boxed()
 
+}
+
+fn post_user_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> 
+    BoxedFilter<(impl Reply,)> 
+{
+    let base_route = warp::post().and(warp::path!("user" / String)).and(form_filter.clone());
+
+    let user_ban_route = base_route
+        .and(qflag!(ban)) 
+        .and(warp::body::form::<common::forms::BanForm>())
+        .and(state_filter.clone())
+        .and_then(|username, _query, form, context: RequestContext| 
+            std_resp!(pages::user::post_ban(pc!(context), username, form), context)
+        ).boxed();
+
+    user_ban_route
 }
