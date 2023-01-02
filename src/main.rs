@@ -360,6 +360,7 @@ async fn main()
         .or(get_forum_post_route)
         .or(get_about_route)
         .or(get_admin_route)
+        .or(post_admin_multi_route(&state_filter, &form_filter))
         .or(get_user_route)
         .or(get_userhome_route)
         .or(post_userhome_multi_route(&state_filter, &form_filter)) //Multiplexed! Login OR send recovery!
@@ -566,6 +567,35 @@ fn post_userhome_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form
         .and(warp::path!("userhome"))
         .and(form_filter.clone())
         .and(userhome_bio_post.or(userhome_sensitive_post).or(userhome_post))
+        .boxed()
+
+}
+
+fn post_admin_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> 
+    BoxedFilter<(impl Reply,)> 
+{
+    let admin_registrationconfig_post = warp::any()
+        .and(qflag!(registrationconfig)) 
+        //For now, we use the direct form
+        .and(warp::body::form::<contentapi::forms::RegistrationConfig>())
+        .and(state_filter.clone())
+        .and_then(|_query, form, context: RequestContext| 
+            std_resp!(pages::admin::post_registrationconfig(pc!(context), form), context)
+        ).boxed();
+
+    //// Tertiary endpoint: user sensitive updates
+    //let userhome_sensitive_post = warp::any()
+    //    .and(qflag!(sensitive)) 
+    //    .and(warp::body::form::<contentapi::forms::UserSensitive>())
+    //    .and(state_filter.clone())
+    //    .and_then(|_query, form, context: RequestContext| 
+    //        std_resp!(pages::userhome::post_sensitive_render(pc!(context), form), context) 
+    //    ).boxed();
+
+    warp::post()
+        .and(warp::path!("admin"))
+        .and(form_filter.clone())
+        .and(admin_registrationconfig_post)
         .boxed()
 
 }

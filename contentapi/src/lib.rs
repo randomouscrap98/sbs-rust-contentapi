@@ -92,6 +92,12 @@ byte_enum!{ UserType => {
     (GROUP:2i8)
 }}
 
+byte_enum!{ BanType => {
+    (NONE:0i8),
+    (PUBLIC:1i8),
+    (PRIVATE:2i8)
+}}
+
 byte_enum!{ UserRelationType => {
     (INGROUP:1i8),
     (ASSIGNCONTENT:2i8)
@@ -170,6 +176,18 @@ pub struct User
     #[serde(alias = "super", deserialize_with = "deserialize_bool_from_anything")]
     pub admin: bool,
     pub createDate : DateTime<Utc>
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct UserBan
+{
+    pub id: i64,
+    pub createDate: DateTime<Utc>,
+    pub expireDate: DateTime<Utc>,
+    pub createUserId: i64,
+    pub bannedUserId: i64,
+    pub message: Option<String>,
+    pub r#type: i8
 }
 
 //#[serde(skip_serializing_if = "Option::is_none")]

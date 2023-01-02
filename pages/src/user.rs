@@ -13,13 +13,24 @@ use common::render::layout::*;
 use common::render::submissions::*;
 use common::submissions::*;
 use maud::*;
+use serde::Deserialize;
+use serde::Serialize;
 
 pub struct UserPackage {
     pub user: User,
     pub userpage: Option<Content>,
     pub users: HashMap<i64, User>,
     pub submissions: Vec<Content>,
-    pub badges: Vec<Content>
+    pub badges: Vec<Content>,
+    pub ban: Option<UserBan>
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BanForm
+{
+    pub user_id: i64,
+    pub reason: String,
+    pub hours: f64,
 }
 
 pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: Option<UserPackage>) -> String 
@@ -69,6 +80,28 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: Option<Use
                     p."aside" {"Don't worry if you don't have these!"}
                 }
             }
+            @if let Some(user) = &data.user {
+                @if user.admin {
+                    section {
+                        h2 { "Admin controls:" }
+                        form #"banform" method="POST" action={(data.links.http_root)"/user?ban=1#banform"} {
+                            label for="ban_hours"{"Ban hours:"}
+                            input #"ban_hours" type="text" required="" name="hours";
+                            label for="ban_reason"{"Reason (shown to user):"}
+                            input #"ban_reason" type="text" required="" name="reason";
+                            input type="hidden" name="user_id" value=(user.id);
+                            input type="submit" value="Ban";
+                            p."aside" { "For now, set ban hours to 0 to unban" }
+                        }
+                        @if let Some(ban) = &user_package.ban {
+                            p."error" { 
+                                "ALREADY BANNED for: "  
+                                time datetime=(dd(&ban.expireDate)) { (timeago(&ban.expireDate)) }
+                            }
+                        }
+                    }
+                }
+            }
         }
         @else {
             section {
@@ -105,6 +138,12 @@ pub async fn get_render(context: PageContext, username: String) -> Result<Respon
         String::from("*"), //ok do we really need it ALL?
         String::from("userId = @user.id AND type = @relationtype") //Unfortunately, we don't do anything else with assigned content in sbs
     )); 
+    
+    request.requests.push(build_request!(
+        RequestType::ban, 
+        String::from("*"),
+        String::from("bannedUserId = @user.id and !activebans()")
+    )); 
 
     let mut badge_request = build_request!(
         RequestType::content, 
@@ -119,6 +158,7 @@ pub async fn get_render(context: PageContext, username: String) -> Result<Respon
     //Now try to parse two things out of it
     let mut users_raw = contentapi::conversion::cast_result_required::<User>(&result, "user")?;
     let mut content_raw = contentapi::conversion::cast_result_required::<Content>(&result, "content")?;
+    let mut bans_raw = contentapi::conversion::cast_result_required::<UserBan>(&result, "ban")?;
     let badges_raw = contentapi::conversion::cast_result_required::<Content>(&result, "badges")?;
 
     let user = users_raw.pop();
@@ -135,6 +175,7 @@ pub async fn get_render(context: PageContext, username: String) -> Result<Respon
             user,
             userpage: content_raw.pop(),
             badges: badges_raw,
+            ban: bans_raw.pop(),
             submissions: conversion::cast_result_safe::<Content>(&result, "content")?,
             users: conversion::map_users(conversion::cast_result_safe::<User>(&result, "user")?)
         })

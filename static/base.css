@@ -111,7 +111,7 @@ form {
  * ----------------------------- */
 
 .error {
-    color: var(--tc_error);
+    color: var(--tc_error) !important;
 }
 
 .errorlist .error {

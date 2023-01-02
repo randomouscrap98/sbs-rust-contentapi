@@ -65,7 +65,9 @@ pub struct FileUploadAsObject {
 /// Write configuration for registration (like if it's enabled or not; admin only)
 /// Not TECHNICALLY just a form, you can also get this as a result from the API
 /// (but it's in a weird place)
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(default)]
 pub struct RegistrationConfig {
+    #[serde(deserialize_with = "deserialize_bool_from_anything")]
     pub enabled: bool
 }
