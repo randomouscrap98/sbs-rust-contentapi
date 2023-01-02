@@ -33,6 +33,14 @@ pub struct UnbanForm
     pub new_reason: String,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct BasicPage
+{
+    pub id: i64,
+    pub text: String
+}
+
+
 // ------------------------
 // *    QUERY PARAMS      *
 // ------------------------

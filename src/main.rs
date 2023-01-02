@@ -549,7 +549,7 @@ fn post_userhome_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form
     // Secondary endpoint: user bio updates
     let userhome_bio_post = warp::any()
         .and(qflag!(bio)) 
-        .and(warp::body::form::<pages::userhome::UserBio>())
+        .and(warp::body::form::<common::forms::BasicPage>())
         .and(state_filter.clone())
         .and_then(|_query, form, context: RequestContext| 
             std_resp!(pages::userhome::post_bio_render(pc!(context), form), context)
@@ -584,19 +584,26 @@ fn post_admin_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_fi
             std_resp!(pages::admin::post_registrationconfig(pc!(context), form), context)
         ).boxed();
 
-    //// Tertiary endpoint: user sensitive updates
-    //let userhome_sensitive_post = warp::any()
-    //    .and(qflag!(sensitive)) 
-    //    .and(warp::body::form::<contentapi::forms::UserSensitive>())
-    //    .and(state_filter.clone())
-    //    .and_then(|_query, form, context: RequestContext| 
-    //        std_resp!(pages::userhome::post_sensitive_render(pc!(context), form), context) 
-    //    ).boxed();
+    let admin_frontpage_post = warp::any()
+        .and(qflag!(frontpage)) 
+        .and(warp::body::form::<common::forms::BasicPage>())
+        .and(state_filter.clone())
+        .and_then(|_query, form, context: RequestContext| 
+            std_resp!(pages::admin::post_frontpage(pc!(context), form), context)
+        ).boxed();
+
+    let admin_alert_post = warp::any()
+        .and(qflag!(alert)) 
+        .and(warp::body::form::<common::forms::BasicPage>())
+        .and(state_filter.clone())
+        .and_then(|_query, form, context: RequestContext| 
+            std_resp!(pages::admin::post_alert(pc!(context), form), context)
+        ).boxed();
 
     warp::post()
         .and(warp::path!("admin"))
         .and(form_filter.clone())
-        .and(admin_registrationconfig_post)
+        .and(admin_registrationconfig_post.or(admin_frontpage_post).or(admin_alert_post))
         .boxed()
 
 }

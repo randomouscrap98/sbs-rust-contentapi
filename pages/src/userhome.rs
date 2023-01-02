@@ -1,4 +1,5 @@
 use common::*;
+use common::forms::BasicPage;
 use common::render::*;
 use common::render::layout::*;
 use contentapi::*;
@@ -134,13 +135,6 @@ pub struct UserUpdate
     pub avatar: String
 }
 
-#[derive(Deserialize, Debug)]
-pub struct UserBio
-{
-    pub id: i64,
-    pub text: String
-}
-
 /// Post to update normal info like username, avatar, etc. Note that although this may return an "Error", this is not from
 /// having a POST error, it's from a render error for userhome
 pub async fn post_info_render(mut context: PageContext, update: UserUpdate) -> Result<Response, Error>
@@ -165,7 +159,7 @@ pub async fn post_info_render(mut context: PageContext, update: UserUpdate) -> R
 }
 
 /// Complicated function for posting a simple user bio yeesh
-pub async fn post_userbio(data: &MainLayoutData, context: &ApiContext, form: &UserBio) -> Result<Content, Error>
+pub async fn post_userbio(data: &MainLayoutData, context: &ApiContext, form: &BasicPage) -> Result<Content, Error>
 {
     if let Some(ref user) = data.user {
         let mut request = FullRequest::new();
@@ -212,7 +206,7 @@ pub async fn post_userbio(data: &MainLayoutData, context: &ApiContext, form: &Us
 
 /// Post to update user bio. It's a bit of a complicated process, but you call this function to perform
 /// everything and render the resulting page afterwards, error or not
-pub async fn post_bio_render(context: PageContext, bio: UserBio) -> Result<Response, Error>
+pub async fn post_bio_render(context: PageContext, bio: BasicPage) -> Result<Response, Error>
 {
     //Both go to the same place, AND the userhome renderer reads the data after this write anyway,
     //so you just have to handle the errors
