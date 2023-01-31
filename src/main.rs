@@ -178,6 +178,9 @@ async fn main()
     let get_about_route = warp_get!(warp::path!("about"),
         |context:RequestContext| warp::reply::html(pages::about::render(pc!(context.layout_data))));
 
+    let get_integrationtest_route = warp_get!(warp::path!("integrationtest"),
+        |context:RequestContext| warp::reply::html(pages::integrationtest::render(pc!(context.layout_data))));
+
     let get_admin_route = warp_get_async!(
         warp::path!("admin"),
         |context:RequestContext| std_resp!(pages::admin::get_render(pc!(context)), context)
@@ -381,6 +384,7 @@ async fn main()
         .or(get_bbcodepreview_route)
         .or(post_bbcodepreview_route)
         .or(legacy_page_pid)
+        .or(get_integrationtest_route)
         .recover(handle_rejection)
     ).run(address).await;
 }
