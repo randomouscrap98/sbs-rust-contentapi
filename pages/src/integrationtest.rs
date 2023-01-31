@@ -26,15 +26,15 @@ pub fn render(data: MainLayoutData) -> String
                     li { "Running frontend locally (localhost)" }
                     li { "Running backend locally" }
                     li { "Not logged in (try private window?)"}
-                    li { "Email handler set to null" }
-                    li { "Backdoor email endpoint active" }
+                    li { "Email handler set to file or null" }
+                    li { "Backdoor registration code get endpoint active" }
                     li { "Pre-existing data available (at least structure, categories, etc. not a fresh database)" }
                 }
             }
             @if errors.is_empty() {
-                a href="#" #"teststart" { "Loading tests..." }
+                a href="#" #"teststart" onclick="runtests();" { "Run all tests" }
                 p."aside" { "Tests can take a very long time" }
-                iframe #"testframe" { }
+                iframe #"testframe" onload="testonload();" { }
             }
             @else {
                 h3 { "This testing page isn't available because:" }
