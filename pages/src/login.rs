@@ -41,7 +41,14 @@ pub fn render(data: MainLayoutData, login_errors: Option<Vec<String>>, recover_e
             }
             hr;
             h2{"New to SmileBASIC Source?"}
-            p { a href={(data.links.http_root)"/register"}{"Click here"} " to register" }
+            /* TODO: remove this when you're done! */
+            p."error" { "WARNING: ACCOUNT CREATION WILL GET RESET, THIS IS STILL A TEST WEBSITE!" }
+            p { a href={(data.links.http_root)"/register"}{"Register here"} }
+            p."aside" { 
+                "If you already registered and need to enter the confirmation code, go to the " 
+                a href={(data.links.http_root)"/register/confirm"}{ "confirmation page" }
+                "."
+            }
         }
     }).into_string()
 }

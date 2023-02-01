@@ -1,9 +1,6 @@
 // The "testframe" iframe element should always be available as a variable
 
-// Set this to have something run on completion of iframe load
-//var pendingTestOnload = false; //next onload
-//var skipPendingLoad = false;
-//var pendingTestLoad = []; //all pending tests
+//We set these to make error reporting easier(?)
 var currentSuite = "?";
 var currentTest = "?";
 var currentTestUser = {};
@@ -59,58 +56,6 @@ function loadAndPostIframe(relativeUrl, formId, formObj, callback)
     });
 }
 
-////Add a pending page load with callback, generally these will be your main test blocks
-//function stageLoad(relativeUrl, suite, tests)
-//{
-//    pendingTestLoad.push({
-//        callback : tests,
-//        suite: suite,
-//        url: relativeUrl
-//    });
-//}
-
-////Add a pending page load with form submit after, then run the tests on the newly loaded page
-//function stagePost(relativeUrl, suite, formObj, formId, tests)
-//{
-//    stageLoad(relativeUrl, suite, () => { instagePost(formObj, formId, tests); });
-//}
-
-//While within a staged callback, post a form with a callback which has additional tests.
-//NOTE: you should NOT perform ANYTHING else after an instagePost!
-//function instagePost(formObj, formId, callback)
-//{
-//    var form = testframe.contentWindow.document.getElementById(formId);
-//    if(!form) throw "Couldn't find form with id " + formId;
-//    applyForm(formObj, form);
-//    skipPendingLoad = true;
-//    pendingTestOnload = () => { callback(); skipPendingLoad = false; };
-//    submitForm(form);
-//}
-
-//The function called when the iframe finishes loading. It calls whatever the currently pending
-//completion function is (usually the next set of assertions)
-//function testonload()
-//{
-//    console.log("test iframe loaded");
-//
-//    if(pendingTestOnload)
-//    {
-//        console.log("Calling callback");
-//        pendingTestOnload();
-//        pendingTestOnload = false;
-//    }
-//
-//    //If there are still leftovers, load the next one
-//    if(pendingTestLoad.length && !skipPendingLoad)
-//    {
-//        var next = pendingTestLoad.shift();
-//        console.log("Loading next pending page " + next.url);
-//        currentSuite = next.suite;
-//        pendingTestOnload = next.callback;
-//        testframe.src = next.url;
-//    }
-//}
-
 //Perform a test of the given name on the currently loaded iframe
 function test(name, assertion)
 {
@@ -140,9 +85,12 @@ function assertExistsGeneric(path, exists)
 function assertExists(path) { return assertExistsGeneric(path, true); }
 function assertNotExists(path)  { return assertExistsGeneric(path, false); }
 
+//Because everything is a callback, and we never know what we might be waiting on, this turns a simple array
+//of tests to be run in order against the iframe into the proper chained callback, wrapping each callback so
+//it calls the next in line at the end of its own execution.
 function runChainedTests(testarray)
 {
-    var nextCb = null;
+    var nextCb = () => console.log("🎉 All tests complete!");
 
     //Go backwards, because each callback actually has to call the NEXT callback, so they're
     //all basically getting wrapped. This could instead be some recursive function but whatever.
@@ -152,16 +100,35 @@ function runChainedTests(testarray)
         let testrun = testarray[i][1];
         let thiscb = nextCb;
         nextCb = () => {
-            currentSuite = testfunc.name;
+            currentSuite = testfunc.name.replaceAll("_tests", "");
             testrun(() =>
             {
-                testfunc();             //Run the desired tests first
-                if(thiscb) thiscb();    //Then run whatever is supposed to come next
+                testfunc();     //Run the desired tests first
+                thiscb();       //Then run whatever is supposed to come next
             });
         };
     }
 
     nextCb();
+}
+
+function resetCurrentTestUser()
+{
+    currentTestUser = {
+        token : false,
+        username : randomUsername(),
+        password : "password"
+    };
+    currentTestUser.email = currentTestUser.username + "@smilebasicsource.com";
+}
+
+function currentUserToForm()
+{
+    return {
+        "username" : currentTestUser.username,
+        "email" : currentTestUser.email,
+        "password" : currentTestUser.password
+    };
 }
 
 // ---------------------------------
@@ -172,30 +139,23 @@ function runtests()
 {
     currentSuite = "prepping";
     currentTest = "none";
-    currentTestUser = {
-        token : false,
-        username : randomUsername()
-    };
+    resetCurrentTestUser();
 
     runChainedTests([
         [ root_tests, (cb) => loadIframe("/", cb) ],
-        [ login_tests, (cb) => loadIframe("/login", cb) ],
-        [ register_step1_tests, (cb) => loadAndPostIframe("/register", "register_form", {
-            "username" : currentTestUser.username,
-            "email" : currentTestUser.username + "@smilebasicsource.com",
-            "password" : "password"
-        }, cb)]
+        [ register_step1_tests, (cb) => loadAndPostIframe("/register", "register_form", currentUserToForm(), cb)],
+        //This should normally come WAY later, after you are FULLY done with the 'currentTestUser', so add other tests to do with 
+        //the actual currentTestUser above this.
+        [ register_step1_tests, (cb) => {
+            resetCurrentTestUser();
+            loadAndPostIframe("/register", "register_form", currentUserToForm(), cb);
+        }],
+        [ register_resend_tests, (cb) => {
+            var form = testframe.contentWindow.document.getElementById("resend_form");
+            postIframe(form, cb);
+        }],
+        //[ login_tests, (cb) => loadIframe("/login", cb) ],
     ]);
-
-    ////Will make this better later; later loads must happen after previous for now
-    //stageLoad("/", "root_loaded", root_tests);
-    //stageLoad("/login", "login_loaded", login_tests);
-    //stagePost("/register", "register_step1", {
-    //    "username" : currentTestUser.username,
-    //    "email" : currentTestUser.username + "@smilebasicsource.com",
-    //    "password" : "password"
-    //}, "register_form", register_step1_tests)
-    //testonload(); //Initiate the tests by calling the recursive iframe onload callback
 }
 
 function root_tests()
@@ -210,10 +170,23 @@ function root_tests()
 function login_tests()
 {
     test("login_selected", () => assertExists('//a[contains(@href,"/login") and contains(@class,"current")]'));
+    test("confirm_relink", () => assertExists('//a[contains(@href,"/register/confirm")]'));
 }
 
 function register_step1_tests()
 {
     test("username_shown", () => assertExists(`//section/p[contains(text(),"${currentTestUser.username}")]`));
-    console.log("Completed the register?");
+    test("email_filled", () => assertExists(`//input[@id="complete_email" and @value="${currentTestUser.email}"]`));
+    test("resend_email_filled", () => assertExists(`//input[@id="resend_email" and @value="${currentTestUser.email}"]`));
+}
+
+function register_resend_tests()
+{
+    //Make sure the two email fields STILL have their data!
+    test("email_filled", () => assertExists(`//input[@id="complete_email" and @value="${currentTestUser.email}"]`));
+    test("resend_email_filled", () => assertExists(`//input[@id="resend_email" and @value="${currentTestUser.email}"]`));
+    //But the username is gone. We specifically test for this to ensure the page actually reloaded and data isn't leaking
+    test("username_not_shown", () => assertNotExists(`//section/p[contains(text(),"${currentTestUser.username}")]`));
+    //And there should be a success message! This may not be in the resend form in the future but...
+    test("success_shown", () => assertExists('//form[@id="resend_form"]/p[contains(text(),"resent") and contains(@class,"success")]'));
 }

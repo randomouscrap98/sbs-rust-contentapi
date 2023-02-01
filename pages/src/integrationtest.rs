@@ -27,8 +27,9 @@ pub fn render(data: MainLayoutData) -> String
                     li { "Running backend locally" }
                     li { "Not logged in (try private window?)"}
                     li { "Registration set to standard (it's NOT in the default settings!)" }
+                    li { "ALL rate limiting turned off!" }
                     li { "Email handler set to file or null" }
-                    li { "Backdoor registration code get endpoint active" }
+                    li { "Backdoor registration 'get code endpoint' active" }
                     li { "Pre-existing data available (at least structure, categories, etc. not a fresh database)" }
                 }
             }

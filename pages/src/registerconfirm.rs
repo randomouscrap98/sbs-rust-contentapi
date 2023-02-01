@@ -29,7 +29,7 @@ pub fn render(data: MainLayoutData, confirm_errors: Option<Vec<String>>, email_e
                 p {"If you've already registered, you'll receive a confirmation email shortly. Re-enter your email and the "
                    "confirmation code here to complete your registration." }
             }
-            form method="POST" action={(data.links.http_root)"/register/confirm"} {
+            form #"complete_form" method="POST" action={(data.links.http_root)"/register/confirm"} {
                 (errorlist(confirm_errors))
                 label for="complete_email" {"Email:"}
                 input #"complete_email" type="text" name="email" required="" value=[&email];
@@ -42,7 +42,7 @@ pub fn render(data: MainLayoutData, confirm_errors: Option<Vec<String>>, email_e
             p {"The email comes from smilebasicsource@gmail.com. It may be in your spam folder, and it may take up to a couple minutes "
                "to get through email filters. If you didn't receive it, you can send it again here:" }
             //Post to the special endpoint still under the "confirm" umbrella, so errors will be rendered "on the same page"
-            form method="POST" action={(data.links.http_root)"/register/confirm?resend=1"} {
+            form #"resend_form" method="POST" action={(data.links.http_root)"/register/confirm?resend=1"} {
                 (errorlist(email_errors))
                 @if resend_success {
                     p."success"{"Email resent!"}
