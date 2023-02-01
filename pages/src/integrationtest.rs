@@ -33,9 +33,9 @@ pub fn render(data: MainLayoutData) -> String
                 }
             }
             @if errors.is_empty() {
-                a href="#" #"teststart" onclick="runtests();" { "Run all tests" }
+                a href="#" #"teststart" /*onclick="runtests();"*/ { "Loading tests..." }
                 p."aside" { "Tests can take a very long time" }
-                iframe #"testframe" onload="testonload();" { }
+                iframe #"testframe" /*onload="testonload();"*/ { }
             }
             @else {
                 h3 { "This testing page isn't available because:" }

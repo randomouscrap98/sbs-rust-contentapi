@@ -66,3 +66,39 @@ function load_inner_iframe(e) {
         iframe.removeAttribute("data-src");
     }
 }
+
+//Apply the given key/value pairs to their respective inputs, do NOT submit the form
+function apply_to_form(formObj, form)
+{
+    Object.keys(formObj).forEach(k =>
+    {
+        var input = form.querySelector(`[name="${k}"]`);
+
+        if(!input) throw "Form field not found: " + k;
+
+        if(input.tagName === "INPUT")
+        {
+            var inputType = input.getAttribute("type");
+
+            if(inputType === "checkbox")
+                input.checked = formObj[k];
+            else
+                input.value = formObj[k];
+        }
+        else if(input.tagName === "TEXTAREA")
+        {
+            input.textContent = formObj[k];
+        }
+        else
+        {
+            throw "Unsupported input type for field " + k;
+        }
+    });
+}
+
+//Assuming a regular SBS form, just... submit it? No callbacks or anything.
+function submit_regular_form(form)
+{
+    var submit = form.querySelector(`[type="submit"]`);
+    submit.click();
+}
