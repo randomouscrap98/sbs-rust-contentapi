@@ -146,6 +146,16 @@ function currentUserToForm()
     };
 }
 
+function completeRegistration(cb)
+{
+    fetch(`${apiend}/user/getregistrationcodebyusername/${currentTestUser.username}`)
+        .then(r => r.text()).then(d => {
+            var form = testframe.contentWindow.document.getElementById("complete_form");
+            apply_to_form({"key":d}, form);
+            postIframe(form, cb);
+        });
+}
+
 // ---------------------------------
 // ** THE REST ARE ALL THE TESTS! **
 // ---------------------------------
@@ -158,18 +168,12 @@ function runtests()
 
     runChainedTests([
         [ root_tests, (cb) => loadIframe("/", cb) ],
-        [ register_step1_tests, (cb) => loadAndPostIframe("/register", "register_form", currentUserToForm(), cb)],
-        [ register_step2_tests, (cb) => {
-            fetch(`${apiend}/user/getregistrationcodebyusername/${currentTestUser.username}`)
-                .then(r => r.text()).then(d => {
-                    var form = testframe.contentWindow.document.getElementById("complete_form");
-                    apply_to_form({"key":d}, form);
-                    postIframe(form, cb);
-                });
-        }],
+        [ login_tests, (cb) => loadIframe("/login", cb) ],
+        [ register_confirm_tests, (cb) => loadAndPostIframe("/register", "register_form", currentUserToForm(), cb)],
+        [ userhome_tests, completeRegistration ],
         //This should normally come WAY later, after you are FULLY done with the 'currentTestUser', so add other tests to do with 
         //the actual currentTestUser above this.
-        [ register_step1_tests, (cb) => {
+        [ register_confirm_tests, (cb) => {
             resetCurrentTestUser();
             loadAndPostIframe("/register", "register_form", currentUserToForm(), cb);
         }],
@@ -177,12 +181,14 @@ function runtests()
             var form = testframe.contentWindow.document.getElementById("resend_form");
             postIframe(form, cb);
         }],
-        //[ login_tests, (cb) => loadIframe("/login", cb) ],
+        [ userhome_tests, completeRegistration ],
+        [ root_tests, (cb) => loadIframe("/logout", cb) ], //And then back to the start; root tests already test for not-logged-in
     ]);
 }
 
 function root_tests()
 {
+    test("at_root", () => assertAtPath("/"));
     test("header_by_id", () => assertExists("#header-user"));
     test("header_by_xpath", () => assertExists("/html/body/header/nav"));
     test("user_by_xpath", () => assertExists('//div[@id="header-user"]/a'));
@@ -192,28 +198,36 @@ function root_tests()
 
 function login_tests()
 {
+    test("at_login", () => assertAtPath("/login"));
     test("login_selected", () => assertExists('//a[contains(@href,"/login") and contains(@class,"current")]'));
     test("confirm_relink", () => assertExists('//a[contains(@href,"/register/confirm")]'));
 }
 
-function register_step1_tests()
+function register_confirm_tests()
 {
+    //WARN: Registering does NOT place us at the confirmation page!!
+    //test("at_confirm", () => assertAtPath("/register/confirm"));
     test("username_shown", () => assertExists(`//section/p[contains(text(),"${currentTestUser.username}")]`));
     test("email_filled", () => assertExists(`//input[@id="complete_email" and @value="${currentTestUser.email}"]`));
     test("resend_email_filled", () => assertExists(`//input[@id="resend_email" and @value="${currentTestUser.email}"]`));
 }
 
 //This may change to "userhome" tests
-function register_step2_tests()
+function userhome_tests()
 {
+    test("at_userhome", () => assertAtPath("/userhome"));
     test("auto_login", () => assertExists(`//div[@id="header-user"]//span[text()="${currentTestUser.username}"]`));
-    test("goto_userhome", () => assertAtPath("/userhome"));
     //Even at userhome, make sure login is selected
     test("userhome_selected", () => assertExists('//a[contains(@href,"/userhome") and contains(@class,"current")]'));
+    //username exist, email exist, logout link exist, userpage exist
+    //do NOT update bio! go to userpage first, make sure it shows up ok
+    //make sure to upload a file too! maybe...?
 }
 
 function register_resend_tests()
 {
+    //We should still be at the confirmation page after resend
+    test("at_confirm", () => assertAtPath("/register/confirm"));
     //Make sure the two email fields STILL have their data!
     test("email_filled", () => assertExists(`//input[@id="complete_email" and @value="${currentTestUser.email}"]`));
     test("resend_email_filled", () => assertExists(`//input[@id="resend_email" and @value="${currentTestUser.email}"]`));
