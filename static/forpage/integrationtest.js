@@ -2,15 +2,30 @@
 
 // Set this to have something run on completion of iframe load
 var pendingTestOnload = false; //next onload
+var skipPendingLoad = false;
 var pendingTestLoad = []; //all pending tests
 var currentSuite = "prepping";
 var currentTest = "none";
+
+var currentTestUser = {
+    token : false,
+    username : randomUsername()
+};
 
 window.onerror = function(msg, url, line)
 {
     alert(`Test '${currentSuite}:${currentTest}' failed on line ${line}: ${msg}`);
 };
 
+function randomUsername()
+{
+    var rnd = String(Math.random());
+    return ("test" + rnd.substring(rnd.indexOf(".") + 1)).substring(0, 16); //Just in case
+}
+
+function chainCallback(cb1, cb2) { return () => { cb1(); cb2(); } }
+
+//Add a pending page load with callback, generally these will be your main test blocks
 function stageLoad(relativeUrl, suite, tests)
 {
     pendingTestLoad.push({
@@ -18,6 +33,60 @@ function stageLoad(relativeUrl, suite, tests)
         suite: suite,
         url: relativeUrl
     });
+}
+
+//Add a pending page load with form submit after, then run the tests on the newly loaded page
+function stagePost(relativeUrl, suite, formObj, formId, tests)
+{
+    stageLoad(relativeUrl, suite, () => { instagePost(formObj, formId, tests); });
+}
+
+//Apply the given key/value pairs to their respective inputs, do NOT submit the form
+function applyForm(formObj, form)
+{
+    Object.keys(formObj).forEach(k =>
+    {
+        var input = form.querySelector(`[name="${k}"]`);
+
+        if(!input) throw "Form field not found: " + k;
+
+        if(input.tagName === "INPUT")
+        {
+            var inputType = input.getAttribute("type");
+
+            if(inputType === "checkbox")
+                input.checked = formObj[k];
+            else
+                input.value = formObj[k];
+        }
+        else if(input.tagName === "TEXTAREA")
+        {
+            input.textContent = formObj[k];
+        }
+        else
+        {
+            throw "Unsupported input type for field " + k;
+        }
+    });
+}
+
+//Assuming a regular SBS form, just... submit it? No callbacks or anything.
+function submitForm(form)
+{
+    var submit = form.querySelector(`[type="submit"]`);
+    submit.click();
+}
+
+//While within a staged callback, post a form with a callback which has additional tests.
+//NOTE: you should NOT perform ANYTHING else after an instagePost!
+function instagePost(formObj, formId, callback)
+{
+    var form = testframe.contentWindow.document.getElementById(formId);
+    if(!form) throw "Couldn't find form with id " + formId;
+    applyForm(formObj, form);
+    skipPendingLoad = true;
+    pendingTestOnload = () => { callback(); skipPendingLoad = false; };
+    submitForm(form);
 }
 
 //The function called when the iframe finishes loading. It calls whatever the currently pending
@@ -34,7 +103,7 @@ function testonload()
     }
 
     //If there are still leftovers, load the next one
-    if(pendingTestLoad.length)
+    if(pendingTestLoad.length && !skipPendingLoad)
     {
         var next = pendingTestLoad.shift();
         console.log("Loading next pending page " + next.url);
@@ -43,13 +112,6 @@ function testonload()
         testframe.src = next.url;
     }
 }
-
-////Load a page with GET and call the given callback after it's fully loaded (maybe?)
-//function getPage(relativeUrl, callback)
-//{
-//    pendingTestOnload.push({callback:callback,url:relativeUrl});
-//    loadNextPage();
-//}
 
 //Perform a test of the given name on the currently loaded iframe
 function test(name, assertion)
@@ -71,7 +133,7 @@ function xpath(xpath)
 function assertExistsGeneric(path, exists)
 {
     var result = false;
-    if(path.indexOf("#") == 0) result = document.getElementById(path.substr(1));
+    if(path.indexOf("#") == 0) result = testframe.contentWindow.document.getElementById(path.substr(1));
     else result = xpath(`count(${path})`).numberValue > 0;
     if(exists && !result) throw `Expected ${path} to exist; it did not!`;
     else if(!exists && result) throw `Expected ${path} not to exist, it did!`;
@@ -79,6 +141,7 @@ function assertExistsGeneric(path, exists)
 
 function assertExists(path) { return assertExistsGeneric(path, true); }
 function assertNotExists(path)  { return assertExistsGeneric(path, false); }
+
 
 // ---------------------------------
 // ** THE REST ARE ALL THE TESTS! **
@@ -89,6 +152,11 @@ function runtests()
     //Will make this better later; later loads must happen after previous for now
     stageLoad("/", "root_loaded", root_tests);
     stageLoad("/login", "login_loaded", login_tests);
+    stagePost("/register", "register_step1", {
+        "username" : currentTestUser.username,
+        "email" : currentTestUser.username + "@smilebasicsource.com",
+        "password" : "password"
+    }, "register_form", register_step1_tests)
     testonload(); //Initiate the tests by calling the recursive iframe onload callback
 }
 
@@ -104,4 +172,10 @@ function root_tests()
 function login_tests()
 {
     test("login_selected", () => assertExists('//a[contains(@href,"/login") and contains(@class,"current")]'));
+}
+
+function register_step1_tests()
+{
+    test("username_shown", () => assertExists(`//section/p[contains(text(),"${currentTestUser.username}")]`));
+    console.log("Completed the register?");
 }
