@@ -1,5 +1,10 @@
 // The "testframe" iframe element should always be available as a variable
 
+var apiend = "http://localhost:5000/api";
+
+//fetch("http://localhost:5000/api/user/getregistrationcodebyusername/test940647490084").then(r => r.text()).then(d => console.log(d));
+
+
 //We set these to make error reporting easier(?)
 var currentSuite = "?";
 var currentTest = "?";
@@ -7,8 +12,12 @@ var currentTestUser = {};
 
 window.onload = function()
 {
-    teststart.onclick = () => runtests();
-    teststart.textContent = "Run all tests";
+    var testButton = document.getElementById("teststart");
+    if(testButton)
+    {
+        testButton.onclick = () => runtests();
+        testButton.textContent = "Run all tests";
+    }
 };
 
 window.onerror = function(msg, url, line)
@@ -82,8 +91,14 @@ function assertExistsGeneric(path, exists)
     else if(!exists && result) throw `Expected ${path} not to exist, it did!`;
 }
 
-function assertExists(path) { return assertExistsGeneric(path, true); }
-function assertNotExists(path)  { return assertExistsGeneric(path, false); }
+function assertExists(path) { assertExistsGeneric(path, true); }
+function assertNotExists(path)  { assertExistsGeneric(path, false); }
+
+function assertAtPath(path) 
+{ 
+    var iframePath = testframe.contentWindow.document.location.pathname;
+    if(iframePath !== path) throw `Expected iframe to be at ${path} but it was at ${iframePath}`
+}
 
 //Because everything is a callback, and we never know what we might be waiting on, this turns a simple array
 //of tests to be run in order against the iframe into the proper chained callback, wrapping each callback so
@@ -115,7 +130,7 @@ function runChainedTests(testarray)
 function resetCurrentTestUser()
 {
     currentTestUser = {
-        token : false,
+        //token : false,
         username : randomUsername(),
         password : "password"
     };
@@ -144,6 +159,14 @@ function runtests()
     runChainedTests([
         [ root_tests, (cb) => loadIframe("/", cb) ],
         [ register_step1_tests, (cb) => loadAndPostIframe("/register", "register_form", currentUserToForm(), cb)],
+        [ register_step2_tests, (cb) => {
+            fetch(`${apiend}/user/getregistrationcodebyusername/${currentTestUser.username}`)
+                .then(r => r.text()).then(d => {
+                    var form = testframe.contentWindow.document.getElementById("complete_form");
+                    apply_to_form({"key":d}, form);
+                    postIframe(form, cb);
+                });
+        }],
         //This should normally come WAY later, after you are FULLY done with the 'currentTestUser', so add other tests to do with 
         //the actual currentTestUser above this.
         [ register_step1_tests, (cb) => {
@@ -178,6 +201,15 @@ function register_step1_tests()
     test("username_shown", () => assertExists(`//section/p[contains(text(),"${currentTestUser.username}")]`));
     test("email_filled", () => assertExists(`//input[@id="complete_email" and @value="${currentTestUser.email}"]`));
     test("resend_email_filled", () => assertExists(`//input[@id="resend_email" and @value="${currentTestUser.email}"]`));
+}
+
+//This may change to "userhome" tests
+function register_step2_tests()
+{
+    test("auto_login", () => assertExists(`//div[@id="header-user"]//span[text()="${currentTestUser.username}"]`));
+    test("goto_userhome", () => assertAtPath("/userhome"));
+    //Even at userhome, make sure login is selected
+    test("userhome_selected", () => assertExists('//a[contains(@href,"/userhome") and contains(@class,"current")]'));
 }
 
 function register_resend_tests()

@@ -25,7 +25,7 @@ pub fn render(data: MainLayoutData) -> String
                 ul {
                     li { "Running frontend locally (localhost)" }
                     li { "Running backend locally" }
-                    li { "Not logged in (try private window?)"}
+                    li { "Not logged in (try private window?) " a href={(data.links.http_root)"/logout"} {"Logout"}}
                     li { "Registration set to standard (it's NOT in the default settings!)" }
                     li { "ALL rate limiting turned off!" }
                     li { "Email handler set to file or null" }
