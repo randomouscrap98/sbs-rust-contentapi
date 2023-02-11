@@ -358,6 +358,7 @@ async fn main()
         .or(get_activity_route)
         .or(get_search_route)
         .or(get_forum_route(&state_filter)) //HEAVILY multiplexed! Lots of legacy forum paths!
+        .or(get_forum_edit_thread_route(&state_filter, &form_filter))
         .or(get_forum_category_route)
         .or(get_forum_thread_route)
         .or(get_forum_post_route)
@@ -458,6 +459,48 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
     warp::get()
         .and(warp::path!("forum"))
         .and(forum_fcid.or(forum_ftid).or(forum_fpid).or(forum_main))
+        .boxed()
+}
+
+fn get_forum_edit_thread_route(state_filter: &BoxedFilter<(RequestContext,)>, _form_filter: &BoxedFilter<()>) -> BoxedFilter<(impl Reply,)> 
+{
+    //struct doesn't need to escape this function!
+    #[allow(dead_code)]
+    #[derive(Deserialize, Debug)]
+    struct CategoryParameter { 
+        category: String
+    }
+
+    let thread_new = warp::any()
+        .and(warp::query::<CategoryParameter>())
+        .and(state_filter.clone())
+        .and_then(|catparam: CategoryParameter, context:RequestContext| 
+            std_resp!(
+                pages::forum_edit_thread::get_render(pc!(context), Some(catparam.category), None),
+                context
+            ) 
+        ); 
+    
+    //Don't forget to add the other stuff!
+    #[allow(dead_code)]
+    #[derive(Deserialize, Debug)]
+    struct ThreadParameter { 
+        thread: String
+    }
+
+    let thread_edit = warp::any()
+        .and(warp::query::<ThreadParameter>())
+        .and(state_filter.clone())
+        .and_then(|threadparam: ThreadParameter, context:RequestContext| 
+            std_resp!(
+                pages::forum_edit_thread::get_render(pc!(context), None, Some(threadparam.thread)),
+                context
+            )
+        ); 
+
+    warp::get()
+        .and(warp::path!("forum" / "edit" / "thread"))
+        .and(thread_new.or(thread_edit))
         .boxed()
 }
 

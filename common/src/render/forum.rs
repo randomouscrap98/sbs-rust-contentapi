@@ -443,8 +443,9 @@ pub fn post_reply(layout_data: &MainLayoutData, bbcode: &mut BBCode, post: &Mess
 pub fn post_textbox(id: Option<&str>, name: Option<&str>, value: Option<&str>) -> Markup
 {
     html! {
-        textarea id=(opt_s!(id)) type="text" name=(opt_s!(name)) value=(opt_s!(value)) placeholder=r##"
-            [b]bold[/b], [i]italic[/i], [u]underline[/u], [s]strikethrough[/s], [spoiler=text]hidden[/spoiler], [quote=user]text[/quote]
-        "##;
+        textarea id=(opt_s!(id)) type="text" name=(opt_s!(name)) placeholder=r##"[b]bold[/b], [i]italic[/i], 
+[u]underline[/u], [s]strikethrough[/s], 
+[spoiler=text]hidden[/spoiler], [quote=user]text[/quote]
+        "## { (opt_s!(value)) }
     }
 }

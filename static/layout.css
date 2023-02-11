@@ -136,13 +136,15 @@ form input, form textarea {
 }*/
 
 form.editor {
-    width: 100%;
     max-width: 50em; /* Eh? Not sure... */
+    display: flex;
+    flex-direction: column;
 }
 
 form.editor textarea {
     height: 10em;
     width: 100%;
+    max-width: 100%;
     box-sizing: border-box;
 }
 
