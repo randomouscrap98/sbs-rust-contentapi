@@ -49,7 +49,9 @@ pub fn render(data: MainLayoutData, private: Option<contentapi::UserPrivate>, us
                 }
                 hr;
                 h3 #"update-userbio" {"Update bio:"}
-                form method="POST" action={(data.links.http_root)"/userhome?bio=1#update-userbio"} {
+                // "Editor" forms are special forms which are meant for editing content instead of whatever other 
+                //  forms do.
+                form."editor" method="POST" action={(data.links.http_root)"/userhome?bio=1#update-userbio"} {
                     (errorlist(bio_errors))
                     input type="hidden" name="id" value=(bio_id);
                     textarea #"update_userbio" type="text" name="text"{(bio_text)}

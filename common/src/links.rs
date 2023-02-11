@@ -43,6 +43,14 @@ impl LinkConfig {
         format!("{}/forum/thread/{}", self.http_root, opt_s!(thread.hash))
     }
 
+    pub fn forum_thread_editor_new(&self, category: &Content) -> String {
+        format!("{}/forum/edit/thread?category={}", self.http_root, opt_s!(category.hash))
+    }
+
+    pub fn forum_thread_editor_edit(&self, thread: &Content) -> String {
+        format!("{}/forum/edit/thread?thread={}", self.http_root, opt_s!(thread.hash))
+    }
+
     pub fn forum_post_hash(post: &Message) -> String {
         format!("#post_{}", post.id.unwrap_or_default())
     }

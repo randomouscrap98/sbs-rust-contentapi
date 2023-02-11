@@ -183,6 +183,10 @@
     margin-left: auto;
 }
 
+/*.bottomcontrols {
+    margin-top: var(--space_big);
+}*/
+
 
 /* ----------------------------------------------
    *       PAGE STYLING (HERE FOR NOW)

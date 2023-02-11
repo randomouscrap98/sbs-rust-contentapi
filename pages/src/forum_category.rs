@@ -49,7 +49,26 @@ pub fn render(mut data: MainLayoutData, category: ForumCategory, path: Vec<Forum
                     a."current"[page.current] href={(data.links.forum_category(&category.category))"?page="(page.page)} { (page.text) }
                 }
             }
+            //Not sure if we should re-use pagelist, probably bad
+            div."smallseparate pagelist" {
+                a."coolbutton" href=(data.links.forum_thread_editor_new(&category.category)) { "New thread" }
+            }
         }
+        //NOTE: to keep forum rendering simple, the editor for new threads should be the SAME as the post editor! well... ok maybe
+        //not the SAME editor but it should work the same: just a page with a form. Makes things WAY easier!
+        //So you'll have: /forum/thread/edit?cid=123, or /forum/thread/edit?tid=123, one for new, one for edit.
+        //Then, you'll have /forum/post/edit?tid=123 for new, or /forum/post/edit?pid=123 for edit. If replying, it might be
+        // /forum/post/edit?tid=123&replyid=123. These will just be used to generate the page, changing the form and the data displayed.
+        //replyid is only valid for new posts, and will be ignored in regular edits since it won't be acceptable to add.
+        /*section {
+            form method="POST" #"thread_form" action={(data.links.http_root)"/userhome?bio=1#update-userbio"} {
+                (errorlist(thread_errors))
+                input type="hidden" name="parent_id" value=(i(&category.category.id));
+                input type="text" name="name" value=(3);
+                textarea #"update_userbio" type="text" name="text"{(bio_text)}
+                input type="submit" value="Update";
+            }
+        }*/
     }).into_string()
 }
 

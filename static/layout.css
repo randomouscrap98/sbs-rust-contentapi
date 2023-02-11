@@ -129,10 +129,26 @@ form input, form textarea {
     margin-bottom: 0.5em;
 }
 
-form textarea {
+/*form textarea {
     width: 100%;
     max-width: 50em;
     height: 10em;
+}*/
+
+form.editor {
+    width: 100%;
+    max-width: 50em; /* Eh? Not sure... */
+}
+
+form.editor textarea {
+    height: 10em;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+form.editor input {
+    width: 100%;
+    box-sizing: border-box;
 }
 
 
