@@ -39,7 +39,7 @@ pub fn render(data: MainLayoutData, form: ThreadForm, category_info: Option<Cont
             @if let Some(title) = title {
                 h1 { (title) }
                 //NOTE: NO ACTION! These kinds of pages always post to themselves
-                form."editor" #"threadeditform" method="POST" {
+                form."editor" #"threadedit_form" method="POST" {
                     (errorlist(errors))
                     input #"threadedit_parent_id" type="hidden" name="parent_id" value=(form.parent_id);
                     label for="threadedit_title"{"Thread title:"}

@@ -31,6 +31,11 @@ function randomUsername()
     return ("test" + rnd.substring(rnd.indexOf(".") + 1)).substring(0, 16); //Just in case
 }
 
+function randomTitle()
+{
+    return randomUsername(); //For now, this is good enough
+}
+
 //function chainCallback(cb1, cb2) { return () => { cb1(); cb2(); } }
 function nonblockingCallback(callback) { return () => setTimeout(callback, 0); }
 
@@ -44,25 +49,29 @@ function loadIframe(relativeUrl, callback)
     testframe.src = relativeUrl;
 }
 
-//Post a form on an ALREADY LOADED iframe.
+//Post a form on an ALREADY LOADED iframe. The form is expected to be pre-filled
 function postIframe(form, callback)
 {
-    console.log("📫 Posting form " + form.id);
+    console.log("📫 Posting form " + form.getAttribute("id"));
     //Don't let anything block the load event. Don't depend on this though, it may change
     testframe.onload = nonblockingCallback(callback);
     submit_regular_form(form);
 }
 
+//Post a form on an ALREADY LOADED iframe, but go find it and apply some data first. 
+//If no data is supplied, the function skips applying but still functions normally
+function postIframeData(formId, formObj, callback)
+{
+    var form = testframe.contentWindow.document.getElementById(formId);
+    if(!form) throw "Couldn't find form with id " + formId;
+    if(formObj) apply_to_form(formObj, form);
+    postIframe(form, callback);
+}
+
 //First load, then post a form on the loaded iframe using the given information
 function loadAndPostIframe(relativeUrl, formId, formObj, callback)
 {
-    loadIframe(relativeUrl, () =>
-    {
-        var form = testframe.contentWindow.document.getElementById(formId);
-        if(!form) throw "Couldn't find form with id " + formId;
-        apply_to_form(formObj, form);
-        postIframe(form, callback);
-    });
+    loadIframe(relativeUrl, () => postIframeData(formId, formObj, callback));
 }
 
 //Perform a test of the given name on the currently loaded iframe
@@ -81,6 +90,25 @@ function xpath(xpath)
     //var result = idoc.evaluate(xpath, idoc, namespaceResolver, resultType, result);
 }
 
+//Run a function on each of the results of the given query selector (against the
+//currently loaded iframe)
+function selectorEach(path, func)
+{
+    var results = testframe.contentWindow.document.querySelectorAll(path);
+    for(var i = 0; i < results.length; i++)
+        func(results[i], i);
+    return results.length;
+}
+
+function selectorSingle(path)
+{
+    return testframe.contentWindow.document.querySelector(path);
+}
+
+function assertTrue(value, message) { if(!value) throw (message || "Expected to be true"); }
+function assertFalse(value, message) { if(value) throw (message || "Expected to be false"); }
+function assertEqual(a, b) { assertTrue(a === b, `${a} does not equal ${b}`); }
+
 //Ensure the given xpath does or does not lead to an actual element (look in iframe)
 function assertExistsGeneric(path, exists)
 {
@@ -98,6 +126,19 @@ function assertAtPath(path)
 { 
     var iframePath = testframe.contentWindow.document.location.pathname;
     if(iframePath !== path) throw `Expected iframe to be at ${path} but it was at ${iframePath}`
+}
+
+function assertAtPathQuery(path)
+{
+    var iloc = testframe.contentWindow.document.location;
+    var iframePath = iloc.pathname + iloc.search;
+    if(iframePath !== path) throw `Expected iframe to be at ${path} but it was at ${iframePath}`
+}
+
+function assertLocationRegex(regex)
+{
+    var iframePath = testframe.contentWindow.location.href; //FULL path!
+    if(!iframePath.match(regex)) throw `Expected iframe to match ${regex} but it was at ${iframePath}`;
 }
 
 //Because everything is a callback, and we never know what we might be waiting on, this turns a simple array
@@ -160,6 +201,18 @@ function completeRegistration(cb)
 // ** THE REST ARE ALL THE TESTS! **
 // ---------------------------------
 
+//NOTE: we have some globals here; they are basically constants but we don't know what they are until
+//we inspect the page. They become available after certain tests are run, which makes the whole thing
+//very fragile. Consider changing this somehow in the future (I don't care right now)
+var sbs_categories = [];    //The HASHES for all sbs categories listed in the main forum page
+var base_category = {};     //The category to run thread tests agains (such as newthread/etc) 
+var newthread_link = "";    //The link to get to someplace which lets us create a new thread in a safe space
+
+var newthread_data = {
+    title: randomTitle(), //This title should be 1-1 translatable to a hash
+    post: "this is just some [b]random[/b] post\ni don't care"
+};
+
 function runtests()
 {
     currentSuite = "prepping";
@@ -171,16 +224,17 @@ function runtests()
         [ login_tests, (cb) => loadIframe("/login", cb) ],
         [ register_confirm_tests, (cb) => loadAndPostIframe("/register", "register_form", currentUserToForm(), cb)],
         [ userhome_tests, completeRegistration ],
+        [ forum_main_tests, (cb) => loadIframe("/forum", cb)],
+        [ forum_category_tests, (cb) => loadIframe(base_category.link, cb)], //NOTE: HAVE to do forummain tests first, as they populate the sbs_category array!
+        [ forum_newthread_form_tests, (cb) => loadIframe(newthread_link, cb)], //Just check the form itself
+        [ forum_newthread_tests, (cb) => postIframeData("threadedit_form", newthread_data, cb)], //We're already on the right page, so just post and check
         //This should normally come WAY later, after you are FULLY done with the 'currentTestUser', so add other tests to do with 
         //the actual currentTestUser above this.
         [ register_confirm_tests, (cb) => {
             resetCurrentTestUser();
             loadAndPostIframe("/register", "register_form", currentUserToForm(), cb);
         }],
-        [ register_resend_tests, (cb) => {
-            var form = testframe.contentWindow.document.getElementById("resend_form");
-            postIframe(form, cb);
-        }],
+        [ register_resend_tests, (cb) => postIframeData("resend_form", null, cb)],
         [ userhome_tests, completeRegistration ],
         [ root_tests, (cb) => loadIframe("/logout", cb) ], //And then back to the start; root tests already test for not-logged-in
     ]);
@@ -212,7 +266,6 @@ function register_confirm_tests()
     test("resend_email_filled", () => assertExists(`//input[@id="resend_email" and @value="${currentTestUser.email}"]`));
 }
 
-//This may change to "userhome" tests
 function userhome_tests()
 {
     test("at_userhome", () => assertAtPath("/userhome"));
@@ -222,6 +275,49 @@ function userhome_tests()
     //username exist, email exist, logout link exist, userpage exist
     //do NOT update bio! go to userpage first, make sure it shows up ok
     //make sure to upload a file too! maybe...?
+}
+
+// Test the main forum list. This populates the globals "sbs_categories" and "base_category"
+function forum_main_tests()
+{
+    test("at_categories", () => assertAtPath("/forum"));
+    sbs_categories = [];
+    selectorEach(".categoryinfo h1 a", (e, i) =>
+    {
+        let href = e.getAttribute("href");
+        sbs_categories.push({
+            link: href,
+            title: e.textContent,
+            id: e.getAttribute("title").match(/\d+/)[0],
+            hash: href.match(/\/([^\/]*)$/)[1]
+        });
+    });
+    test("found_categories", () => assertTrue(sbs_categories.length > 4, `Not enough categories found! (${sbs_categories.length}, expected > 4)`))
+    base_category = sbs_categories[0];
+}
+
+// Test against one of the categories. This populates the global "newthread_link"
+function forum_category_tests()
+{
+    test("at_firstcategory", () => assertAtPath(base_category.link));
+
+    //Instead of using the normal test, we go query for the new thread link and perform
+    //other kinds of tests on it (because we need the value within)
+    var newThread = selectorSingle("#newthread");
+    test("has_newthread", () => assertTrue(newThread, "Couldn't find newthread link!"));
+    newthread_link = newThread.getAttribute("href");
+}
+
+function forum_newthread_form_tests()
+{
+    test("at_newthreadform", () => assertAtPathQuery(newthread_link));
+    test("has_categorytitle", () => assertExists(`//h1[contains(text(), "${base_category.title}")]`));
+    test("has_categoryinput", () => assertExists(`//form/input[@name="parent_id" and @value="${base_category.id}"]`));
+}
+
+function forum_newthread_tests()
+{
+    test("at_newthread", () => assertLocationRegex(new RegExp(`/forum/thread/${newthread_data.title}/\\d+#(.*)$`)));
 }
 
 function register_resend_tests()

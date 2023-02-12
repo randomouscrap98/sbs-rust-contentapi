@@ -51,7 +51,7 @@ pub fn render(mut data: MainLayoutData, category: ForumCategory, path: Vec<Forum
             }
             //Not sure if we should re-use pagelist, probably bad
             div."smallseparate pagelist" {
-                a."coolbutton" href=(data.links.forum_thread_editor_new(&category.category)) { "New thread" }
+                a."coolbutton" #"newthread" href=(data.links.forum_thread_editor_new(&category.category)) { "New thread" }
             }
         }
         //NOTE: to keep forum rendering simple, the editor for new threads should be the SAME as the post editor! well... ok maybe
