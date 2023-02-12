@@ -258,6 +258,7 @@ impl ApiContext
     make_post_endpoint!{post_request<FullRequest,RequestResult>("/request")}
     make_post_endpoint!{post_userupdate<User,User>("/write/user")}
     make_post_endpoint!{post_content<Content,Content>("/write/content")}
+    make_post_endpoint!{post_message<Message,Message>("/write/message")}
     make_post_endpoint!{post_ban<UserBan,UserBan>("/write/ban")}
     make_post_endpoint!{post_registrationconfig<forms::RegistrationConfig,forms::RegistrationConfig>("/user/registrationconfig")}
 
