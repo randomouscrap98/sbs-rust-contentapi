@@ -462,7 +462,7 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
         .boxed()
 }
 
-fn get_forum_edit_thread_route(state_filter: &BoxedFilter<(RequestContext,)>, _form_filter: &BoxedFilter<()>) -> BoxedFilter<(impl Reply,)> 
+fn get_forum_edit_thread_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> BoxedFilter<(impl Reply,)> 
 {
     //struct doesn't need to escape this function!
     #[allow(dead_code)]
@@ -479,7 +479,7 @@ fn get_forum_edit_thread_route(state_filter: &BoxedFilter<(RequestContext,)>, _f
                 pages::forum_edit_thread::get_render(pc!(context), Some(catparam.category), None),
                 context
             ) 
-        ); 
+        ).boxed(); 
     
     //Don't forget to add the other stuff!
     #[allow(dead_code)]
@@ -496,11 +496,30 @@ fn get_forum_edit_thread_route(state_filter: &BoxedFilter<(RequestContext,)>, _f
                 pages::forum_edit_thread::get_render(pc!(context), None, Some(threadparam.thread)),
                 context
             )
-        ); 
+        ).boxed(); 
 
-    warp::get()
-        .and(warp::path!("forum" / "edit" / "thread"))
-        .and(thread_new.or(thread_edit))
+            //std_resp!(pages::register::post_render(pc!(context), &form), context) 
+        //.and_then(|form, context: RequestContext| 
+        //    std_resp!(pages::register::post_render(pc!(context), &form), context) 
+        //).boxed();
+    let thread_post = warp::any()
+        .and(warp::body::form::<common::forms::ThreadForm>())
+        .and(state_filter.clone())
+        .and_then(|form: common::forms::ThreadForm, context: RequestContext| {
+            std_resp!(pages::forum_edit_thread::post_render(pc!(context), form), context) 
+            //let gc = context.global_state.clone();
+            ////let login = form.to_api_login(
+            ////    gc.config.default_cookie_expire, 
+            ////    gc.config.long_cookie_expire);
+            //async move {
+            //    let (response,token) = pages::forum_edit_thread::post_render(pc!(context), &form).await;
+            //    handle_response_with_token(response, &gc.link_config, token, login.expireSeconds)
+            //}
+        }).boxed();
+
+    warp::path!("forum" / "edit" / "thread")
+        .and(warp::get().and(thread_new.or(thread_edit))
+            .or(warp::post().and(form_filter.clone()).and(thread_post)))
         .boxed()
 }
 
