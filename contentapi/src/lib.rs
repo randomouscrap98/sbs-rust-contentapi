@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 pub mod endpoints;
 pub mod forms;
 pub mod conversion;
+pub mod search;
 
 /// Create the values for ['Content'] or ['Message'] from a simple list of key : value pairs
 #[macro_export]

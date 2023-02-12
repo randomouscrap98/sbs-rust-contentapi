@@ -1,4 +1,5 @@
 use core::fmt::Debug;
+//use std::error::Error;
 
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -21,6 +22,7 @@ pub enum ApiError
     Parse(AboutRequest, String, Option<Vec<u8>>),        //Something didn't parse correctly! This is common enough to be its own error
     Network(AboutRequest, String),      //Is the API reachable? Endpoint not necessary most likely; this indicates an error beyond 404
     Request(AboutRequest, String, u16), //Oh something went wrong with the request itself! Probably a 400 or 500 error
+    Other(String)                       //Avoid this at all costs, if you can
 }
 
 impl ApiError {
@@ -29,7 +31,8 @@ impl ApiError {
             Self::NonRequest(_,err) => err.clone(),
             Self::Parse(_,err,_) => err.clone(),
             Self::Network(_,err) => err.clone(),
-            Self::Request(_,err,_) => err.clone() //May change?
+            Self::Request(_,err,_) => err.clone(), //May change?
+            Self::Other(err) => err.clone()
         }
     }
     pub fn to_status(&self) -> u16 {
@@ -37,7 +40,8 @@ impl ApiError {
             Self::NonRequest(_,_) => 500,
             Self::Parse(_,_,_) => 500,
             Self::Network(_,_) => 503,
-            Self::Request(_,_,_) => 400
+            Self::Request(_,_,_) => 400,
+            Self::Other(_) => 500
         }
     }
     pub fn to_verbose_string(&self) -> String {
@@ -56,9 +60,18 @@ impl ApiError {
                 format!("[{}]{} - The backend seems to be unreachable: {}", about.verb, about.endpoint, err),
             Self::Request(about,err,api_status_code) => 
                 format!("[{}]{} - Bad request to API ({}): {}", about.verb, about.endpoint, api_status_code, err),
+            Self::Other(err) =>
+                format!("Generic API error: {}", err)
         }
     }
 }
+
+impl From<Box<dyn std::error::Error>> for ApiError {
+    fn from(error: Box<dyn std::error::Error>) -> Self {
+        Self::Other(error.to_string()) 
+    }
+}
+
 
 #[derive(Debug, Clone)]
 pub struct AboutRequest {
@@ -304,6 +317,7 @@ impl ApiContext
             None => None
         }
     }
+
 }
 
 

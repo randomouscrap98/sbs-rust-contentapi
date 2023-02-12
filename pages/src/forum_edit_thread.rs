@@ -7,6 +7,7 @@ use contentapi::*;
 
 use common::*;
 //use common::constants::*;
+use common::forms::*;
 use common::forum::*;
 use common::render::*;
 use common::render::forum::*;
@@ -14,18 +15,21 @@ use common::render::layout::*;
 //use common::pagination::*;
 use maud::*;
 
-
-pub fn render(data: MainLayoutData, new_in_category: Option<Content>, edit_thread: Option<Content>, errors: Option<Vec<String>>) -> String 
+//Rendering ALWAYS requires the form, even if it's just an empty one
+pub fn render(data: MainLayoutData, form: ThreadForm, category_info: Option<Content>, errors: Option<Vec<String>>) -> String 
 {
     let mut title : Option<String> = None;
-    let mut thread_name : Option<&str> = None;
+    let mut edit = false;
 
-    if let Some(ref category) = new_in_category {
-        title = Some(format!("New thread in '{}'", opt_s!(category.name)))
+    //Assume it's new or not based on the values in the form. The form drives this render
+    if form.id == 0 {
+        if let Some(ref category) = category_info {
+            title = Some(format!("New thread in '{}'", opt_s!(category.name)));
+        }
     }
-    else if let Some(ref thread) = edit_thread {
-        title = Some(format!("Edit thread: '{}'", opt_s!(thread.name)));
-        thread_name = thread.name.as_deref();
+    else {
+        title = Some(format!("Edit thread: '{}'", form.title));
+        edit = true;
     }
 
     layout(&data, html!{
@@ -36,18 +40,17 @@ pub fn render(data: MainLayoutData, new_in_category: Option<Content>, edit_threa
                 //NOTE: NO ACTION! These kinds of pages always post to themselves
                 form."editor" #"threadeditform" method="POST" {
                     (errorlist(errors))
-                    @if let Some(ref category) = new_in_category {
-                        input #"threadedit_category" type="hidden" name="category" value=(opt_s!(category.hash));
-                    }
+                    input #"threadedit_parent_id" type="hidden" name="parent_id" value=(form.parent_id);
                     label for="threadedit_title"{"Thread title:"}
-                    input #"threadedit_title" type="text" name="title" value=(opt_s!(thread_name));
-                    @if edit_thread.is_none() {
+                    input #"threadedit_title" type="text" name="title" value=(form.title);
+                    input #"threadedit_id" type="hidden" name="id" value=(form.id);
+                    @if edit {
+                        input type="submit" value="Update thread";
+                    }
+                    @else {
                         label for="threadedit_post" {"Post:"}
                         (post_textbox(Some("threadedit_post"), Some("post"), None))
                         input type="submit" value="Post thread";
-                    }
-                    @else {
-                        input type="submit" value="Update thread";
                     }
                 }
             }
@@ -62,20 +65,66 @@ pub async fn get_render(mut context: PageContext, category_hash: Option<String>,
     Result<Response, Error> 
 {
     let mut category : Option<Content> = None;
-    let mut thread : Option<Content> = None;
+    let mut form = ThreadForm::default();
 
     if category_hash.is_some() {
         let request = get_category_request(category_hash, None);
         let category_result = context.api_context.post_request_profiled_opt(&request, "getcategory").await?;
         let mut categories = cast_result_required::<Content>(&category_result, CATEGORYKEY)?;
         category = categories.pop();
+        form.parent_id = category.as_ref().and_then(|c| c.id).ok_or_else(|| Error::NotFound("Category not found!".to_string()))?;
     }
     if thread_hash.is_some() {
         let request = get_prepost_request(None, None, None, thread_hash); //get_category_request(category_hash, None);
         let thread_result = context.api_context.post_request_profiled_opt(&request, "getthread").await?;
         let mut threads = cast_result_required::<Content>(&thread_result, THREADKEY)?;
-        thread = threads.pop();
+        if let Some(thread) = threads.pop() {
+            //Only way this doesn't have this field is if I messed up, it's ok
+            form.title = thread.name.unwrap(); //ok_or_else(|| Error::Other("Programmer error: thread result didn't have title!".to_string()))?;
+            form.parent_id = thread.parentId.unwrap(); //ok_or_else(|| Error::Other("Programmer error: thread result didn't have parent id!".to_string()))?;
+            form.id = thread.id.unwrap(); //ok_or_else(|| Error::Other("Programmer error: thread result didn't have parent id!".to_string()))?;
+        }
+        else {
+            return Err(Error::NotFound("Thread not found!".to_string()));
+        }
     }
 
-    Ok(Response::Render(render(context.layout_data, category, thread, None)))
+    Ok(Response::Render(render(context.layout_data, form, category, None)))
 }
+
+pub async fn post_render(mut context: PageContext, form: ThreadForm) ->
+    Result<Response, Error>
+{
+    //Creating a thread will show up as two events, and requires two inserts. How do we approach this?
+    //The history will show "this user created thread 'whatever'" and then immediately posting. Actually,
+    //go see what this looks like in person. It looks fine, just leave it for now.
+
+    //So, we use the api to create content, then on success we add our post with defaults.
+    if let Some(ref user) = context.layout_data.user 
+    {
+        let mut errors = Vec::new();
+        let mut content = Content::default();
+        //note: the hash it autogenerated from the name (hopefully)
+        content.text = Some(String::from("")); //Threads have no text... kinda weird but just easier
+        content.id = Some(0);
+        content.name = Some(thread.title);
+        content.parentId = Some(thread.parent_id);
+        content.contentType = Some(ContentType::PAGE);
+        content.permissions = Some(make_permissions! {
+            "0": "CR" //Create so people can post on your "wall" (idk if that'll ever happen)
+        });
+        content.values = Some(make_values! {
+            "markup": "bbcode"
+        });
+        context.api_context.post_content(&content).await.map_err(|e| e.into())
+    }
+    else {
+        Err(Error::Other(String::from("Not logged in!")))
+    }
+}
+
+//No editing for now
+//pub async fn post_edit_render(mut context: PageContext, id: i64, parent_id: i64, title: String)
+//{
+//
+//}

@@ -40,6 +40,23 @@ pub struct BasicPage
     pub text: String
 }
 
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct ThreadForm
+{
+    pub id: i64, //Should default to 0
+    pub parent_id: i64,
+    pub title: String,
+    pub post: Option<String> //Not present on thread edits
+}
+
+//#[derive(Serialize, Deserialize, Debug)]
+//pub struct EditThread
+//{
+//    pub id: i64,
+//    pub parent_id: i64,
+//    pub title: String,
+//    //Not sure what else to do with this for now
+//}
 
 // ------------------------
 // *    QUERY PARAMS      *
