@@ -58,7 +58,12 @@ pub fn activity_item(links: &LinkConfig, item: &SbsActivity) -> Markup {
                     a."username flatlink" href=(links.user(item.user)) { (item.user.username) }
                     span { (item.action_text) }
                     @if let Some((href, text)) = &item.activity_href {
-                        (activity_link(text, href))
+                        @if let Some(href) = href {
+                            (activity_link(text, href))
+                        }
+                        @else {
+                            span."error" { "'" (text) "'" }
+                        }
                     }
                     //span."action" { (PreEscaped(&item.action_text)) }
                     time."aside" datetime=(dd(&item.date)) { (timeago(&item.date)) } 
@@ -88,7 +93,7 @@ pub struct SbsActivity<'a> {
     pub date: DateTime<Utc>,
     pub user: &'a User,
     pub action_text: String, //This is RAW, WITH whatever links you need!
-    pub activity_href: Option<(String,String)>,
+    pub activity_href: Option<(Option<String>,String)>,
     pub extra_text: Option<String>,
 }
 
@@ -104,12 +109,14 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     add_value!(request, "allowed_types", vec![
         SBSPageType::PROGRAM, 
         SBSPageType::RESOURCE,
-        SBSPageType::FORUMTHREAD
+        SBSPageType::FORUMTHREAD,
     ]); //common::forum::ALLOWEDTYPES);
+
+    add_value!(request, "deleted", UserAction::DELETE);
 
     let mut user_query = String::new();
     let mut message_query = String::from("!basiccomments() and !literaltypein(@allowed_types)");
-    let mut activity_query = String::from("!basichistory() and !literaltypein(@allowed_types)");
+    let mut activity_query = String::from("!basichistory() and (!literaltypein(@allowed_types) or action = @deleted)");
     let mut order_cd = "createDate_desc";
     let mut order_d = "date_desc";
 
@@ -236,7 +243,7 @@ pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page
             date: post.createDate.unwrap_or_default(), 
             user: this_user,
             action_text: String::from("posted on"), 
-            activity_href: Some((context.layout_data.links.forum_post(post, &this_content),String::from(opt_s!(this_content.name)))),
+            activity_href: Some((Some(context.layout_data.links.forum_post(post, &this_content)),String::from(opt_s!(this_content.name)))),
             extra_text: Some(context.bbcode.parse_profiled_opt(opt_s!(post.text), format!("post-{}", i(&post.id))))
         })
     }
@@ -262,11 +269,23 @@ pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page
             }
         );
 
+        //let link_text = if activity.action == Some(UserAction::DELETE) {
+        //    println!("A DELETE WAS FOUND: {:?}", activity);
+        //    &this_content.hash
+        //} else {
+        //    &this_content.name
+        //    //String::from(opt_s!(this_content.name))
+        //};
+
         result.push(SbsActivity { 
             date: activity.date.unwrap_or_default(), 
             user: this_user,
             action_text, //: String::from("posted on"), 
-            activity_href: Some((context.layout_data.links.forum_thread(&this_content),String::from(opt_s!(this_content.name)))),
+            activity_href: if activity.action == Some(UserAction::DELETE) {
+                Some((None, format!("{} ({})", opt_s!(this_content.hash), i(&this_content.id))))
+            } else {
+                Some((Some(context.layout_data.links.forum_thread(&this_content)), String::from(opt_s!(this_content.name))))
+            },
             extra_text: activity.message.clone()
         })
     }
