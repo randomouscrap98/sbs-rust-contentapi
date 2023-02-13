@@ -286,7 +286,9 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
                             a."coolbutton" #"editthread" href=(data.links.forum_thread_editor_edit(&thread.thread)) { "Edit thread" }
                         }
                         @if can_delete_thread(user, &thread.thread) {
-                            a."coolbutton" #"deletethread" href=(data.links.forum_thread_delete(&thread.thread)) { "Delete thread" }
+                            form."nospacing" #"deletethread" method="POST" action=(data.links.forum_thread_delete(&thread.thread)) {
+                                input."coolbutton" data-confirmdelete=(format!("thread '{}'", opt_s!(&thread.thread.name))) type="submit" value="Delete thread";
+                            }
                         }
                     }
                 }

@@ -165,6 +165,19 @@ pub async fn post_render(context: PageContext, form: ThreadForm) ->
     }
 }
 
+pub async fn delete_render(context: PageContext, thread_id: i64) ->
+    Result<Response, Error>
+{
+    //This is a VERY DUMB delete endpoint, because it just passes it through to the backend. Then the backend will
+    //produce errors and the resulting screen will just be one of the ugly 400 screens (which we might spruce up).
+    //I don't care much about it because the delete thread isn't a form, its just a button, so putting the usual
+    //error box doesn't really work.
+    context.api_context.post_delete_content(thread_id).await?;
+
+    //Again, super dumb
+    Ok(Response::Redirect(context.layout_data.links.activity()))
+}
+
 //No editing for now
 //pub async fn post_edit_render(mut context: PageContext, id: i64, parent_id: i64, title: String)
 //{

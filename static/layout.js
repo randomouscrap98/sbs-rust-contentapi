@@ -5,6 +5,7 @@
 upgrade_forms();
 upgrade_times();
 upgrade_code();
+upgrade_deleteconfirm();
 
 function upgrade_forms()
 {
@@ -53,6 +54,23 @@ function upgrade_times()
         times[i].setAttribute("title", date.toLocaleString());
     }
 
+}
+
+function upgrade_deleteconfirm()
+{
+    //We're looking for SPECIFICALLY inputs with the delete confirm, since we'll be interrupting the 
+    //submit and then submitting after the confirm
+    var deleteconfirms = document.querySelectorAll('input[data-confirmdelete]');
+    console.log("Found delete confirms: ", deleteconfirms)
+    for(var i = 0; i < deleteconfirms.length; i++)
+    {
+        let deleteInput = deleteconfirms[i];
+        deleteInput.onclick = (e) => {
+            e.preventDefault();
+            if (confirm("Are you sure you want to delete " + deleteInput.getAttribute("data-confirmdelete") + "?")) 
+                deleteInput.parentElement.submit();
+        };
+    }
 }
 
 //Onsubmit for standard (non-javascript) forms. This isn't required to

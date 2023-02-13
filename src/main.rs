@@ -345,6 +345,13 @@ async fn main()
             std_resp!(pages::register::post_render(pc!(context), &form), context) 
         ).boxed();
     
+    let post_thread_delete_route = warp::post()
+        .and(warp::path!("forum" / "delete" / "thread" / i64))
+        .and(state_filter.clone())
+        .and_then(|thread_id, context: RequestContext|
+            std_resp!(pages::forum_edit_thread::delete_render(pc!(context), thread_id), context)
+        ).boxed();
+    
     let legacy_page_pid = warp_get_async!(
         warp::path!("page").and(warp::query::<pages::page::PageQuery>()),
         |query, context:RequestContext| 
@@ -359,6 +366,7 @@ async fn main()
         .or(get_search_route)
         .or(get_forum_route(&state_filter)) //HEAVILY multiplexed! Lots of legacy forum paths!
         .or(get_forum_edit_thread_route(&state_filter, &form_filter))
+        .or(post_thread_delete_route)
         .or(get_forum_category_route)
         .or(get_forum_thread_route)
         .or(get_forum_post_route)

@@ -29,6 +29,10 @@ impl LinkConfig {
         format!("{}/page/{}", self.http_root, opt_s!(page.hash))
     }
 
+    pub fn activity(&self) -> String {
+        format!("{}/activity", self.http_root)
+    }
+
     pub fn forum_category(&self, category: &Content) -> String {
         self.forum_category_unsafe(opt_s!(category.hash))
     }
