@@ -5,6 +5,7 @@ use crate::constants::*;
 
 use contentapi::conversion::*;
 use contentapi::*;
+use contentapi::permissions::can_user_action;
 
 
 //Not sure if we need values, but I NEED permissions to know if the thread is locked
@@ -411,3 +412,20 @@ pub fn get_reply_request(root_post_id: i64) -> FullRequest
     request
 }
 
+//------------------
+//   PERMISSIONS
+//------------------
+
+pub fn can_edit_thread(user: &User, thread: &Content) -> bool
+{
+    can_user_action(user, "U", thread)
+}
+
+pub fn can_delete_thread(user: &User, _thread: &Content) -> bool
+{
+    //NOTE: we WERE going to have groups and all that for "moderators" but no more: apparently contentapi
+    //doesn't let you modify comments/posts unless you're super, which means moderators would HAVE to 
+    //be super users anyway. As such, since we're only allowing "mods" to delete threads, this check
+    //is sufficient
+    user.admin
+}

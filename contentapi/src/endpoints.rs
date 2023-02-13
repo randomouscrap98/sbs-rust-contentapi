@@ -286,9 +286,9 @@ impl ApiContext
 
     //Some special wrappers
 
-    //This consumes the error and returns "None", since it could just be that the token is stupid. In the future,
-    //we may want to alert the user that their token is invalid somewhere, which would require propogating the
-    //error result AND checking the status to determine if we need JSON or not...
+    /// This consumes the error and returns "None", since it could just be that the token is stupid. In the future,
+    /// we may want to alert the user that their token is invalid somewhere, which would require propogating the
+    /// error result AND checking the status to determine if we need JSON or not...
     pub async fn get_me_safe(&self) -> Option<User>
     {
         //Only run if there IS a token

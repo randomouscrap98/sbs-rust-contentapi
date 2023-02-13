@@ -189,7 +189,7 @@ function currentUserToForm()
 
 function completeRegistration(cb)
 {
-    fetch(`${apiend}/user/getregistrationcodebyusername/${currentTestUser.username}`)
+    fetch(`${apiend}/user/debug/getregistrationcodebyusername/${currentTestUser.username}`)
         .then(r => r.text()).then(d => {
             var form = testframe.contentWindow.document.getElementById("complete_form");
             apply_to_form({"key":d}, form);

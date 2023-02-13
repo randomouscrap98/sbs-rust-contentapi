@@ -1,7 +1,7 @@
 use super::*;
 use contentapi::*;
 use contentapi::forms::*;
-
+use render::i;
 
 /// Extend LinkConfig to have additional functionality
 impl LinkConfig {
@@ -49,6 +49,10 @@ impl LinkConfig {
 
     pub fn forum_thread_editor_edit(&self, thread: &Content) -> String {
         format!("{}/forum/edit/thread?thread={}", self.http_root, opt_s!(thread.hash))
+    }
+
+    pub fn forum_thread_delete(&self, thread: &Content) -> String {
+        format!("{}/forum/delete/thread/{}", self.http_root, i(&thread.id))
     }
 
     pub fn forum_post_hash(post: &Message) -> String {

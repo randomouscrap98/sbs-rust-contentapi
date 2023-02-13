@@ -11,6 +11,7 @@ pub mod endpoints;
 pub mod forms;
 pub mod conversion;
 pub mod search;
+pub mod permissions;
 
 /// Create the values for ['Content'] or ['Message'] from a simple list of key : value pairs
 #[macro_export]
@@ -184,7 +185,8 @@ pub struct User
     //pub deleted: bool,
     #[serde(alias = "super", deserialize_with = "deserialize_bool_from_anything")]
     pub admin: bool,
-    pub createDate : DateTime<Utc>
+    pub createDate : DateTime<Utc>,
+    pub groups: Vec<i64>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

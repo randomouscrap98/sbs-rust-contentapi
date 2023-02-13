@@ -262,6 +262,9 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
         @if config.render_page && is_pagetype {
             (render_page(&data, bbcode, &thread))
         }
+        //it says "thread-top" because it is: it's the beginning of the section that displays posts. After the 
+        //for loop, it then displays pages, which is on the bottom of the thread, so it might seem confusing.
+        //maybe the id should be changed to an anchor, idr how to do that.
         section #"thread-top" data-selected=[config.selected_post_id] {
             @for (index,tree) in reply_tree.iter().enumerate() {
                 @let sequence = config.start_num.and_then(|s| Some(s + index as i32));
@@ -271,6 +274,20 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
                 div."smallseparate pagelist" {
                     @for page in pages {
                         a."current"[page.current] target="_top" href={(data.links.forum_thread(&thread.thread))"?page="(page.page)"#thread-top"} { (page.text) }
+                    }
+                }
+            }
+            //Only display the thread controls if it's NOT a regular page
+            @if !is_pagetype {
+                @if let Some(ref user) = context.layout_data.user {
+                    //TODO: again, reusing pagelist may be inappropriate. IDK
+                    div."smallseparate pagelist" {
+                        @if can_edit_thread(user, &thread.thread) {
+                            a."coolbutton" #"editthread" href=(data.links.forum_thread_editor_edit(&thread.thread)) { "Edit thread" }
+                        }
+                        @if can_delete_thread(user, &thread.thread) {
+                            a."coolbutton" #"deletethread" href=(data.links.forum_thread_delete(&thread.thread)) { "Delete thread" }
+                        }
                     }
                 }
             }

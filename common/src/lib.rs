@@ -149,7 +149,8 @@ pub fn user_or_default(user: Option<&User>) -> User {
             r#type: UserType::USER,
             admin: false,
             special: None,
-            createDate: chrono::Utc::now()
+            createDate: chrono::Utc::now(),
+            groups: Vec::new()
         }
     }
 }

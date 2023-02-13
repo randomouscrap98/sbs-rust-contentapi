@@ -30,6 +30,7 @@ pub fn render(data: MainLayoutData) -> String
                     li { "ALL rate limiting turned off!" }
                     li { "Email handler set to file or null" }
                     li { "Backdoor registration 'get code endpoint' active" }
+                    li { "Backdoor super updates allowed (this is A VERY dangerous setting!)" }
                     li { "Pre-existing data available (at least structure, categories, etc. not a fresh database)" }
                 }
             }
