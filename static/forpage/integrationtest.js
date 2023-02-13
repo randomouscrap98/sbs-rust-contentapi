@@ -207,6 +207,7 @@ function completeRegistration(cb)
 var sbs_categories = [];    //The HASHES for all sbs categories listed in the main forum page
 var base_category = {};     //The category to run thread tests agains (such as newthread/etc) 
 var newthread_link = "";    //The link to get to someplace which lets us create a new thread in a safe space
+var newthread_edit_link = ""; //The link to edit the new thread
 
 var newthread_data = {
     title: randomTitle(), //This title should be 1-1 translatable to a hash
@@ -228,6 +229,11 @@ function runtests()
         [ forum_category_tests, (cb) => loadIframe(base_category.link, cb)], //NOTE: HAVE to do forummain tests first, as they populate the sbs_category array!
         [ forum_newthread_form_tests, (cb) => loadIframe(newthread_link, cb)], //Just check the form itself
         [ forum_newthread_tests, (cb) => postIframeData("threadedit_form", newthread_data, cb)], //We're already on the right page, so just post and check
+        [ forum_newthread_general_tests, (cb) => {
+            //Update the thread data to reflect the edited title
+            newthread_data.title = newthread_data.title.replace("test", "tesw");
+            loadAndPostIframe(newthread_edit_link, "threadedit_form", { title: newthread_data.title }, cb);
+        }], //We're already on the right page, so just post and check
         //This should normally come WAY later, after you are FULLY done with the 'currentTestUser', so add other tests to do with 
         //the actual currentTestUser above this.
         [ register_confirm_tests, (cb) => {
@@ -315,9 +321,22 @@ function forum_newthread_form_tests()
     test("has_categoryinput", () => assertExists(`//form/input[@name="parent_id" and @value="${base_category.id}"]`));
 }
 
+function forum_newthread_general_tests()
+{
+    test("has_title", () => assertExists(`//section/h1[text()="${newthread_data.title}"]`));
+    var piece = newthread_data.post.match(/^([^\[]*)\[/)[1]; 
+    test("has_post", () => assertExists(`//div[contains(@class,"post")]//div[contains(@class,"content") and contains(text(),"${piece}")]`));
+    //Because we're logged in AND it's our thread, we should be able to edit it. BUT we should NOT be able to delete it
+    test("has_editthread", () => assertExists("#editthread"));
+    test("missing_deletethread", () => assertNotExists("#deletethread"));
+}
+
 function forum_newthread_tests()
 {
     test("at_newthread", () => assertLocationRegex(new RegExp(`/forum/thread/${newthread_data.title}/\\d+#(.*)$`)));
+    forum_newthread_general_tests();
+    var editThread = selectorSingle("#editthread");
+    newthread_edit_link = editThread.getAttribute("href");
 }
 
 function register_resend_tests()
