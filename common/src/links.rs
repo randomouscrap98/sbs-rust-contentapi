@@ -47,6 +47,15 @@ impl LinkConfig {
         format!("{}/forum/thread/{}", self.http_root, opt_s!(thread.hash))
     }
 
+    pub fn forum_post_hash(post: &Message) -> String {
+        format!("#post_{}", post.id.unwrap_or_default())
+    }
+
+    pub fn forum_post(&self, post: &Message, thread: &Content) -> String {
+        format!("{}/forum/thread/{}/{}{}", self.http_root, opt_s!(thread.hash), post.id.unwrap_or_default(), Self::forum_post_hash(post))
+    }
+
+
     pub fn forum_thread_editor_new(&self, category: &Content) -> String {
         format!("{}/forum/edit/thread?category={}", self.http_root, opt_s!(category.hash))
     }
@@ -59,12 +68,26 @@ impl LinkConfig {
         format!("{}/forum/delete/thread/{}", self.http_root, i(&thread.id))
     }
 
-    pub fn forum_post_hash(post: &Message) -> String {
-        format!("#post_{}", post.id.unwrap_or_default())
+    /// Get the link to the post editor for a brand new post. You HAVE to specify which thread you're posting on, but
+    /// you can also optionally specify which post you're replying to.
+    pub fn forum_post_editor_new(&self, thread: &Content, reply_to: Option<&Message>) -> String {
+        format!("{}/forum/edit/post?thread={}{}", self.http_root, opt_s!(thread.hash),
+            if let Some(reply) = reply_to {
+                format!("&reply={}", i(&reply.id))
+            } else {
+                String::from("")
+            })
     }
 
-    pub fn forum_post(&self, post: &Message, thread: &Content) -> String {
-        format!("{}/forum/thread/{}/{}{}", self.http_root, opt_s!(thread.hash), post.id.unwrap_or_default(), Self::forum_post_hash(post))
+    /// Get the link to the post editor to edit the given message. You don't need extra data in this case, since 
+    /// the message to edit has all the info you need
+    pub fn forum_post_editor_edit(&self, post: &Message) -> String {
+        format!("{}/forum/edit/post?post={}", self.http_root, i(&post.id))
+    }
+
+    /// Get the link to delete a post. You'll need to POST to this to delete
+    pub fn forum_post_delete(&self, post: &Message) -> String {
+        format!("{}/forum/delete/post/{}", self.http_root, i(&post.id))
     }
 
 }

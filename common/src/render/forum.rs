@@ -278,10 +278,13 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
                 }
             }
             //Only display the thread controls if it's NOT a regular page
-            @if !is_pagetype {
-                @if let Some(ref user) = context.layout_data.user {
-                    //TODO: again, reusing pagelist may be inappropriate. IDK
-                    div."smallseparate pagelist" {
+            @if let Some(ref user) = context.layout_data.user {
+                //TODO: again, reusing pagelist may be inappropriate. IDK
+                div."smallseparate pagelist" {
+                    @if can_create_post(user, &thread.thread) {
+                        a."coolbutton" #"createpost" href=(data.links.forum_post_editor_new(&thread.thread, None)) { "New post" }
+                    }
+                    @if !is_pagetype {
                         @if can_edit_thread(user, &thread.thread) {
                             a."coolbutton" #"editthread" href=(data.links.forum_thread_editor_edit(&thread.thread)) { "Edit thread" }
                         }

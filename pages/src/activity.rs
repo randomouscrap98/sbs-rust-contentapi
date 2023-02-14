@@ -62,7 +62,9 @@ pub fn activity_item(links: &LinkConfig, item: &SbsActivity) -> Markup {
                             (activity_link(text, href))
                         }
                         @else {
-                            span."error" { "'" (text) "'" }
+                            span {(text)}
+                            //This version looks really messy
+                            //span."error" { "'" (text) "'" }
                         }
                     }
                     //span."action" { (PreEscaped(&item.action_text)) }

@@ -429,3 +429,8 @@ pub fn can_delete_thread(user: &User, _thread: &Content) -> bool
     //is sufficient
     user.admin
 }
+
+pub fn can_create_post(user: &User, thread: &Content) -> bool
+{
+    can_user_action(user, "C", thread)
+}
