@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use contentapi::*;
 use contentapi::forms::*;
+use contentapi::permissions::can_user_delete_message;
+use contentapi::permissions::can_user_edit_message;
 use maud::*;
 
 use crate::*;
@@ -95,6 +97,7 @@ pub struct PostsConfig {
     pub render_page: bool,
     pub render_reply_chain: bool,
     pub render_reply_link: bool,
+    pub render_controls: bool
     //pub render_sequence: bool
 }
 
@@ -113,7 +116,8 @@ impl PostsConfig {
             render_header: true,
             render_page: true,
             render_reply_chain: false,
-            render_reply_link: true
+            render_reply_link: true,
+            render_controls: true
         }
     }
     pub fn reply_mode(thread: ForumThread, related: HashMap<i64,Message>, users: HashMap<i64,User>, selected_post_id: Option<i64>) -> Self {
@@ -128,7 +132,8 @@ impl PostsConfig {
             render_header: false,
             render_page: false,
             render_reply_chain: true,
-            render_reply_link: false
+            render_reply_link: false,
+            render_controls: false
         }
     }
 }
@@ -290,7 +295,7 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
                         }
                         @if can_delete_thread(user, &thread.thread) {
                             form."nospacing" #"deletethread" method="POST" action=(data.links.forum_thread_delete(&thread.thread)) {
-                                input."coolbutton" data-confirmdelete=(format!("thread '{}'", opt_s!(&thread.thread.name))) type="submit" value="Delete thread";
+                                input."coolbutton notheme" data-confirmdelete=(format!("thread '{}'", opt_s!(&thread.thread.name))) type="submit" value="Delete thread";
                             }
                         }
                     }
@@ -408,6 +413,24 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
             div."postright" {
                 div."postheader" {
                     a."flatlink username" target="_top" href=(layout_data.links.user(&user)) { (&user.username) } 
+                    @if config.render_controls {
+                        @if let Some(ref current_user) = layout_data.user {
+                            div."postcontrols aside smallseparate" {
+                                @if can_create_post(&current_user, &config.thread.thread) {
+                                    a."postreply flatlink" title="Reply" href=(layout_data.links.forum_post_editor_new(&config.thread.thread, Some(post))) { "⮪ Reply" }
+                                }
+                                @if can_user_edit_message(&current_user, post) {
+                                    a."postedit flatlink" title="Edit" href=(layout_data.links.forum_post_editor_edit(post)) { "✎" }
+                                }
+                                @if can_user_delete_message(&current_user, post) {
+                                    form."nospacing" method="POST" action=(layout_data.links.forum_post_delete(post)) {
+                                        input."flatlink notheme" title="Delete" data-confirmdelete=(format!("post '{}'", opt_s!(&post.text))) type="submit" value="✖";
+                                    }
+                                    //a."postreply flatlink" title="Delete" href=(layout_data.links.forum_post_delete(post)) { "✖" }
+                                }
+                            }
+                        }
+                    }
                     @if let Some(sequence) = sequence {
                         a."sequence" target="_top" title=(i(&post.id)) href=(layout_data.links.forum_post(post, &config.thread.thread)){ "#" (sequence) } 
                     }

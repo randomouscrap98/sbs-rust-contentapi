@@ -36,7 +36,7 @@
 
 .post {
     display: flex;
-    align-items: flex-start;
+    align-items: stretch; /*flex-start;*/
 }
 
 .post.current {
@@ -69,18 +69,33 @@
 .post .avatar {
     width: 4em;
     border-radius: 0.5em;
+    margin-bottom: var(--space_small);
 }
 
 .postheader {
     display: flex;
+    align-items: center;
 }
 
 .postheader .username {
     font-size: 1.1em;
+    margin-right: auto;
+}
+
+.postcontrols {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    margin-right: var(--space_medium);
+}
+
+.postcontrols a.flatlink:visited, .postcontrols a.flatlink:link, .postcontrols input.flatlink {
+    color: var(--tc_aside);
 }
 
 .sequence {
-    margin-left: auto;
+    /*margin-left: auto;*/
     filter: opacity(0.6);
     font-size: 0.8em;
     text-decoration: none;

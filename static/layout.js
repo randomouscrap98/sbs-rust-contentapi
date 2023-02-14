@@ -65,9 +65,11 @@ function upgrade_deleteconfirm()
     for(var i = 0; i < deleteconfirms.length; i++)
     {
         let deleteInput = deleteconfirms[i];
+        let confirmText = "Are you sure you want to delete " + deleteInput.getAttribute("data-confirmdelete") + "?";
+        deleteInput.removeAttribute("data-confirmdelete");
         deleteInput.onclick = (e) => {
             e.preventDefault();
-            if (confirm("Are you sure you want to delete " + deleteInput.getAttribute("data-confirmdelete") + "?")) 
+            if (confirm(confirmText))
                 deleteInput.parentElement.submit();
         };
     }

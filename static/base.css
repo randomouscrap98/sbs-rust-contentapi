@@ -153,6 +153,14 @@ form {
     color: var(--tc_aside);
 }
 
+.faint {
+    opacity: 0.4;
+}
+
+.faint:hover, .faint:focus {
+    opacity: unset;
+}
+
 .largeinput {
     width: 30em;
     max-width: 100%;
@@ -185,6 +193,7 @@ form {
 .nospacing {
     margin: 0;
     padding: 0;
+    display: contents;
 }
 
 a.coolbutton, input.coolbutton {
@@ -211,9 +220,17 @@ a:link, a:visited {
     color: var(--tc_link);
 }
 
-a.flatlink:link, a.flatlink:visited {
+a.flatlink:link, a.flatlink:visited, input.flatlink {
     text-decoration: none;
     color: var(--tc_flatlink);
+}
+
+input.flatlink {
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    display: inline;
 }
 
 label.inline {

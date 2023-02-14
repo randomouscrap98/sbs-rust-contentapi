@@ -115,6 +115,8 @@ body[data-theme="sbs-blue"] {
     --line_width: 2.5px;
 }
 
+[data-theme="sbs-contrast"] .faint { opacity: unset; }
+
 [data-theme="sbs-dark-contrast"] {
     /* Main colors */
     --tc_main: #FFF;
@@ -163,6 +165,7 @@ body[data-theme="sbs-dark-contrast"] {
     filter: invert(0.8);
 }
 
+[data-theme="sbs-dark-contrast"] .faint { opacity: unset; }
 
 
 
