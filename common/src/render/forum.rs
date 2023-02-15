@@ -278,7 +278,6 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
 {
     let values = match &thread.thread.values { Some(values) => values.clone(), None => HashMap::new() };
 
-
     html!{
         section {
             //First check is if it's a program, then we float this box to the right
@@ -320,7 +319,8 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
                 div."content bbcode" { (PreEscaped(&bbcode.parse_profiled_opt(&text, format!("program-{}", i(&thread.thread.id))))) }
             }
             @if let Some(categories) = &thread.categories { //categories.len() > 0 {
-                div."pagelist smallseparate" {
+                hr."smaller";
+                div."categorylist smallseparate" {
                     @for category in categories {
                         a."flatlink" href=(data.links.search_category(category.id.unwrap_or_default())) { (opt_s!(category.name)) }
                     }

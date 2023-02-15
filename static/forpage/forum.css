@@ -239,6 +239,13 @@
     align-items: center;
 }
 
+.categorylist {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
 @media screen and (max-width: 55em) 
 {
     .programinfo { 

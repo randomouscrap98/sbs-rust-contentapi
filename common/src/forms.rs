@@ -80,7 +80,7 @@ impl Default for PageSearch {
         Self {
             search: None,
             order: String::from(POPSCORE1SORT), 
-            subtype: Some(String::from(SBSPageType::PROGRAM)), 
+            subtype: None, //Some(String::from(SBSPageType::PROGRAM)), 
             system: String::from(ANYSYSTEM),
             user_id: None,
             category: None,
