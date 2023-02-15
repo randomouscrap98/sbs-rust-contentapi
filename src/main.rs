@@ -366,6 +366,7 @@ async fn main()
         .or(get_search_route)
         .or(get_forum_route(&state_filter)) //HEAVILY multiplexed! Lots of legacy forum paths!
         .or(get_forum_edit_thread_route(&state_filter, &form_filter))
+        .or(get_forum_edit_post_route(&state_filter, &form_filter))
         .or(post_thread_delete_route)
         .or(get_forum_category_route)
         .or(get_forum_thread_route)
@@ -516,6 +517,56 @@ fn get_forum_edit_thread_route(state_filter: &BoxedFilter<(RequestContext,)>, fo
     warp::path!("forum" / "edit" / "thread")
         .and(warp::get().and(thread_new.or(thread_edit))
             .or(warp::post().and(form_filter.clone()).and(thread_post)))
+        .boxed()
+}
+
+fn get_forum_edit_post_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> BoxedFilter<(impl Reply,)> 
+{
+    //struct doesn't need to escape this function!
+    #[allow(dead_code)]
+    #[derive(Deserialize, Debug)]
+    struct NewPostParameters { 
+        thread: String,
+        reply: Option<i64>
+    }
+
+    let post_new = warp::any()
+        .and(warp::query::<NewPostParameters>())
+        .and(state_filter.clone())
+        .and_then(|param: NewPostParameters, context:RequestContext| 
+            std_resp!(
+                pages::forum_edit_post::get_render(pc!(context), Some(param.thread), None, param.reply),
+                context
+            ) 
+        ).boxed(); 
+    
+    //Don't forget to add the other stuff!
+    #[allow(dead_code)]
+    #[derive(Deserialize, Debug)]
+    struct EditPostParameter { 
+        post: i64
+    }
+
+    let post_edit = warp::any()
+        .and(warp::query::<EditPostParameter>())
+        .and(state_filter.clone())
+        .and_then(|param: EditPostParameter, context:RequestContext| 
+            std_resp!(
+                pages::forum_edit_post::get_render(pc!(context), None, Some(param.post), None),
+                context
+            )
+        ).boxed(); 
+
+    let post_post = warp::any()
+        .and(warp::body::form::<common::forms::PostForm>())
+        .and(state_filter.clone())
+        .and_then(|form: common::forms::PostForm, context: RequestContext| {
+            std_resp!(pages::forum_edit_post::post_render(pc!(context), form), context) 
+        }).boxed();
+
+    warp::path!("forum" / "edit" / "post")
+        .and(warp::get().and(post_new.or(post_edit))
+            .or(warp::post().and(form_filter.clone()).and(post_post)))
         .boxed()
 }
 

@@ -45,7 +45,7 @@ pub fn render(data: MainLayoutData, form: PostForm, thread_info: Option<Content>
                         input #"postedit_reply_id" type="hidden" name="reply_id" value=(reply_id);
                     }
                     label for="postedit_post" {"Post:"}
-                    (post_textbox(Some("postedit_post"), Some("post"), None))
+                    (post_textbox(Some("postedit_post"), Some("post"), Some(&form.post)))
                     input type="submit" value=(submit_value);
                 }
             }
@@ -78,6 +78,7 @@ pub async fn get_render(context: PageContext, thread_hash: Option<String>, post_
         let post = context.api_context.get_message_by_id(post_id, THISMESSAGEFIELDS).await?;
         form.content_id = post.contentId.unwrap();
         form.id = post.id.unwrap();
+        form.post = post.text.clone().unwrap();
         if let Some(reply_data) = get_replydata(&post) {
             form.reply_id = Some(reply_data.direct);
         }

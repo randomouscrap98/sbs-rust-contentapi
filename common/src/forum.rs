@@ -11,7 +11,7 @@ use contentapi::permissions::can_user_action;
 //Not sure if we need values, but I NEED permissions to know if the thread is locked
 pub static THREADFIELDS : &str = "id,name,lastCommentId,literalType,contentType,hash,parentId,commentCount,createDate,createUserId,values,permissions";
 //Need values to know the stickies
-pub static CATEGORYFIELDS: &str = "id,hash,name,description,literalType,contentType,values";
+pub static CATEGORYFIELDS: &str = "id,hash,name,description,literalType,contentType,values,permissions";
 
 //Note: these are keys for the REQUESTS, not anything else!
 pub static THREADKEY: &str = "thread";
