@@ -42,7 +42,8 @@ pub struct ForumThread {
     pub locked: bool,
     pub private: bool,
     pub neutral: bool, //Used by the frontend
-    pub posts: Vec<Message>
+    pub posts: Vec<Message>,
+    pub categories: Option<Vec<Content>>
 }
 
 impl ForumThread {
@@ -62,7 +63,8 @@ impl ForumThread {
         Ok(ForumThread { 
             locked, sticky, thread, private,
             neutral: !locked && !sticky,
-            posts: messages_raw.iter().filter(|m| m.contentId == thread_id).map(|m| m.clone()).collect()
+            posts: messages_raw.iter().filter(|m| m.contentId == thread_id).map(|m| m.clone()).collect(),
+            categories: None
         })
     }
 }

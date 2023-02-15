@@ -1,10 +1,40 @@
 
 use contentapi::*;
+use contentapi::endpoints::ApiContext;
+use contentapi::endpoints::ApiError;
+//use contentapi::endpoints::ApiContext;
+//use contentapi::endpoints::ApiError;
 use crate::constants::*;
 use crate::forms::*;
 
-// Generate the complicated FullRequest for the given search. Could be a "From" if 
-// the search included a per-page I guess...
+pub const CATEGORYPREFIX: &str = "tag:";
+//pub const CATEGORYSEARCHBASE: &str = "contentType = @systemtype and !notdeleted() and literalType = {{}}";
+pub const CATEGORYFIELDS: &str = "id,literalType,contentType,values,name";
+
+pub fn get_allcategory_query() -> String {
+    format!("contentType = {{{{{}}}}} and !notdeleted() and literalType = {{{{{}}}}}", ContentType::SYSTEM, SBSPageType::CATEGORY)
+}
+
+/// Get the list of category ids this content is tagged under
+pub fn get_tagged_categories(content: &Content) -> Vec<i64>
+{
+    let mut result : Vec<i64> = Vec::new();
+
+    if let Some(ref values) = content.values {
+        for (key, _value) in values {
+            if key.starts_with(CATEGORYPREFIX) {
+                if let Ok(category) = (&key[..CATEGORYPREFIX.len()]).parse::<i64>() {
+                    result.push(category)
+                }
+            }
+        }
+    }
+
+    result
+}
+
+/// Generate the complicated FullRequest for the given search. Could be a "From" if 
+/// the search included a per-page I guess...
 pub fn get_search_request(search: &PageSearch, per_page: i32) -> FullRequest
 {
     //Build up the request based on the search, then render
@@ -31,7 +61,7 @@ pub fn get_search_request(search: &PageSearch, per_page: i32) -> FullRequest
 
     if let Some(category) = search.category {
         if category != 0 {
-            add_value!(request, "categoryTag", vec![format!("tag:{}", category)]);
+            add_value!(request, "categoryTag", vec![format!("{}{}", CATEGORYPREFIX, category)]);
             query.push_str(" and !valuekeyin(@categoryTag)");
         }
     }
@@ -84,14 +114,36 @@ pub fn get_search_request(search: &PageSearch, per_page: i32) -> FullRequest
     );
     request.requests.push(user_request);
 
-    add_value!(request, "categorytype", SBSPageType::CATEGORY);
+    //add_value!(request, "categorytype", SBSPageType::CATEGORY);
     let mut category_request = build_request!(
         RequestType::content,
-        String::from("id,literalType,contentType,values,name"),
-        String::from("contentType = @systemtype and !notdeleted() and literalType = @categorytype") 
+        String::from(CATEGORYFIELDS),
+        get_allcategory_query()
+        //format!("{} and literalType = @categorytype", CATEGORYSEARCHBASE) 
     );
     category_request.name = Some(String::from("categories"));
     request.requests.push(category_request);
 
     request
+}
+
+pub async fn get_all_categories(context: &mut ApiContext, limit: Option<Vec<i64>>) -> Result<Vec<Content>, ApiError> //Box<dyn std::error::Error>>
+{
+    let mut request = FullRequest::new();
+
+    request.requests.push(build_request!(
+        RequestType::content,
+        String::from(CATEGORYFIELDS),
+        format!("{} {}", get_allcategory_query(), 
+            if let Some(limit) = limit {
+                add_value!(request, "limit", limit);
+                " and id in @limit"
+            } else { 
+                "" 
+            }
+        )
+    ));
+
+    let result = context.post_request_profiled_opt(&request, "all_categories").await?;
+    conversion::cast_result_required::<Content>(&result, &RequestType::content.to_string()).map_err(|e| e.into())
 }

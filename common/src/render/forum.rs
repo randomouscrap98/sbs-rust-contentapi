@@ -277,6 +277,8 @@ fn images_to_attr(config: &LinkConfig, images: &Vec<serde_json::Value>) -> Strin
 pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThread) -> Markup 
 {
     let values = match &thread.thread.values { Some(values) => values.clone(), None => HashMap::new() };
+
+
     html!{
         section {
             //First check is if it's a program, then we float this box to the right
@@ -316,6 +318,13 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
             //Next check is if there's even any text to show
             @if let Some(text) = &thread.thread.text {
                 div."content bbcode" { (PreEscaped(&bbcode.parse_profiled_opt(&text, format!("program-{}", i(&thread.thread.id))))) }
+            }
+            @if let Some(categories) = &thread.categories { //categories.len() > 0 {
+                div."pagelist smallseparate" {
+                    @for category in categories {
+                        a."flatlink" href=(data.links.search_category(category.id.unwrap_or_default())) { (opt_s!(category.name)) }
+                    }
+                }
             }
         }
     }

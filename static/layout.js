@@ -61,7 +61,6 @@ function upgrade_deleteconfirm()
     //We're looking for SPECIFICALLY inputs with the delete confirm, since we'll be interrupting the 
     //submit and then submitting after the confirm
     var deleteconfirms = document.querySelectorAll('input[data-confirmdelete]');
-    console.log("Found delete confirms: ", deleteconfirms)
     for(var i = 0; i < deleteconfirms.length; i++)
     {
         let deleteInput = deleteconfirms[i];

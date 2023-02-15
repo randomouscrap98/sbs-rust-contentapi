@@ -90,6 +90,10 @@ impl LinkConfig {
         format!("{}/forum/delete/post/{}", self.http_root, i(&post.id))
     }
 
+    pub fn search_category(&self, category: i64) -> String {
+        format!("{}/search?category={}", self.http_root, category)
+    }
+
 }
 
 impl MainLayoutData 

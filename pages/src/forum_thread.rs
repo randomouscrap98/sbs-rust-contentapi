@@ -57,8 +57,11 @@ async fn render_thread(mut context: PageContext, pre_request: FullRequest, per_p
 
     //Construct before borrowing 
     let path = vec![ForumPathItem::root(), ForumPathItem::from_category(&category.category), ForumPathItem::from_thread(&thread)];
+    let thread_tags_ids = submissions::get_tagged_categories(&thread);
+    let mut full_thread = ForumThread::from_content(thread, &messages_raw, &category.stickies)?;
+    full_thread.categories = Some(submissions::get_all_categories(&mut context.api_context, Some(thread_tags_ids)).await?);
     Ok(Response::Render(render(context, PostsConfig::thread_mode(
-        ForumThread::from_content(thread, &messages_raw, &category.stickies)?, 
+        full_thread,
         map_messages(related_raw),
         map_users(users_raw),
         path,

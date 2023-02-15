@@ -37,6 +37,8 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                     select #"search-category" name="category" {
                         option value="0" { "Any" }
                         @for category in &categories {
+                            //NOTE: this "selected" actually does work, it adds the attribute when appropriate. But
+                            //the select is not showing this when the page loads, so it may be js or something
                             option data-for=(category.forcontent) value=(category.id) selected[Some(category.id) == search.category] { 
                                 (category.name) 
                             }
