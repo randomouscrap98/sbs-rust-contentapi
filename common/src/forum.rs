@@ -142,6 +142,7 @@ impl CleanedPreCategory {
 }
 
 
+#[derive(Clone, Debug)]
 pub struct ReplyData {
     pub top: i64,
     pub direct: i64
@@ -185,13 +186,15 @@ pub fn get_new_replydata(post: &Message) -> ReplyData
     reply_data
 }
 
+#[derive(Clone, Debug)]
 pub struct ReplyTree<'a> {
     pub id: i64,
     pub post: &'a Message,
     pub children: Vec<ReplyTree<'a>>
 }
 
-impl<'a> ReplyTree<'a> {
+impl<'a> ReplyTree<'a> 
+{
     pub fn new(message: &'a Message) -> Self {
         ReplyTree { 
             id: message.id.unwrap_or_else(||0), 
@@ -199,25 +202,74 @@ impl<'a> ReplyTree<'a> {
             children: Vec::new() 
         }
     }
-}
 
-pub fn posts_to_replytree(posts: &Vec<Message>) -> Vec<ReplyTree> 
-{
-    let mut temp_tree : Vec<ReplyTree> =  Vec::new(); 
-    'outer: for post in posts.iter() {
-        if let Some(data) = get_replydata(post) {
-            //Slow and I don't care
-            for node in temp_tree.iter_mut() {
-                if node.id == data.direct {
-                    node.children.push(ReplyTree::new(post));
-                    continue 'outer;
+    pub fn insert_post(&mut self, post: &'a Message, data: &ReplyData) -> Option<&ReplyTree>
+    {
+        //If this is the node to insert into, return ourselves
+        if self.id == data.direct {
+            self.children.push(ReplyTree::new(post));
+            return self.children.last()
+        }
+        else {
+            //Otherwise, look through all the children. This is depth first recursion... whatever I guess.
+            for node in self.children.iter_mut() {
+                let result = node.insert_post(post, data);
+                if result.is_some() {
+                    return result;
                 }
             }
-            println!("WARN: could not find place for message {}, reply to {}", render::i(&post.id), data.direct);
         }
-        temp_tree.push(ReplyTree::new(post));
+
+        //If we make it here, it was never found
+        return None;
     }
-    temp_tree
+}
+
+//Recursive scan the given tree to find an insertion point for the given reply data
+//fn insert_reply<'a>(tree: &'a mut ReplyTree<'a>, post: &'a Message, data: &ReplyData) -> bool //Option<&'a mut ReplyTree<'a>>
+//{
+//    //If this is the node to insert into, return ourselves
+//    if tree.id == data.direct {
+//        tree.children.push(ReplyTree::new(post));
+//        return true;
+//        //return Some(tree);
+//    }
+//    else {
+//        //Otherwise, look through all the children. This is depth first recursion... whatever I guess.
+//        for node in tree.children.iter_mut() {
+//            if insert_reply(node, post, data) {
+//                return true;
+//            }
+//            //let found = find_insert_node(node, data);
+//            //if found.is_some() {
+//            //    return found;
+//            //}
+//        }
+//    }
+//
+//    //If we make it here, it was never found
+//    return false; //None
+//}
+
+/// Convert a list of posts into a tree. ASSUMES THE FIRST POST IS THE ROOT!!
+pub fn posts_to_replytree(posts: &Vec<Message>) -> Vec<ReplyTree> 
+{
+    if posts.len() == 0 {
+        return Vec::new();
+    }
+
+    let mut root = ReplyTree::new(&posts[0]);
+
+    for post in posts.iter().skip(1) {
+        if let Some(data) = get_replydata(post) {
+            if root.insert_post(post, &data).is_none() {
+                println!("WARN: could not find place for message {}, reply to {}", render::i(&post.id), data.direct);
+            }
+        }
+    }
+
+    println!("{:#?}", root);
+    vec![root]
 }
 
 
