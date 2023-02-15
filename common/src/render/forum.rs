@@ -372,7 +372,7 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
                                     a."postedit flatlink" title="Edit" href=(layout_data.links.forum_post_editor_edit(post)) { "✎" }
                                 }
                                 @if can_user_delete_message(&current_user, post) {
-                                    form."nospacing" method="POST" action=(layout_data.links.forum_post_delete(post)) {
+                                    form."postdelete nospacing" method="POST" action=(layout_data.links.forum_post_delete(post)) {
                                         input."flatlink notheme" title="Delete" data-confirmdelete=(format!("post '{}'", opt_s!(&post.text))) type="submit" value="✖";
                                     }
                                     //a."postreply flatlink" title="Delete" href=(layout_data.links.forum_post_delete(post)) { "✖" }

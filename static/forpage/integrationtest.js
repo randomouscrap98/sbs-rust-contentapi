@@ -214,10 +214,19 @@ var sbs_categories = [];    //The HASHES for all sbs categories listed in the ma
 var base_category = {};     //The category to run thread tests agains (such as newthread/etc) 
 var newthread_link = "";    //The link to get to someplace which lets us create a new thread in a safe space
 var newthread_edit_link = ""; //The link to edit the new thread
+var newthread_post_link = ""; //Link to post new post on new thread
+var random_submission_link = "/forum/thread/shadow-men"; //link to some random submission
 
 var newthread_data = {
     title: randomTitle(), //This title should be 1-1 translatable to a hash
     post: "this is just some [b]random[/b] post\ni don't care"
+};
+
+//The title may change, but the hash should not
+var newthread_hash = newthread_data.title;
+
+var newpost_data = {
+    post: "a brand new post! [u]underlines!"
 };
 
 function runtests()
@@ -239,7 +248,10 @@ function runtests()
             //Update the thread data to reflect the edited title
             newthread_data.title = newthread_data.title.replace("test", "tesw");
             loadAndPostIframe(newthread_edit_link, "threadedit_form", { title: newthread_data.title }, cb);
-        }], //We're already on the right page, so just post and check
+        }],
+        [ forum_newpost_form_tests, (cb) => loadIframe(newthread_post_link, cb) ],
+        [ forum_newpost_tests, (cb) => postIframeData("postedit_form", newpost_data, cb)], //We're already on the right page, so just post and check
+        [ random_submission_tests, (cb) => loadIframe(random_submission_link, cb)],
         //This should normally come WAY later, after you are FULLY done with the 'currentTestUser', so add other tests to do with 
         //the actual currentTestUser above this.
         [ register_confirm_tests, (cb) => {
@@ -334,15 +346,47 @@ function forum_newthread_general_tests()
     test("has_post", () => assertExists(`//div[contains(@class,"post")]//div[contains(@class,"content") and contains(text(),"${piece}")]`));
     //Because we're logged in AND it's our thread, we should be able to edit it. BUT we should NOT be able to delete it
     test("has_editthread", () => assertExists("#editthread"));
+    test("has_newpost", () => assertExists("#createpost"));
     test("missing_deletethread", () => assertNotExists("#deletethread"));
+    test("first_post_editable", () => assertExists(`/descendant::div[contains(@class,"post")][1]//a[contains(@class,"postedit")]`)); // descendant::bar[1]));
+    test("first_post_replyable", () => assertExists(`/descendant::div[contains(@class,"post")][1]//a[contains(@class,"postreply")]`)); // descendant::bar[1]));
+    test("first_post_deletable", () => assertExists(`/descendant::div[contains(@class,"post")][1]//form[contains(@class,"postdelete")]`)); // descendant::bar[1]));
 }
 
 function forum_newthread_tests()
 {
-    test("at_newthread", () => assertLocationRegex(new RegExp(`/forum/thread/${newthread_data.title}/\\d+#(.*)$`)));
+    test("at_newthread", () => assertLocationRegex(new RegExp(`/forum/thread/${newthread_hash}/\\d+#(.*)$`)));
     forum_newthread_general_tests();
     var editThread = selectorSingle("#editthread");
     newthread_edit_link = editThread.getAttribute("href");
+    var createPost = selectorSingle("#createpost");
+    newthread_post_link = createPost.getAttribute("href");
+}
+
+function forum_newpost_form_tests()
+{
+    test("at_newpostform", () => assertAtPathQuery(newthread_post_link));
+    test("has_threadtitle", () => assertExists(`//h1[contains(text(), "${newthread_data.title}")]`));
+    test("has_threadinput", () => assertExists(`//form/input[@name="content_id"]`));
+}
+
+function forum_newpost_tests()
+{
+    test("at_newthread", () => assertLocationRegex(new RegExp(`/forum/thread/${newthread_hash}/\\d+#(.*)$`)));
+    forum_newthread_general_tests();
+    var piece = newpost_data.post.match(/^([^\[]*)\[/)[1]; 
+    test("has_post", () => assertExists(`//div[contains(@class,"post")]//div[contains(@class,"content") and contains(text(),"${piece}")]`));
+}
+
+function random_submission_tests()
+{
+    test("at_submission", () => assertAtPath(random_submission_link));
+    test("no_editthread", () => assertNotExists("#editthread"));
+    test("no_deletethread", () => assertNotExists("#deletethread"));
+    test("has_newpost", () => assertExists("#createpost"));
+    test("first_post_replyable", () => assertExists(`/descendant::div[contains(@class,"post")][1]//a[contains(@class,"postreply")]`)); // descendant::bar[1]));
+    test("first_post_noedit", () => assertNotExists(`/descendant::div[contains(@class,"post")][1]//a[contains(@class,"postedit")]`)); // descendant::bar[1]));
+    test("first_post_nodelete", () => assertNotExists(`/descendant::div[contains(@class,"post")][1]//form[contains(@class,"postdelete")]`)); // descendant::bar[1]));
 }
 
 function register_resend_tests()
