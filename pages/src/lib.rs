@@ -20,6 +20,7 @@ pub mod page;
 pub mod admin;
 pub mod integrationtest;
 pub mod forum_edit_thread;
+pub mod forum_edit_post;
 
 //Email errors are weird with their true/false return. 
 macro_rules! email_errors {

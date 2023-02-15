@@ -49,14 +49,14 @@ pub struct ThreadForm
     pub post: Option<String> //Not present on thread edits
 }
 
-//#[derive(Serialize, Deserialize, Debug)]
-//pub struct EditThread
-//{
-//    pub id: i64,
-//    pub parent_id: i64,
-//    pub title: String,
-//    //Not sure what else to do with this for now
-//}
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct PostForm
+{
+    pub id: i64,
+    pub content_id: i64,
+    pub reply_id: Option<i64>,
+    pub post: String, //Always needed on post, of course
+}
 
 // ------------------------
 // *    QUERY PARAMS      *

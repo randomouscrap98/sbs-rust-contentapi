@@ -138,59 +138,6 @@ impl PostsConfig {
     }
 }
 
-struct ReplyData {
-    top: i64,
-    direct: i64
-}
-
-/// Compute the flattened reply data for the given message
-fn get_replydata(post: &Message) -> Option<ReplyData>
-{
-    if let Some(values) = &post.values {
-        if let Some(top) = values.get("re-top").and_then(|v| v.as_i64()) {
-            if let Some(direct) = values.get("re").and_then(|v| v.as_i64()) {
-                return Some(ReplyData { top, direct })
-            }
-        }
-    }
-    return None
-}
-
-struct ReplyTree<'a> {
-    id: i64,
-    post: &'a Message,
-    children: Vec<ReplyTree<'a>>
-}
-
-impl<'a> ReplyTree<'a> {
-    fn new(message: &'a Message) -> Self {
-        ReplyTree { 
-            id: message.id.unwrap_or_else(||0), 
-            post: message, 
-            children: Vec::new() 
-        }
-    }
-}
-
-fn posts_to_replytree(posts: &Vec<Message>) -> Vec<ReplyTree> 
-{
-    let mut temp_tree : Vec<ReplyTree> =  Vec::new(); 
-    'outer: for post in posts.iter() {
-        if let Some(data) = get_replydata(post) {
-            //Slow and I don't care
-            for node in temp_tree.iter_mut() {
-                if node.id == data.direct {
-                    node.children.push(ReplyTree::new(post));
-                    continue 'outer;
-                }
-            }
-            println!("WARN: could not find place for message {}, reply to {}", i(&post.id), data.direct);
-        }
-        temp_tree.push(ReplyTree::new(post));
-    }
-    temp_tree
-}
-
 fn walk_post_tree(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &PostsConfig, tree: &ReplyTree, 
     sequence: Option<i32>, posts_left: &mut i32) -> Markup
 {

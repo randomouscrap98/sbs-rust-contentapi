@@ -142,6 +142,85 @@ impl CleanedPreCategory {
 }
 
 
+pub struct ReplyData {
+    pub top: i64,
+    pub direct: i64
+}
+
+impl ReplyData {
+    pub fn write_to_values(&self, values: &mut HashMap<String, serde_json::Value>) {
+        values.insert(String::from("re-top"), self.top.into());
+        values.insert(String::from("re"), self.direct.into());
+    }
+}
+
+/// Compute the flattened reply data for the given message
+pub fn get_replydata(post: &Message) -> Option<ReplyData>
+{
+    if let Some(values) = &post.values {
+        if let Some(top) = values.get("re-top").and_then(|v| v.as_i64()) {
+            if let Some(direct) = values.get("re").and_then(|v| v.as_i64()) {
+                return Some(ReplyData { top, direct })
+            }
+        }
+    }
+    return None
+}
+
+/// Given a post, regenerate the new reply data that would properly point to this post
+pub fn get_new_replydata(post: &Message) -> ReplyData
+{
+    let id = post.id.unwrap_or_default();
+
+    let mut reply_data = ReplyData {
+        top: id,
+        direct: id
+    };
+
+    //Oh but if we can parse existing reply data off the message, that one's top becomes our top too
+    if let Some(existing) = get_replydata(post) {
+        reply_data.top = existing.top;
+    }
+
+    reply_data
+}
+
+pub struct ReplyTree<'a> {
+    pub id: i64,
+    pub post: &'a Message,
+    pub children: Vec<ReplyTree<'a>>
+}
+
+impl<'a> ReplyTree<'a> {
+    pub fn new(message: &'a Message) -> Self {
+        ReplyTree { 
+            id: message.id.unwrap_or_else(||0), 
+            post: message, 
+            children: Vec::new() 
+        }
+    }
+}
+
+pub fn posts_to_replytree(posts: &Vec<Message>) -> Vec<ReplyTree> 
+{
+    let mut temp_tree : Vec<ReplyTree> =  Vec::new(); 
+    'outer: for post in posts.iter() {
+        if let Some(data) = get_replydata(post) {
+            //Slow and I don't care
+            for node in temp_tree.iter_mut() {
+                if node.id == data.direct {
+                    node.children.push(ReplyTree::new(post));
+                    continue 'outer;
+                }
+            }
+            println!("WARN: could not find place for message {}, reply to {}", render::i(&post.id), data.direct);
+        }
+        temp_tree.push(ReplyTree::new(post));
+    }
+    temp_tree
+}
+
+
 // --------------------------
 // *   REQUEST GENERATION   *
 // --------------------------

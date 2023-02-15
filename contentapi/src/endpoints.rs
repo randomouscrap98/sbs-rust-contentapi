@@ -260,14 +260,23 @@ impl ApiContext
     make_post_endpoint!{post_content<Content,Content>("/write/content")}
     make_post_endpoint!{post_message<Message,Message>("/write/message")}
     make_post_endpoint!{post_ban<UserBan,UserBan>("/write/ban")}
-    //make_post_endpoint!{post_delete_content<>}("/delete/content/")
     make_post_endpoint!{post_registrationconfig<forms::RegistrationConfig,forms::RegistrationConfig>("/user/registrationconfig")}
 
     //These endpoints don't really fit into the normal "make_post_endpoint" macro
+
     pub async fn post_delete_content(&self, content_id: i64) -> Result<Content, ApiError> 
     {
         self.basic_post_request(AboutRequest{ 
             endpoint: format!("/delete/content/{}", content_id),
+            verb: String::from("POST"),
+            post_data: None, 
+        }, &true).await
+    }
+
+    pub async fn post_delete_message(&self, message_id: i64) -> Result<Content, ApiError> 
+    {
+        self.basic_post_request(AboutRequest{ 
+            endpoint: format!("/delete/message/{}", message_id),
             verb: String::from("POST"),
             post_data: None, 
         }, &true).await
