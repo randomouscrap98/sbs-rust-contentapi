@@ -12,7 +12,7 @@ function fix_searchform()
             var attr = options[i].getAttribute("data-for");
             if(attr)
             {
-                if(attr === searchType.value)
+                if(!searchType.value || attr === searchType.value)
                     options[i].removeAttribute("hidden");
                 else
                     options[i].setAttribute("hidden", "");

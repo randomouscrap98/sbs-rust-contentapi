@@ -47,20 +47,22 @@ pub fn get_search_request(search: &PageSearch, per_page: i32) -> FullRequest
     // fields. The system doesn't HAVE to limit by subtype (program/resource/etc)
     if let Some(subtype) = &search.subtype 
     {
-        add_value!(request, "subtype", subtype.clone());
-        query.push_str(" and literalType = @subtype");
-        //Ignore certain search criteria
-        if subtype == SBSPageType::PROGRAM {
-            //MUST have a key unless the user specifies otherwise
-            if !search.removed {
-                add_value!(request, "dlkeylist", vec![SBSValue::DOWNLOADKEY]);
-                query.push_str(" and !valuekeyin(@dlkeylist)");
-            }
+        if !subtype.is_empty() {
+            add_value!(request, "subtype", subtype.clone());
+            query.push_str(" and literalType = @subtype");
+            //Ignore certain search criteria
+            if subtype == SBSPageType::PROGRAM {
+                //MUST have a key unless the user specifies otherwise
+                if !search.removed {
+                    add_value!(request, "dlkeylist", vec![SBSValue::DOWNLOADKEY]);
+                    query.push_str(" and !valuekeyin(@dlkeylist)");
+                }
 
-            if search.system != ANYSYSTEM {
-                add_value!(request, "systemkey", SBSValue::SYSTEMS);
-                add_value!(request, "system", format!("%{}%", search.system)); //Systems is actually a json list but this should be fine
-                query.push_str(" and !valuelike(@systemkey, @system)");
+                if search.system != ANYSYSTEM {
+                    add_value!(request, "systemkey", SBSValue::SYSTEMS);
+                    add_value!(request, "system", format!("%{}%", search.system)); //Systems is actually a json list but this should be fine
+                    query.push_str(" and !valuelike(@systemkey, @system)");
+                }
             }
         }
     }

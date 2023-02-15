@@ -1,3 +1,5 @@
+use crate::constants::SBSPageType;
+
 use super::super::*;
 
 use contentapi::forms::*;
@@ -27,7 +29,7 @@ pub fn header(data: &MainLayoutData) -> Markup {
                 a."plainlink" #"homelink" href={(data.links.http_root)"/"}{
                     img src={(data.links.resource_root)"/favicon.ico"};
                     (main_nav_link(data,"Activity","/activity",None))
-                    (main_nav_link(data,"Browse","/search",None))
+                    (main_nav_link(data,"Browse",&format!("/search?subtype={}", SBSPageType::PROGRAM),None))
                     (main_nav_link(data,"Forums","/forum",None))
                     @if let Some(user) = &data.user {
                         @if user.admin {

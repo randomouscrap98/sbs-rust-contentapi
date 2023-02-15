@@ -56,6 +56,7 @@ pub const SBSSYSTEMS: &[(&str,&str)] = &[
 ]; 
 
 pub const SEARCHPAGETYPES: &[(&str,&str)] = &[
+    ("", "Any"),
     (SBSPageType::PROGRAM, "Programs"), 
     (SBSPageType::RESOURCE, "Resources")
 ];
