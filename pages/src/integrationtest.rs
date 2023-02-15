@@ -7,8 +7,12 @@ pub fn render(data: MainLayoutData) -> String
     let mut errors : Vec<&'static str> = Vec::new();
 
     //Calculate errors before rendering page to make life easier
-    if !data.links.http_root.is_ascii() { errors.push("Frontend isn't running locally"); }
-    if data.user.is_some() { errors.push("You must be logged out"); }
+    if !data.links.http_root.starts_with("http://localhost") {
+        errors.push("Frontend isn't running locally with non-empty http_root"); 
+    }
+    if data.user.is_some() { 
+        errors.push("You must be logged out"); 
+    }
 
     layout(&data, html!{
         style { r#"

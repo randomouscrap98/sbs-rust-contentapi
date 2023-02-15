@@ -124,12 +124,18 @@ function assertNotExists(path)  { assertExistsGeneric(path, false); }
 
 function assertAtPath(path) 
 { 
+    var parsedPath = path.match(/https?:\/\//) ? new URL(path).pathname : path;
     var iframePath = testframe.contentWindow.document.location.pathname;
-    if(iframePath !== path) throw `Expected iframe to be at ${path} but it was at ${iframePath}`
+    if(iframePath !== parsedPath) throw `Expected iframe to be at ${parsedPath} but it was at ${iframePath}`
 }
 
 function assertAtPathQuery(path)
 {
+    if(path.match(/https?:\/\//))
+    {
+        var url = new URL(path);
+        path = url.pathname + url.search;
+    }
     var iloc = testframe.contentWindow.document.location;
     var iframePath = iloc.pathname + iloc.search;
     if(iframePath !== path) throw `Expected iframe to be at ${path} but it was at ${iframePath}`

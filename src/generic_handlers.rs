@@ -71,7 +71,8 @@ pub fn handle_response_with_anycookie(response: common::Response, link_config: &
 
     match response {
         common::Response::Redirect(url) => {
-            builder = builder.status(303).header("Location", format!("{}{}", link_config.http_root, url));
+            let loc = if link_config.http_root.is_empty() || url.starts_with(&link_config.http_root) { String::from(&url) } else { format!("{}{}", link_config.http_root, &url) };
+            builder = builder.status(303).header("Location", loc);
             Ok(errwrap!(builder.body(String::from("")))?) 
         },
         common::Response::Render(page) => {
