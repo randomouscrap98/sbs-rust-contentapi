@@ -203,6 +203,7 @@ impl<'a> ReplyTree<'a>
         }
     }
 
+    /// Insert the given post as a node in this tree. Modifies the tree, and returns the node (if it was inserted)
     pub fn insert_post(&mut self, post: &'a Message, data: &ReplyData) -> Option<&ReplyTree>
     {
         //If this is the node to insert into, return ourselves
@@ -225,32 +226,6 @@ impl<'a> ReplyTree<'a>
     }
 }
 
-//Recursive scan the given tree to find an insertion point for the given reply data
-//fn insert_reply<'a>(tree: &'a mut ReplyTree<'a>, post: &'a Message, data: &ReplyData) -> bool //Option<&'a mut ReplyTree<'a>>
-//{
-//    //If this is the node to insert into, return ourselves
-//    if tree.id == data.direct {
-//        tree.children.push(ReplyTree::new(post));
-//        return true;
-//        //return Some(tree);
-//    }
-//    else {
-//        //Otherwise, look through all the children. This is depth first recursion... whatever I guess.
-//        for node in tree.children.iter_mut() {
-//            if insert_reply(node, post, data) {
-//                return true;
-//            }
-//            //let found = find_insert_node(node, data);
-//            //if found.is_some() {
-//            //    return found;
-//            //}
-//        }
-//    }
-//
-//    //If we make it here, it was never found
-//    return false; //None
-//}
-
 /// Convert a list of posts into a tree. ASSUMES THE FIRST POST IS THE ROOT!!
 pub fn posts_to_replytree(posts: &Vec<Message>) -> Vec<ReplyTree> 
 {
@@ -268,7 +243,7 @@ pub fn posts_to_replytree(posts: &Vec<Message>) -> Vec<ReplyTree>
         }
     }
 
-    println!("{:#?}", root);
+    //println!("{:#?}", root);
     vec![root]
 }
 

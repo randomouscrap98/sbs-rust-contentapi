@@ -167,8 +167,10 @@ pub async fn delete_render(context: PageContext, post_id: i64) ->
     //produce errors and the resulting screen will just be one of the ugly 400 screens (which we might spruce up).
     //I don't care much about it because the delete thread isn't a form, its just a button, so putting the usual
     //error box doesn't really work.
-    context.api_context.post_delete_message(post_id).await?;
+    let result = context.api_context.post_delete_message(post_id).await?;
 
-    //Again, super dumb
-    Ok(Response::Redirect(context.layout_data.links.activity()))
+    //Go lookup the thread, we ASSUME the result that's returned is the value BEFORE it was deleted
+    let thread = context.api_context.get_content_by_id(result.contentId.unwrap(), "*").await?;
+
+    Ok(Response::Redirect(context.layout_data.links.forum_thread(&thread)))
 }

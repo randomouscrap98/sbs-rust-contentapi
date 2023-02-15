@@ -273,7 +273,7 @@ impl ApiContext
         }, &true).await
     }
 
-    pub async fn post_delete_message(&self, message_id: i64) -> Result<Content, ApiError> 
+    pub async fn post_delete_message(&self, message_id: i64) -> Result<Message, ApiError> 
     {
         self.basic_post_request(AboutRequest{ 
             endpoint: format!("/delete/message/{}", message_id),
