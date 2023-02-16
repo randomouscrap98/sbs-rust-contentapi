@@ -58,6 +58,25 @@ pub struct PostForm
     pub post: String, //Always needed on post, of course
 }
 
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct PageForm
+{
+    pub id: i64, //Should default to 0
+    pub subtype: String, //Has to be SOMETHING, and the post endpoint will reject invalid values
+    pub title: String,
+    pub text: String,
+    pub description: String,    //Making this required now
+    pub keywords: String,       //List of keywords separated by space, gets split afterwards
+    pub images: String,         //Same as keywords
+    pub categories: String,     //Same as keywords
+
+    //These are optional fields, for programs
+    pub key: Option<String>,
+    pub version: Option<String>,
+    pub size: Option<String>,
+    pub systems: Option<String>     //Same as keywords
+}
+
 // ------------------------
 // *    QUERY PARAMS      *
 // ------------------------

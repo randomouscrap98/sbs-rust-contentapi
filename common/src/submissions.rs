@@ -6,6 +6,8 @@ use contentapi::endpoints::ApiError;
 //use contentapi::endpoints::ApiError;
 use crate::constants::*;
 use crate::forms::*;
+use crate::forum::can_delete_thread;
+use crate::forum::can_edit_thread;
 
 pub const CATEGORYPREFIX: &str = "tag:";
 //pub const CATEGORYSEARCHBASE: &str = "contentType = @systemtype and !notdeleted() and literalType = {{}}";
@@ -147,3 +149,7 @@ pub async fn get_all_categories(context: &mut ApiContext, limit: Option<Vec<i64>
     let result = context.post_request_profiled_opt(&request, "all_categories").await?;
     conversion::cast_result_required::<Content>(&result, &RequestType::content.to_string()).map_err(|e| e.into())
 }
+
+//Both of these are the same as threads for now
+pub fn can_edit_page(user: &User, page: &Content) -> bool { can_edit_thread(user, page) }
+pub fn can_delete_page(user: &User, page: &Content) -> bool { can_delete_thread(user, page) }

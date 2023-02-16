@@ -91,7 +91,21 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
             }
             //Generic pagelist generation (just need data)
             (page_navigation(&data, &search))
+            @if let Some(ref _user) = data.user {
+                div."pagelist smallseparate" {
+                    a."coolbutton" #"newprogram" href=(data.links.page_editor_new(SBSPageType::PROGRAM)) { "New Program" }
+                    a."coolbutton" #"newresource" href=(data.links.page_editor_new(SBSPageType::RESOURCE)) { "New Resource" }
+                }
+            }
         }
+        //@if let Some(ref _user) = data.user {
+        //    section #"newpagecontrols" {
+        //        div."pagelist smallseparate" {
+        //            a."coolbutton" #"newprogram" href=(data.links.page_editor_new(SBSPageType::PROGRAM)) { "New Program" }
+        //            a."coolbutton" #"newresource" href=(data.links.page_editor_new(SBSPageType::RESOURCE)) { "New Resource" }
+        //        }
+        //    }
+        //}
     }).into_string()
 }
 

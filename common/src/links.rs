@@ -90,6 +90,20 @@ impl LinkConfig {
         format!("{}/forum/delete/post/{}", self.http_root, i(&post.id))
     }
 
+
+    pub fn page_editor_new(&self, page_type: &str) -> String {
+        format!("{}/page/edit?type={}", self.http_root, page_type)
+    }
+
+    pub fn page_editor_edit(&self, page: &Content) -> String {
+        format!("{}/page/edit?page={}", self.http_root, opt_s!(page.hash))
+    }
+
+    pub fn page_delete(&self, page: &Content) -> String {
+        format!("{}/page/delete/{}", self.http_root, i(&page.id))
+    }
+
+
     pub fn search_category(&self, category: i64) -> String {
         format!("{}/search?category={}", self.http_root, category)
     }

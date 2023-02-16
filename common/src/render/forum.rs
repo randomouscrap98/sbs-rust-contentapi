@@ -12,7 +12,6 @@ use crate::render::*;
 use crate::constants::*;
 use crate::forum::*;
 use crate::pagination::*;
-use crate::render::submissions;
 
 
 // ----------------------------
@@ -67,7 +66,7 @@ pub fn forum_path(config: &LinkConfig, path: &Vec<ForumPathItem>) -> Markup {
 pub fn threadicon(config: &LinkConfig, thread: &ForumThread) -> Markup { //neutral: bool, sticky: bool, locked: bool) -> Markup {
     html! {
         div."threadicon smallseparate" {
-            @if thread.neutral { (submissions::pageicon(config, &thread.thread)) }
+            @if thread.neutral { (render::submissions::pageicon(config, &thread.thread)) }
             @if thread.sticky { span title="Pinned" {"📌"} }
             @if thread.locked { span title="Locked (No posting)" {"🔒"} }
             @if thread.private { span title="Private (Only participants can view)" {"🤫"} }
@@ -278,6 +277,18 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
 {
     let values = match &thread.thread.values { Some(values) => values.clone(), None => HashMap::new() };
 
+    let can_edit; 
+    let can_delete; 
+
+    if let Some(ref user) = data.user {
+        can_edit = crate::submissions::can_edit_page(user, &thread.thread);
+        can_delete = crate::submissions::can_delete_page(user, &thread.thread);
+    }
+    else {
+        can_edit = false;
+        can_delete = false;
+    }
+
     html!{
         section {
             //First check is if it's a program, then we float this box to the right
@@ -317,6 +328,16 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
             //Next check is if there's even any text to show
             @if let Some(text) = &thread.thread.text {
                 div."content bbcode" { (PreEscaped(&bbcode.parse_profiled_opt(&text, format!("program-{}", i(&thread.thread.id))))) }
+            }
+            @if can_edit || can_delete {
+                div."pagelist smallseparate" {
+                    @if can_edit {
+                        a."coolbutton" #"editpage" href=(data.links.page_editor_edit(&thread.thread)) { "Edit page" }
+                    }
+                    @if can_delete {
+                        a."coolbutton" #"deletepage" data-confirmdelete=(format!("page '{}'", opt_s!(&thread.thread.text))) href=(data.links.page_delete(&thread.thread)) { "Delete page" }
+                    }
+                }
             }
             @if let Some(categories) = &thread.categories { //categories.len() > 0 {
                 hr."smaller";
