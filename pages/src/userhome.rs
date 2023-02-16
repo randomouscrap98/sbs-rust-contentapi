@@ -70,7 +70,7 @@ pub fn render(data: MainLayoutData, private: Option<contentapi::UserPrivate>, us
                 }
             }
             section {
-                iframe."imagebrowser" src={(data.links.http_root)"/widget/imagebrowser"} {}
+                iframe."imagebrowser" src={(data.links.imagebrowser())} {}
             }
             section {
                 h3 #"update-sensitive"{"Update sensitive info"}

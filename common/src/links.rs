@@ -33,6 +33,10 @@ impl LinkConfig {
         format!("{}/activity", self.http_root)
     }
 
+    pub fn imagebrowser(&self) -> String {
+        format!("{}/widget/imagebrowser", self.http_root)
+    }
+
     pub fn forum_category(&self, category: &Content) -> String {
         self.forum_category_unsafe(opt_s!(category.hash))
     }
