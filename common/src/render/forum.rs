@@ -335,7 +335,10 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
                         a."coolbutton" #"editpage" href=(data.links.page_editor_edit(&thread.thread)) { "Edit page" }
                     }
                     @if can_delete {
-                        a."coolbutton" #"deletepage" data-confirmdelete=(format!("page '{}'", opt_s!(&thread.thread.text))) href=(data.links.page_delete(&thread.thread)) { "Delete page" }
+                        form."nospacing" #"deletepage" method="POST" action=(data.links.page_delete(&thread.thread)) {
+                            input."coolbutton notheme" data-confirmdelete=(format!("page '{}'", opt_s!(&thread.thread.name))) type="submit" value="Delete page";
+                        }
+                        //a."coolbutton" #"deletepage" data-confirmdelete=(format!("page '{}'", opt_s!(&thread.thread.text))) href=(data.links.page_delete(&thread.thread)) { "Delete page" }
                     }
                 }
             }

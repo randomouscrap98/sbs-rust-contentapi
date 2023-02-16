@@ -112,7 +112,6 @@ const THISMESSAGEFIELDS : &str = "*";
 pub async fn get_render(mut context: PageContext, subtype: Option<String>, page_hash: Option<String>) -> 
     Result<Response, Error> 
 {
-    //let mut page: Option<Content> = None;
     let mut form = PageForm::default();
 
     if let Some(subtype) = subtype {
@@ -135,7 +134,6 @@ pub async fn get_render(mut context: PageContext, subtype: Option<String>, page_
         form.subtype = page.literalType.unwrap();
         form.text = page.text.unwrap();
         form.title = page.name.unwrap();
-        //thread = Some(c);
     }
 
     let all_categories = map_categories(get_all_categories(&mut context.api_context, None).await?);
