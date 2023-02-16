@@ -42,7 +42,7 @@ pub fn render(data: MainLayoutData, form: PageForm, all_categories: Vec<Content>
     */
 
     layout(&data, html!{
-        //(data.links.style("/forpage/forum.css"))
+        (data.links.style("/forpage/pageeditor.css"))
         section {
             @if form.subtype != SBSPageType::PROGRAM && form.subtype != SBSPageType::RESOURCE {
                 h1."error" { "Unknown editor type: " (form.subtype) }
@@ -125,6 +125,7 @@ pub async fn get_render(mut context: PageContext, subtype: Option<String>, page_
     //}
     let all_categories = get_all_categories(&mut context.api_context, None).await?;
     let cloned_subtype = form.subtype.clone();
+    println!("All categories: {:#?}", all_categories);
 
     Ok(Response::Render(render(context.layout_data, form, all_categories.into_iter().filter(move |c| c.literalType.as_deref() == Some(&cloned_subtype)).collect(), None)))
 }
@@ -157,12 +158,13 @@ pub async fn construct_post_message(context: &ApiContext, form: &PostForm)
     message.text = Some(form.post.clone()); 
 
     Ok(message)
-}
+} */
 
-pub async fn post_render(context: PageContext, form: PostForm) ->
+pub async fn post_render(context: PageContext, form: PageForm) ->
     Result<Response, Error>
 {
-    if let Some(ref _user) = context.layout_data.user 
+        Err(Error::Other(String::from("Not logged in!")))
+    /*if let Some(ref _user) = context.layout_data.user 
     {
         //This one, we throw all the way, since we can't re-render the page without the parent anyway
         let thread = context.api_context.get_content_by_id(form.content_id, THISCONTENTFIELDS).await?;
@@ -200,22 +202,18 @@ pub async fn post_render(context: PageContext, form: PostForm) ->
     }
     else {
         Err(Error::Other(String::from("Not logged in!")))
-    }
+    }*/
 }
 
-pub async fn delete_render(context: PageContext, post_id: i64) ->
+pub async fn delete_render(context: PageContext, page_id: i64) ->
     Result<Response, Error>
 {
     //This is a VERY DUMB delete endpoint, because it just passes it through to the backend. Then the backend will
     //produce errors and the resulting screen will just be one of the ugly 400 screens (which we might spruce up).
     //I don't care much about it because the delete thread isn't a form, its just a button, so putting the usual
     //error box doesn't really work.
-    let result = context.api_context.post_delete_message(post_id).await?;
+    //let result = 
+    context.api_context.post_delete_content(page_id).await?;
 
-    //Go lookup the thread, we ASSUME the result that's returned is the value BEFORE it was deleted
-    let thread = context.api_context.get_content_by_id(result.contentId.unwrap(), "*").await?;
-
-    Ok(Response::Redirect(context.layout_data.links.forum_thread(&thread)))
+    Ok(Response::Redirect(context.layout_data.links.activity()))
 }
-
-*/

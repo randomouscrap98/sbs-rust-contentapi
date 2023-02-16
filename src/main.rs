@@ -358,6 +358,13 @@ async fn main()
         .and_then(|post_id, context: RequestContext|
             std_resp!(pages::forum_edit_post::delete_render(pc!(context), post_id), context)
         ).boxed();
+
+    let post_page_delete_route = warp::post()
+        .and(warp::path!("page" / "delete" / i64))
+        .and(state_filter.clone())
+        .and_then(|page_id, context: RequestContext|
+            std_resp!(pages::page_edit::delete_render(pc!(context), page_id), context)
+        ).boxed();
     
     let legacy_page_pid = warp_get_async!(
         warp::path!("page").and(warp::query::<pages::page::PageQuery>()),
@@ -374,8 +381,10 @@ async fn main()
         .or(get_forum_route(&state_filter)) //HEAVILY multiplexed! Lots of legacy forum paths!
         .or(get_forum_edit_thread_route(&state_filter, &form_filter))
         .or(get_forum_edit_post_route(&state_filter, &form_filter))
+        .or(get_page_edit_route(&state_filter, &form_filter))
         .or(post_thread_delete_route)
         .or(post_post_delete_route)
+        .or(post_page_delete_route)
         .or(get_forum_category_route)
         .or(get_forum_thread_route)
         .or(get_forum_post_route)
@@ -575,6 +584,55 @@ fn get_forum_edit_post_route(state_filter: &BoxedFilter<(RequestContext,)>, form
     warp::path!("forum" / "edit" / "post")
         .and(warp::get().and(post_new.or(post_edit))
             .or(warp::post().and(form_filter.clone()).and(post_post)))
+        .boxed()
+}
+
+fn get_page_edit_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> BoxedFilter<(impl Reply,)> 
+{
+    //struct doesn't need to escape this function!
+    #[allow(dead_code)]
+    #[derive(Deserialize, Debug)]
+    struct SubtypeParameter { 
+        r#type: String
+    }
+
+    let page_new = warp::any()
+        .and(warp::query::<SubtypeParameter>())
+        .and(state_filter.clone())
+        .and_then(|param: SubtypeParameter, context:RequestContext| 
+            std_resp!(
+                pages::page_edit::get_render(pc!(context), Some(param.r#type), None),
+                context
+            ) 
+        ).boxed(); 
+    
+    //Don't forget to add the other stuff!
+    #[allow(dead_code)]
+    #[derive(Deserialize, Debug)]
+    struct PageParameter { 
+        page: String
+    }
+
+    let page_edit = warp::any()
+        .and(warp::query::<PageParameter>())
+        .and(state_filter.clone())
+        .and_then(|param: PageParameter, context:RequestContext| 
+            std_resp!(
+                pages::page_edit::get_render(pc!(context), None, Some(param.page)),
+                context
+            )
+        ).boxed(); 
+
+    let page_post = warp::any()
+        .and(warp::body::form::<common::forms::PageForm>())
+        .and(state_filter.clone())
+        .and_then(|form: common::forms::PageForm, context: RequestContext| {
+            std_resp!(pages::page_edit::post_render(pc!(context), form), context) 
+        }).boxed();
+
+    warp::path!("page" / "edit")
+        .and(warp::get().and(page_new.or(page_edit))
+            .or(warp::post().and(form_filter.clone()).and(page_post)))
         .boxed()
 }
 
