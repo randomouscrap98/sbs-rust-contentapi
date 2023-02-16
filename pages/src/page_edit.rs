@@ -1,5 +1,5 @@
 use common::constants::SBSPageType;
-use common::submissions::get_all_categories;
+use common::submissions::*;
 use contentapi::*;
 
 use common::*;
@@ -11,7 +11,7 @@ use contentapi::endpoints::ApiContext;
 use maud::*;
 
 //Rendering ALWAYS requires the form, even if it's just an empty one
-pub fn render(data: MainLayoutData, form: PageForm, all_categories: Vec<Content>, errors: Option<Vec<String>>) -> String 
+pub fn render(data: MainLayoutData, form: PageForm, all_categories: Vec<Category>, errors: Option<Vec<String>>) -> String 
 {
     let title : Option<String>;
     let mut submit_value = format!("Submit {}", form.subtype);
@@ -86,9 +86,9 @@ pub fn render(data: MainLayoutData, form: PageForm, all_categories: Vec<Content>
                             "you want, add the ID to the field above"
                         }
                         table {
-                            th { td { "Name" } td { "Id" } }
+                            tr { th { "Name" } th { "Id" } }
                             @for category in all_categories {
-                                tr { td{ (opt_s!(category.name)) } td{ (i(&category.id)) }}
+                                tr { td{ (category.name) } td{ (category.id) }}
                             }
                         }
                     }
@@ -123,11 +123,11 @@ pub async fn get_render(mut context: PageContext, subtype: Option<String>, page_
     //    form.content_id = c.id.unwrap(); 
     //    thread = Some(c);
     //}
-    let all_categories = get_all_categories(&mut context.api_context, None).await?;
+    let all_categories = map_categories(get_all_categories(&mut context.api_context, None).await?);
     let cloned_subtype = form.subtype.clone();
-    println!("All categories: {:#?}", all_categories);
+    //println!("Subtype: {}, All categories: {:#?}", cloned_subtype, all_categories);
 
-    Ok(Response::Render(render(context.layout_data, form, all_categories.into_iter().filter(move |c| c.literalType.as_deref() == Some(&cloned_subtype)).collect(), None)))
+    Ok(Response::Render(render(context.layout_data, form, all_categories.into_iter().filter(move |c| &c.forcontent == &cloned_subtype).collect(), None)))
 }
 
 /* 

@@ -1,3 +1,7 @@
 .editorinstructions {
     margin-bottom: var(--space_small);
 }
+
+.editorinstructions > *:last-child {
+    margin-bottom: var(--space_big);
+}

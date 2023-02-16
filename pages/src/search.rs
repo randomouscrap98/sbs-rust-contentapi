@@ -130,12 +130,6 @@ fn page_navigation(data: &MainLayoutData, search: &PageSearch) -> Markup {
 }
 
 
-pub struct Category {
-    pub id: i64,
-    pub name: String,
-    pub forcontent: String
-}
-
 pub async fn get_render(context: PageContext, search: PageSearch, per_page: i32) -> Result<Response, Error> 
 {
     let request = get_search_request(&search, per_page);
@@ -147,15 +141,7 @@ pub async fn get_render(context: PageContext, search: PageSearch, per_page: i32)
     let categories = conversion::cast_result_safe::<Content>(&result, "categories")?;
     let users = map_users(users);
 
-    let categories = categories.into_iter().map(|c| {
-        Category {
-            id: c.id.unwrap_or(0),
-            name: c.name.unwrap_or_else(|| String::from("")), //Only evaluated on failure
-            forcontent: c.values
-                .and_then(|v| v.get(SBSValue::FORCONTENT).and_then(|v2| v2.as_str()).and_then(|v3| Some(String::from(v3))))
-                .unwrap_or_else(|| String::from(""))
-        }
-    }).collect::<Vec<Category>>();
+    let categories = map_categories(categories);
 
     //Manually parse the search, because of the tag magic (no javascript)
     //Err(Error::Other(String::from("wow")))

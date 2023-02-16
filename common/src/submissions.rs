@@ -150,6 +150,26 @@ pub async fn get_all_categories(context: &mut ApiContext, limit: Option<Vec<i64>
     conversion::cast_result_required::<Content>(&result, &RequestType::content.to_string()).map_err(|e| e.into())
 }
 
+#[derive(Debug)]
+pub struct Category {
+    pub id: i64,
+    pub name: String,
+    pub forcontent: String
+}
+
+pub fn map_categories(categories: Vec<Content>) -> Vec<Category>
+{
+    categories.into_iter().map(|c| {
+        Category {
+            id: c.id.unwrap_or(0),
+            name: c.name.unwrap_or_else(|| String::from("")), //Only evaluated on failure
+            forcontent: c.values
+                .and_then(|v| v.get(SBSValue::FORCONTENT).and_then(|v2| v2.as_str()).and_then(|v3| Some(String::from(v3))))
+                .unwrap_or_else(|| String::from(""))
+        }
+    }).collect::<Vec<Category>>()
+}
+
 //Both of these are the same as threads for now
 pub fn can_edit_page(user: &User, page: &Content) -> bool { can_edit_thread(user, page) }
 pub fn can_delete_page(user: &User, page: &Content) -> bool { can_delete_thread(user, page) }
