@@ -1,7 +1,11 @@
 .editorinstructions {
-    margin-bottom: var(--space_small);
+    margin-bottom: 0.5em; /*var(--space_medium);*/
 }
 
 .editorinstructions > *:last-child {
     margin-bottom: var(--space_big);
+}
+
+#pageedit_text {
+    height: 20em;
 }

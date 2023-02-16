@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use serde_aux::prelude::*; //Necessary to deserialize bool from "anything"
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 pub mod endpoints;
 pub mod forms;
@@ -250,6 +251,25 @@ pub struct Content //Remember, these are files, pages, threads etc. Lovely!
     pub keywordCount: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub lastRevisionId: Option<i64>
+}
+
+impl Content {
+    pub fn get_value_str(&self, key: &str) -> Option<&str>
+    {
+        if let Some(ref values) = self.values {
+            values.get(key).and_then(|v| v.as_str())
+        } else { None }
+    }
+    pub fn get_value_string(&self, key: &str) -> Option<String>
+    {
+        self.get_value_str(key).map(|v| v.to_string())
+    }
+    pub fn get_value_array(&self, key: &str) -> Option<&Vec<Value>>
+    {
+        if let Some(ref values) = self.values {
+            values.get(key).and_then(|v| v.as_array())
+        } else { None }
+    }
 }
 
 

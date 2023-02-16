@@ -1,4 +1,5 @@
 use common::constants::SBSPageType;
+use common::constants::SBSValue;
 use common::submissions::*;
 use contentapi::*;
 
@@ -65,13 +66,13 @@ pub fn render(data: MainLayoutData, form: PageForm, all_categories: Vec<Category
                         input #"pageedit_key" type="text" name="key" value=(opt_s!(form.key)) required placeholder="The key for people to download your program!";
                         label for="pageedit_version" { "Version:" }
                         input #"pageedit_version" type="text" name="version" value=(opt_s!(form.version)) placeholder="A version to keep track of updates (not required)";
-                        label for="pageedit_size" { "Size in bytes:" }
+                        label for="pageedit_size" { "Size (include units):" }
                         input #"pageedit_size" type="text" name="size" value=(opt_s!(form.size)) placeholder="Rough estimate for total size of download (not required)";
                     }
                     label for="pageedit_images" { "Images:" }
                     input #"pageedit_images" type="text" name="images" value=(form.images) placeholder="Space separated";
                     details."editorinstructions" {
-                        summary { "About images" }
+                        summary."aside" { "About images" }
                         p { "Images are uploaded to your account, not to the page. So, you first upload your images using the form "
                             "below, then you can copy the unique image id and paste it into the field above. The first image listed "
                             "becomes the main image for your page"
@@ -81,7 +82,7 @@ pub fn render(data: MainLayoutData, form: PageForm, all_categories: Vec<Category
                     label for="pageedit_categories" { "Categories:" }
                     input #"pageedit_categories" type="text" name="categories" value=(form.categories) placeholder="Space separated";
                     details."editorinstructions" {
-                        summary { "About categories" }
+                        summary."aside" { "About categories" }
                         p { "You can categorize your page for organization and searching. The category table is below: for each category " 
                             "you want, add the ID to the field above"
                         }
@@ -118,14 +119,27 @@ pub async fn get_render(mut context: PageContext, subtype: Option<String>, page_
         form.subtype = subtype;
     }
 
-    //if let Some(hash) = page_hash {
-    //    let c = context.api_context.get_content_by_hash(&hash, THISCONTENTFIELDS).await?;
-    //    form.content_id = c.id.unwrap(); 
-    //    thread = Some(c);
-    //}
+    if let Some(hash) = page_hash {
+        let page = context.api_context.get_content_by_hash(&hash, THISCONTENTFIELDS).await?;
+        //Remember to do all the ref stuff before we move values out of page
+        form.categories = get_tagged_categories(&page).into_iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ");
+        form.key = page.get_value_string(SBSValue::DOWNLOADKEY); //page.values.unwrap().get(SBSValue::DOWNLOADKEY).and_then(|v| v.as_str()).and_then(|v| Some(v.to_string()));
+        form.size = page.get_value_string(SBSValue::SIZE); 
+        form.version = page.get_value_string(SBSValue::VERSION); 
+        if let Some(images) = page.get_value_array(SBSValue::IMAGES) {
+            form.images = images.into_iter().map(|i| i.as_str().unwrap_or("")).collect::<Vec<&str>>().join(" ");
+        }
+        form.id = page.id.unwrap();
+        form.description = page.description.unwrap();
+        form.keywords = page.keywords.unwrap().join(" ");
+        form.subtype = page.literalType.unwrap();
+        form.text = page.text.unwrap();
+        form.title = page.name.unwrap();
+        //thread = Some(c);
+    }
+
     let all_categories = map_categories(get_all_categories(&mut context.api_context, None).await?);
     let cloned_subtype = form.subtype.clone();
-    //println!("Subtype: {}, All categories: {:#?}", cloned_subtype, all_categories);
 
     Ok(Response::Render(render(context.layout_data, form, all_categories.into_iter().filter(move |c| &c.forcontent == &cloned_subtype).collect(), None)))
 }
