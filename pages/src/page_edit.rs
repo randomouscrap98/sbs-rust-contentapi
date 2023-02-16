@@ -1,5 +1,7 @@
 use common::constants::SBSPageType;
+use common::constants::SBSSYSTEMS;
 use common::constants::SBSValue;
+use common::constants::ANYSYSTEM;
 use common::submissions::*;
 use contentapi::*;
 
@@ -64,6 +66,23 @@ pub fn render(data: MainLayoutData, form: PageForm, all_categories: Vec<Category
                     @if form.subtype == SBSPageType::PROGRAM {
                         label for="pageedit_key" { "Key:" }
                         input #"pageedit_key" type="text" name="key" value=(opt_s!(form.key)) required placeholder="The key for people to download your program!";
+                        label for="pageedit_systems" { "Systems:" }
+                        input #"pageedit_systems" type="text" name="systems" value=(opt_s!(form.systems)) required placeholder="What console does this go on?";
+                        details."editorinstructions" {
+                            summary."aside" { "About systems" }
+                            p { "SmileBASIC is available for several systems, so people have to know what system your program is for! "
+                                "Certain systems are interoperable and share keys, so you can add multiple systems if multiple apply. "
+                                "Please use the IDs below for the system, not the name."
+                            }
+                            table {
+                                tr { th { "Name" } th { "Id" } }
+                                @for (id, name) in SBSSYSTEMS {
+                                    @if *id != ANYSYSTEM {
+                                        tr { td{ (name) } td{ (id) }}
+                                    }
+                                }
+                            }
+                        }
                         label for="pageedit_version" { "Version:" }
                         input #"pageedit_version" type="text" name="version" value=(opt_s!(form.version)) placeholder="A version to keep track of updates (not required)";
                         label for="pageedit_size" { "Size (include units):" }
@@ -107,7 +126,6 @@ pub fn render(data: MainLayoutData, form: PageForm, all_categories: Vec<Category
 
 //You can optimize this later I guess (if it really needs it...)
 const THISCONTENTFIELDS : &str = "*";
-const THISMESSAGEFIELDS : &str = "*";
 
 pub async fn get_render(mut context: PageContext, subtype: Option<String>, page_hash: Option<String>) -> 
     Result<Response, Error> 
@@ -127,6 +145,9 @@ pub async fn get_render(mut context: PageContext, subtype: Option<String>, page_
         form.version = page.get_value_string(SBSValue::VERSION); 
         if let Some(images) = page.get_value_array(SBSValue::IMAGES) {
             form.images = images.into_iter().map(|i| i.as_str().unwrap_or("")).collect::<Vec<&str>>().join(" ");
+        }
+        if let Some(systems) = page.get_value_array(SBSValue::SYSTEMS) {
+            form.systems = Some(systems.into_iter().map(|i| i.as_str().unwrap_or("")).collect::<Vec<&str>>().join(" "));
         }
         form.id = page.id.unwrap();
         form.description = page.description.unwrap();
