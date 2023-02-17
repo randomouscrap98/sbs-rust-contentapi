@@ -56,12 +56,12 @@ pub fn header(data: &MainLayoutData) -> Markup {
                 div."alert" { (PreEscaped(alert)) }
             }
         }
-        @else {
-            div."alert" { 
-                b."error" {"This is a preview website!"} " Changes made may get reset and will " b{"not"} " carry over to the final version! "
-                "Original website still up at " a href="https://old.smilebasicsource.com" {"https://old.smilebasicsource.com"}
-             }//"This is a test alert " a href="#" { "OK?" } span."error" { " ERROR OR SOMETHING"} }
-        }
+        //@else {
+        //    div."alert" { 
+        //        b."error" {"This is a preview website!"} " Changes made may get reset and will " b{"not"} " carry over to the final version! "
+        //        "Original website still up at " a href="https://old.smilebasicsource.com" {"https://old.smilebasicsource.com"}
+        //     }//"This is a test alert " a href="#" { "OK?" } span."error" { " ERROR OR SOMETHING"} }
+        //}
     }
 }
 

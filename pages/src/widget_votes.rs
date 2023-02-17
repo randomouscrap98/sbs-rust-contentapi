@@ -1,5 +1,6 @@
 use common::*;
 use common::constants::{DOWNVOTE, UPVOTE, VOTETYPE};
+use common::forms::VoteForm;
 use common::render::layout::*;
 use common::submissions::get_content_vote;
 use maud::*;
@@ -38,19 +39,30 @@ pub fn render(data: MainLayoutData, content: Content, user_vote: Option<ContentE
         (data.links.style("/forpage/votewidget.css"))
     }, html! {
         div #"main" {
-            form."nospacing" #"downvote" method="POST" action={(data.current_path)"?vote="(DOWNVOTE)} { 
-                input."notheme" type="submit" value="-" title="Downvote" data-current[real_vote==DOWNVOTE];
+            @if data.user.is_some() {
+                form."nospacing" #"downvote" method="POST" action=(data.current_path) { 
+                    input type="hidden" name="vote" value=(DOWNVOTE);
+                    input."notheme" type="submit" value="-" title="Downvote" data-current[real_vote==DOWNVOTE];
+                }
             }
             div #"votebar" data-votes=(totalvotes) {
                 div #"voteline" style=(format!("width:{}%", (upvotes as f32) / (totalvotes as f32) * 100.0)) { }
                 div #"votecount" { (totalvotes) }
             }
-            form."nospacing" #"upvote" method="POST" action={(data.current_path)"?vote="(UPVOTE)} { 
-                input."notheme" type="submit" value="+" title="Upvote" data-current[real_vote==UPVOTE];
+            @if data.user.is_some() {
+                form."nospacing" #"upvote" method="POST" action=(data.current_path) { 
+                    input type="hidden" name="vote" value=(UPVOTE);
+                    input."notheme" type="submit" value="+" title="Upvote" data-current[real_vote==UPVOTE];
+                }
             }
         }
     }).into_string()
 }
+
+//fn get_render_base(context: PageContext, content_id: i64) -> Result<Response, Error>
+//{
+//
+//}
 
 pub async fn get_render(context: PageContext, content_id: i64) -> Result<Response, Error>
 {
@@ -58,4 +70,10 @@ pub async fn get_render(context: PageContext, content_id: i64) -> Result<Respons
     let engagement = get_content_vote(&context.api_context, content_id).await?; //context.api_context.get_content_by_id(id, "id,name,engagement").await?;
 
     Ok(Response::Render(render(context.layout_data, content, engagement)))
+}
+
+pub async fn post_render(context: PageContext, content_id: i64, form: VoteForm) -> Result<Response, Error>
+{
+    context.api_context.post_set_content_engagement(content_id, VOTETYPE, &form.vote).await?;
+    get_render(context, content_id).await
 }

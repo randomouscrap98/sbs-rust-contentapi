@@ -1,7 +1,8 @@
 :root {
-    --upvote_color: #57de7b; 
-    --downvote_color: pink;
-    --novote_color: lightgray;
+    --bg_upvote: #57de7b; 
+    --bg_downvote: pink;
+    --bg_novote: #EEE;/*lightgray;*/
+    --tc_votetext: black;
 }
 
 html, body {
@@ -21,7 +22,6 @@ html, body {
     align-items: stretch;
     width: 100%;
     height: 100%;
-    /* background-color: red; /* temporary */
 }
 
 #downvote, #upvote {
@@ -31,27 +31,25 @@ html, body {
 
 #downvote input, #upvote input {
     border: none;
-    /*background-color: var(--bg_activeselect);
-    color: var(--tc_activeselect);*/
-    /*background-color: var(--color_divider);
-    color: var(--tc_main);*/
     cursor: pointer;
     font-weight: bold;
-    filter: brightness(0.7);
+    filter: brightness(0.9);
+    color: var(--tc_votetext);
+    background-color: var(--bg_novote);
 }
 
-#downvote input { background-color: var(--downvote_color); }
-#upvote input { background-color: var(--upvote_color); }
+#downvote input[data-current] { background-color: var(--bg_downvote); }
+#upvote input[data-current] { background-color: var(--bg_upvote); }
 
 #votebar {
     flex-grow: 6;
     display: block;
     position: relative;
-    background-color: var(--downvote_color);
+    background-color: var(--bg_downvote);
 }
 
 #votebar[data-votes="0"] {
-    background-color: var(--novote_color);
+    background-color: var(--bg_novote);
 }
 
 #voteline {
@@ -59,7 +57,7 @@ html, body {
     right: 0;
     top: 0;
     height: 100%;
-    background-color: var(--upvote_color);
+    background-color: var(--bg_upvote);
 }
 
 #votecount {
@@ -70,5 +68,5 @@ html, body {
     width: 100%;
     height: 100%;
     font-size: 0.9rem;
-    color: black;
+    color: var(--tc_votetext);
 }

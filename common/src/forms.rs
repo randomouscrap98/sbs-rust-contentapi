@@ -77,6 +77,12 @@ pub struct PageForm
     pub systems: Option<String>     //Same as keywords
 }
 
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct VoteForm
+{
+    pub vote: String
+}
+
 // ------------------------
 // *    QUERY PARAMS      *
 // ------------------------
