@@ -30,6 +30,8 @@ pub fn render(data: MainLayoutData, content: Content, user_vote: Option<ContentE
         }
     }
 
+    let totalvotes = downvotes + upvotes;
+
     basic_skeleton(&data, html! {
         title { "SmileBASIC Source Vote Widget" }
         meta name="description" content="A small widget to allow voting without reloading a main page";
@@ -37,14 +39,14 @@ pub fn render(data: MainLayoutData, content: Content, user_vote: Option<ContentE
     }, html! {
         div #"main" {
             form."nospacing" #"downvote" method="POST" action={(data.current_path)"?vote="(DOWNVOTE)} { 
-                input type="submit" value="-" data-current[real_vote==DOWNVOTE];
+                input."notheme" type="submit" value="-" title="Downvote" data-current[real_vote==DOWNVOTE];
             }
-            div #"votebar" {
-                div #"voteline" style=(format!("width:{}%", (upvotes as f32) / ((downvotes + upvotes) as f32) * 100.0)) { }
-                div #"votecount" { ((downvotes + upvotes)) }
+            div #"votebar" data-votes=(totalvotes) {
+                div #"voteline" style=(format!("width:{}%", (upvotes as f32) / (totalvotes as f32) * 100.0)) { }
+                div #"votecount" { (totalvotes) }
             }
             form."nospacing" #"upvote" method="POST" action={(data.current_path)"?vote="(UPVOTE)} { 
-                input type="submit" value="+" data-current[real_vote==UPVOTE];
+                input."notheme" type="submit" value="+" title="Upvote" data-current[real_vote==UPVOTE];
             }
         }
     }).into_string()

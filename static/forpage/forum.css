@@ -196,11 +196,12 @@
     align-items: center;
     overflow: hidden;
     margin-left: auto;
+    flex-wrap: wrap;
 }
 
 .foruminfo .votes {
-    width: 10em;
-    height: 1.5em;
+    width: 7em; /*10em;*/
+    height: 1.3em; /*1.5em;*/
     padding: 0;
     border: none;
 }

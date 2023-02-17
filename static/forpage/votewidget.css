@@ -1,3 +1,9 @@
+:root {
+    --upvote_color: #57de7b; 
+    --downvote_color: pink;
+    --novote_color: lightgray;
+}
+
 html, body {
     margin: 0;
     padding: 0;
@@ -5,6 +11,7 @@ html, body {
     width: 100vw;
     overflow: hidden;
     border-radius: var(--space_small);
+    background: none !important;
 }
 
 #main {
@@ -24,23 +31,35 @@ html, body {
 
 #downvote input, #upvote input {
     border: none;
-    background-color: var(--color_divider);
-    color: var(--tc_main);
+    /*background-color: var(--bg_activeselect);
+    color: var(--tc_activeselect);*/
+    /*background-color: var(--color_divider);
+    color: var(--tc_main);*/
     cursor: pointer;
     font-weight: bold;
+    filter: brightness(0.7);
 }
+
+#downvote input { background-color: var(--downvote_color); }
+#upvote input { background-color: var(--upvote_color); }
 
 #votebar {
     flex-grow: 6;
     display: block;
     position: relative;
-    background-color: pink;
+    background-color: var(--downvote_color);
+}
+
+#votebar[data-votes="0"] {
+    background-color: var(--novote_color);
 }
 
 #voteline {
     position: absolute;
+    right: 0;
+    top: 0;
     height: 100%;
-    background-color: #57de7b; /*var(--bg_activeselect)*/
+    background-color: var(--upvote_color);
 }
 
 #votecount {
@@ -51,5 +70,5 @@ html, body {
     width: 100%;
     height: 100%;
     font-size: 0.9rem;
-    color: white;
+    color: black;
 }
