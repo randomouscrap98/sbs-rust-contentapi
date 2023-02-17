@@ -189,6 +189,9 @@ pub async fn construct_post_content(context: &ApiContext, form: &PageForm)
         content.values = Some(make_values! {
             "markup": "bbcode"
         });
+        content.permissions = Some(make_permissions! {
+            "0": "CR" 
+        });
 
         //We HAVE to get the parent of content!
         let mut request = FullRequest::new();
@@ -268,7 +271,7 @@ pub async fn post_render(mut context: PageContext, form: PageForm) ->
             //If there are no errors, we go to the new page
             Ok(Response::Redirect(
                 if let Some(ref page) = written_page {
-                    context.layout_data.links.page(page)
+                    context.layout_data.links.forum_thread(page)
                 }
                 else {
                     Err(Error::Other(String::from("Some internal error occurred, preventing the new page from being shown! No errors produced, but no page data found!")))?

@@ -25,9 +25,9 @@ impl LinkConfig {
         self.image(hash, &QueryImage::default())
     }
 
-    pub fn page(&self, page: &Content) -> String {
-        format!("{}/page/{}", self.http_root, opt_s!(page.hash))
-    }
+    //pub fn page(&self, page: &Content) -> String {
+    //    format!("{}/page/{}", self.http_root, opt_s!(page.hash))
+    //}
 
     pub fn activity(&self) -> String {
         format!("{}/activity", self.http_root)
