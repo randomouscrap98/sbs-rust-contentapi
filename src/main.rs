@@ -1,6 +1,6 @@
 use std::{net::SocketAddr, sync::Arc};
 
-use bbscope::BBCode;
+use bbscope::{BBCode, BBCodeTagConfig, BBCodeLinkTarget};
 use chrono::SecondsFormat;
 use common::LinkConfig;
 
@@ -101,7 +101,9 @@ async fn main()
     };
 
     let bbcode = {
-        let mut matchers = BBCode::basics().unwrap(); //this better not fail! It'll fail very early though
+        let mut config = BBCodeTagConfig::default();
+        config.link_target = BBCodeLinkTarget::None;
+        let mut matchers = BBCode::basics_config(config).unwrap(); //this better not fail! It'll fail very early though
         let mut extras = BBCode::extras().unwrap();
         matchers.append(&mut extras);
         BBCode::from_matchers(matchers)
@@ -376,8 +378,12 @@ async fn main()
             fs_static_route
         .or(fs_favicon_route)
         .or(get_index_route)
-        .or(get_activity_route)
+        .or(get_about_route)
         .or(get_search_route)
+        .or(get_admin_route)
+        .or(post_admin_multi_route(&state_filter, &form_filter))
+        .or(get_activity_route)
+            .boxed()
         .or(get_forum_route(&state_filter)) //HEAVILY multiplexed! Lots of legacy forum paths!
         .or(get_forum_edit_thread_route(&state_filter, &form_filter))
         .or(get_forum_edit_post_route(&state_filter, &form_filter))
@@ -388,9 +394,7 @@ async fn main()
         .or(get_forum_category_route)
         .or(get_forum_thread_route)
         .or(get_forum_post_route)
-        .or(get_about_route)
-        .or(get_admin_route)
-        .or(post_admin_multi_route(&state_filter, &form_filter))
+            .boxed()
         .or(get_user_route)
         .or(post_user_multi_route(&state_filter, &form_filter))
         .or(get_userhome_route)
@@ -406,6 +410,7 @@ async fn main()
         .or(post_recover_route)
         .or(get_sessionsettings_route)
         .or(post_sessionsettings_route)
+            .boxed()
         .or(get_imagebrowser_route)
         .or(get_widgetthread_route)
         .or(get_bbcodepreview_route)
@@ -428,7 +433,7 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
                 pages::forum_main::get_render(pc!(context), &cf!(context.forum_category_order), cf!(context.default_category_threads)),
                 context
             )
-        ); 
+        ).boxed(); 
     
     //struct doesn't need to escape this function!
     #[allow(dead_code)]
@@ -446,7 +451,7 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
                 pages::forum_category::get_fcid_render(pc!(context), fcid_page.fcid, cf!(context.default_display_threads), fcid_page.page),
                 context
             ) 
-        ); 
+        ).boxed(); 
     
     //Don't forget to add the other stuff!
     #[allow(dead_code)]
@@ -464,7 +469,7 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
                 pages::forum_thread::get_ftid_render(pc!(context), ftid_page.ftid, cf!(context.default_display_posts), ftid_page.page),
                 context
             )
-        ); 
+        ).boxed(); 
 
     #[allow(dead_code)]
     #[derive(Deserialize, Debug)]
@@ -480,7 +485,7 @@ fn get_forum_route(state_filter: &BoxedFilter<(RequestContext,)>) -> BoxedFilter
                 pages::forum_thread::get_fpid_render(pc!(context), fpid.fpid, cf!(context.default_display_posts)),
                 context
             )
-        ); 
+        ).boxed(); 
 
     warp::get()
         .and(warp::path!("forum"))
