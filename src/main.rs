@@ -325,6 +325,12 @@ async fn main()
             std_resp!(pages::widget_thread::get_render(pc!(context), search), context)
     );
 
+    let get_votewidget_route = warp_get_async!(
+        warp::path!("widget" / "votes" / i64),
+        |content_id, context:RequestContext| 
+            std_resp!(pages::widget_votes::get_render(pc!(context), content_id), context)
+    );
+
     let post_recover_route = warp::post()
         .and(warp::path!("recover"))
         .and(form_filter.clone())
@@ -413,6 +419,7 @@ async fn main()
             .boxed()
         .or(get_imagebrowser_route)
         .or(get_widgetthread_route)
+        .or(get_votewidget_route)
         .or(get_bbcodepreview_route)
         .or(post_bbcodepreview_route)
         .or(legacy_page_pid)

@@ -45,6 +45,10 @@ pub const USERTHEMES: &[(&str,&str)] = &[
     ("sbs-dark-contrast", "SBS Dark High Contrast")
 ];
 
+pub const UPVOTE: &str = "+";
+pub const DOWNVOTE: &str = "-";
+pub const VOTETYPE: &str = "vote";
+
 pub const POPSCORE1SORT: &str = "popScore1_desc";
 pub const ANYSYSTEM: &str = "any";
 

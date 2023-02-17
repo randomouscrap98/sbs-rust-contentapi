@@ -7,6 +7,7 @@ pub mod search;
 pub mod widget_imagebrowser;
 pub mod widget_bbcodepreview;
 pub mod widget_thread;
+pub mod widget_votes;
 pub mod userhome;
 pub mod recover;
 pub mod register;

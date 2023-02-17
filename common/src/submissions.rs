@@ -184,3 +184,23 @@ pub fn map_categories(categories: Vec<Content>) -> Vec<Category>
 //Both of these are the same as threads for now
 pub fn can_edit_page(user: &User, page: &Content) -> bool { can_edit_thread(user, page) }
 pub fn can_delete_page(user: &User, page: &Content) -> bool { can_delete_thread(user, page) }
+
+pub async fn get_content_vote(context: &ApiContext, content_id: i64) -> Result<Option<ContentEngagement>, ApiError>
+{
+    let mut request = FullRequest::new();
+    add_value!(request, "contentId", content_id);
+    add_value!(request, "upvote", UPVOTE);
+    add_value!(request, "downvote", DOWNVOTE);
+    add_value!(request, "type", VOTETYPE);
+    let mut creq = build_request!(
+        RequestType::content_engagement,
+        String::from("*"),
+        String::from("contentId = @contentId and type = @type and (engagement = @upvote or engagement = @downvote)")
+    );
+    creq.limit = 1; //Just in case
+    request.requests.push(creq);
+
+    let result = context.post_request(&request).await?;
+    let mut engagement = conversion::cast_result_required::<ContentEngagement>(&result, &RequestType::content_engagement.to_string())?;
+    Ok(engagement.pop())
+}

@@ -38,6 +38,7 @@ impl Keygen {
 #[derive(Clone, Debug)]
 pub struct ForumThread {
     pub thread: Content,
+    pub id: i64,
     pub sticky: bool,
     pub locked: bool,
     pub private: bool,
@@ -48,7 +49,7 @@ pub struct ForumThread {
 
 impl ForumThread {
     pub fn from_content(thread: Content, messages_raw: &Vec<Message>, stickies: &Vec<i64>) -> Result<Self, Error> {
-        let thread_id = thread.id;
+        let thread_id = thread.id.unwrap_or(0);
         let permissions = match thread.permissions {
             Some(ref p) => Ok(p),
             None => Err(Error::Other(String::from("Thread didn't have permissions in resultset!")))
@@ -59,11 +60,12 @@ impl ForumThread {
         //ok_or(Error::Other(String::from("Thread didn't have global permissions!")))?;
         let locked = !global_perms.contains('C'); //Right... the order matters. need to finish using it before you give up thread
         let private = !global_perms.contains('R');
-        let sticky = stickies.contains(&thread_id.unwrap_or(0));
+        let sticky = stickies.contains(&thread_id);
         Ok(ForumThread { 
             locked, sticky, thread, private,
+            id: thread_id,
             neutral: !locked && !sticky,
-            posts: messages_raw.iter().filter(|m| m.contentId == thread_id).map(|m| m.clone()).collect(),
+            posts: messages_raw.iter().filter(|m| m.contentId == Some(thread_id)).map(|m| m.clone()).collect(),
             categories: None
         })
     }
@@ -73,6 +75,7 @@ impl ForumThread {
 #[derive(Clone, Debug)]
 pub struct ForumCategory {
     pub category: Content,
+    pub id: i64,
     pub threads: Vec<ForumThread>,
     pub stickies: Vec<ForumThread>,
     pub threads_count: i32,
@@ -92,6 +95,7 @@ impl ForumCategory {
         let users_raw = cast_result_required::<User>(&thread_result, "user")?;
 
         Ok(ForumCategory {
+            id: category.id,
             category: category.category, //partial move
             threads: threads_raw.into_iter().map(|thread| ForumThread::from_content(thread, messages_raw, &category.stickies)).collect::<Result<Vec<_>,_>>()?,
             stickies: stickies_raw.into_iter().map(|thread| ForumThread::from_content(thread, messages_raw, &category.stickies)).collect::<Result<Vec<_>,_>>()?,

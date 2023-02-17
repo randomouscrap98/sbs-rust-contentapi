@@ -40,6 +40,12 @@ impl ApiContext
         get_something_by_field!(self, RequestType::content, Content, "id", id, fields)
     }
 
+    ///// Get the current user's content engagement for the given content. Note that the user must be
+    ///// signed in, and you can only ever get your own engagement value. It is possible the user did not
+    ///// engage in the content, so you will get nothing. It is also possible for a user to have multiple 
+    ///// engagements
+    //pub async fn get_content_engagement(&self, content_id: i64, fields: &str) -> Result<Vec<ContentEngagement>, 
+
     pub async fn get_message_by_id(&self, id: i64, fields: &str) -> Result<Message, ApiError>
     {
         get_something_by_field!(self, RequestType::message, Message, "id", id, fields)

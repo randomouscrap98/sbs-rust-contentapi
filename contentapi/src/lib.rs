@@ -274,6 +274,25 @@ impl Content {
 }
 
 
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+#[serde(default)]
+pub struct ContentEngagement
+{
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id : Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub userId: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub r#type : Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub engagement : Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub createDate : Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contentId: Option<i64>,
+}
+
+
 //#[serde_with::skip_serializing_none] //MUST COME BEFORE
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 #[serde(default)]

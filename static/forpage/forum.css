@@ -198,6 +198,12 @@
     margin-left: auto;
 }
 
+.foruminfo .votes {
+    width: 10em;
+    height: 1em;
+    padding: 0;
+}
+
 /*.bottomcontrols {
     margin-top: var(--space_big);
 }*/
