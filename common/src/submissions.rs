@@ -35,6 +35,17 @@ pub fn get_tagged_categories(content: &Content) -> Vec<i64>
     result
 }
 
+/// Add a parsed list of categories from a user form (which should be just ids)
+/// to the given content. It will add them as values
+pub fn add_category_taglist(raw_parsed: Vec<String>, content: &mut Content)
+{
+    if let Some(ref mut values) = content.values {
+        for category in raw_parsed {
+            values.insert(format!("{}{}", CATEGORYPREFIX, category), true.into());
+        }
+    }
+}
+
 /// Generate the complicated FullRequest for the given search. Could be a "From" if 
 /// the search included a per-page I guess...
 pub fn get_search_request(search: &PageSearch, per_page: i32) -> FullRequest
@@ -48,8 +59,8 @@ pub fn get_search_request(search: &PageSearch, per_page: i32) -> FullRequest
 
     let mut parent_request = build_request!(
         RequestType::content, 
-        String::from("id,literalType"), 
-        String::from("literalType = @submissions_type")
+        String::from("id,literalType,contentType"), 
+        String::from("literalType = @submissions_type and contentType = @systemtype")
     ); 
     parent_request.name = Some("submissions".to_string());
     request.requests.push(parent_request);

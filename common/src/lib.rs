@@ -172,3 +172,18 @@ pub fn content_or_default(content: Option<&Content>) -> Content {
         result
     }
 }
+
+/// Parse a comma or space separated string into parts
+pub fn parse_compound_value(original: &str) -> Vec<String>
+{
+    //First, convert all commas into spaces
+    let cleansed = original.replace(",", " ");
+
+    //Then, split by space
+    let mut result = Vec::new();
+    for v in cleansed.split_ascii_whitespace() {
+        result.push(v.to_string())
+    }
+
+    result
+}

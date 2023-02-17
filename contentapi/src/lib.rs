@@ -31,7 +31,8 @@ macro_rules! make_permissions {
     };
 }
 
-/// Add a single value to an existing values hash from [`Content`] or [`Message`]
+/// Add a single value to an existing values hash from [`Content`] or [`Message`], 
+/// or a value to a request (they amount to the same thing)
 #[macro_export]
 macro_rules! add_value {
     ($request:expr, $key:literal, $value:expr) => {

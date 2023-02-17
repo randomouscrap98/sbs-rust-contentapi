@@ -127,6 +127,12 @@ pub fn render(data: MainLayoutData, form: PageForm, all_categories: Vec<Category
 //You can optimize this later I guess (if it really needs it...)
 const THISCONTENTFIELDS : &str = "*";
 
+pub async fn get_render_categories(mut api_context: &mut ApiContext, subtype: &str) -> Result<Vec<Category>, Error> {
+    let all_categories = map_categories(get_all_categories(&mut api_context, None).await?);
+    let cloned_subtype = subtype.clone();
+    Ok(all_categories.into_iter().filter(move |c| &c.forcontent == &cloned_subtype).collect())
+}
+
 pub async fn get_render(mut context: PageContext, subtype: Option<String>, page_hash: Option<String>) -> 
     Result<Response, Error> 
 {
@@ -157,59 +163,100 @@ pub async fn get_render(mut context: PageContext, subtype: Option<String>, page_
         form.title = page.name.unwrap();
     }
 
-    let all_categories = map_categories(get_all_categories(&mut context.api_context, None).await?);
-    let cloned_subtype = form.subtype.clone();
-
-    Ok(Response::Render(render(context.layout_data, form, all_categories.into_iter().filter(move |c| &c.forcontent == &cloned_subtype).collect(), None)))
+    //let all_categories = map_categories(get_all_categories(&mut context.api_context, None).await?);
+    //let cloned_subtype = form.subtype.clone();
+    let render_categories = get_render_categories(&mut context.api_context, &form.subtype).await?;
+    Ok(Response::Render(render(context.layout_data, form, render_categories, None)))
+        //all_categories.into_iter().filter(move |c| &c.forcontent == &cloned_subtype).collect(), None)))
 }
 
-/* 
-/// Craft the message to be written to the api for the given post form
-pub async fn construct_post_message(context: &ApiContext, form: &PostForm) 
-    -> Result<Message, Error>
+/// Craft the content to be written to the api for the given post form
+pub async fn construct_post_content(context: &ApiContext, form: &PageForm) 
+    -> Result<Content, Error>
 {
-    let mut message;
+    let mut content;
     
     if form.id > 0 {
-        //Use all the values from the original message. You can't "move" messages fyi...
-        message = context.get_message_by_id(form.id, THISMESSAGEFIELDS).await?;
+        //Go pull all the original values. Note that most pages are legacy pages with important 
+        //information, make sure that information is NOT overwritten or lost! Also, note that
+        //pages cannot change their form, so 'literalType' is not set on edit
+        content = context.get_content_by_id(form.id, THISCONTENTFIELDS).await?;
     }
     else {
-        message = Message::default();
-        message.contentId = Some(form.content_id);
-        let mut values = make_values! {
+        content = Content::default();
+        content.contentType = Some(ContentType::PAGE);
+        content.literalType = Some(form.subtype.clone());
+        content.values = Some(make_values! {
             "markup": "bbcode"
-        };
-        //If we have a reply, add the appropriate reply-replated values
-        if let Some(reply_id) = form.reply_id {
-            let reply_to = context.get_message_by_id(reply_id, THISMESSAGEFIELDS).await?;
-            let reply_data = get_new_replydata(&reply_to);
-            reply_data.write_to_values(&mut values);
-        }
-        message.values = Some(values);
+        });
+
+        //We HAVE to get the parent of content!
+        let mut request = FullRequest::new();
+        add_value!(request, "systemtype", ContentType::SYSTEM);
+        add_value!(request, "submissions_type", SBSPageType::SUBMISSIONS);
+        //add_value!(request, "forcontent", SBSValue::FORCONTENT);
+
+        request.requests.push(build_request!(
+            RequestType::content, 
+            String::from("id,literalType,contentType"), 
+            String::from("literalType = @submissions_type and contentType = @systemtype")
+        )); 
+
+        let result = context.post_request(&request).await?;
+        let mut submission_parents = conversion::cast_result_required::<Content>(&result, &RequestType::content.to_string())?;
+        let submission_parent = submission_parents.pop().ok_or_else(|| Error::NotFound(String::from("Couldn't find submissions parent!")))?;
+
+        content.parentId = submission_parent.id;
     }
-    message.text = Some(form.post.clone()); 
 
-    Ok(message)
-} */
+    content.text = Some(form.text.clone()); 
+    content.name = Some(form.title.clone());
+    content.description = Some(form.description.clone());
+    content.keywords = Some(parse_compound_value(&form.keywords));
+    add_category_taglist(parse_compound_value(&form.categories), &mut content);
 
-pub async fn post_render(context: PageContext, form: PageForm) ->
+    //We KNOW there will be values, but might as well do the thing...
+    if let Some(ref mut values) = content.values 
+    {
+        values.insert(SBSValue::IMAGES.to_string(), parse_compound_value(&form.images).into());
+
+        if let Some(ref key) = form.key {
+            values.insert(SBSValue::DOWNLOADKEY.to_string(), key.clone().into());
+        }
+        if let Some(ref size) = form.size {
+            values.insert(SBSValue::SIZE.to_string(), size.clone().into());
+        }
+        if let Some(ref version) = form.version {
+            values.insert(SBSValue::VERSION.to_string(), version.clone().into());
+        }
+        if let Some(ref systems) = form.systems {
+            values.insert(SBSValue::SYSTEMS.to_string(), parse_compound_value(systems).into());
+        }
+    }
+    else {
+        return Err(Error::Other(String::from("INTERNAL ERROR: Somehow while constructing content, there wasn't a values dictionary!")))
+    }
+
+    Ok(content)
+}
+
+pub async fn post_render(mut context: PageContext, form: PageForm) ->
     Result<Response, Error>
 {
-        Err(Error::Other(String::from("Not logged in!")))
-    /*if let Some(ref _user) = context.layout_data.user 
+        //Err(Error::Other(String::from("Not logged in!")))
+    if let Some(ref _user) = context.layout_data.user 
     {
         //This one, we throw all the way, since we can't re-render the page without the parent anyway
-        let thread = context.api_context.get_content_by_id(form.content_id, THISCONTENTFIELDS).await?;
-        let mut written_post : Option<Message> = None;
+        //let thread = context.api_context.get_content_by_id(form.content_id, THISCONTENTFIELDS).await?;
+        let mut written_page : Option<Content> = None;
         let mut errors = Vec::new();
 
-        match construct_post_message(&context.api_context, &form).await {
-            Ok(message) =>
+        match construct_post_content(&context.api_context, &form).await {
+            Ok(page) =>
             {
-                match context.api_context.post_message(&message).await { 
-                    Ok(posted_post) => {
-                        written_post = Some(posted_post);
+                match context.api_context.post_content(&page).await { 
+                    Ok(posted_page) => {
+                        written_page = Some(posted_page);
                     },
                     Err(e) => { errors.push(e.to_user_string()); }
                 }
@@ -220,22 +267,23 @@ pub async fn post_render(context: PageContext, form: PageForm) ->
         if errors.is_empty() {
             //If there are no errors, we go to the new page
             Ok(Response::Redirect(
-                if let Some(ref post) = written_post {
-                    context.layout_data.links.forum_post(post, &thread)
+                if let Some(ref page) = written_page {
+                    context.layout_data.links.page(page)
                 }
                 else {
-                    Err(Error::Other(String::from("Some internal error occurred, preventing the new thread from being shown! No errors produced, but no thread data found!")))?
+                    Err(Error::Other(String::from("Some internal error occurred, preventing the new page from being shown! No errors produced, but no page data found!")))?
                 })
             )
         }
         else {
             //Otherwise, we stay here and show all the terrifying errors
-            Ok(Response::Render(render(context.layout_data, form, Some(thread), Some(errors))))
+            let render_categories = get_render_categories(&mut context.api_context, &form.subtype).await?;
+            Ok(Response::Render(render(context.layout_data, form, render_categories, Some(errors))))
         }
     }
     else {
         Err(Error::Other(String::from("Not logged in!")))
-    }*/
+    }
 }
 
 pub async fn delete_render(context: PageContext, page_id: i64) ->
