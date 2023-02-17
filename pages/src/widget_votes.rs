@@ -36,14 +36,14 @@ pub fn render(data: MainLayoutData, content: Content, user_vote: Option<ContentE
         (data.links.style("/forpage/votewidget.css"))
     }, html! {
         div #"main" {
-            form #"downvote" method="POST" action={(data.current_path)"?vote="(DOWNVOTE)} { 
+            form."nospacing" #"downvote" method="POST" action={(data.current_path)"?vote="(DOWNVOTE)} { 
                 input type="submit" value="-" data-current[real_vote==DOWNVOTE];
             }
             div #"votebar" {
                 div #"voteline" style=(format!("width:{}%", (upvotes as f32) / ((downvotes + upvotes) as f32) * 100.0)) { }
                 div #"votecount" { ((downvotes + upvotes)) }
             }
-            form #"upvote" method="POST" action={(data.current_path)"?vote="(UPVOTE)} { 
+            form."nospacing" #"upvote" method="POST" action={(data.current_path)"?vote="(UPVOTE)} { 
                 input type="submit" value="+" data-current[real_vote==UPVOTE];
             }
         }
