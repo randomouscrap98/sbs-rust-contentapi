@@ -285,7 +285,7 @@ impl ApiContext
     pub async fn post_set_content_engagement(&self, content_id: i64, engagement_type: &str, engagement: &str) -> Result<ContentEngagement, ApiError>
     {
         self.basic_post_request(AboutRequest{ 
-            endpoint: format!("/content/{}/setengagement/{}", content_id, engagement_type),
+            endpoint: format!("/shortcuts/content/{}/setengagement/{}", content_id, engagement_type),
             verb: String::from("POST"),
             post_data: Some(engagement.to_string()), 
         }, &engagement.to_string()).await

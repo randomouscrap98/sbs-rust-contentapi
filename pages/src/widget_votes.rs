@@ -40,7 +40,7 @@ pub fn render(data: MainLayoutData, content: Content, user_vote: Option<ContentE
     }, html! {
         div #"main" {
             @if data.user.is_some() {
-                form."nospacing" #"downvote" method="POST" action=(data.current_path) { 
+                form."nospacing" #"downvote" method="POST" action=(data.current()) { 
                     input type="hidden" name="vote" value=(DOWNVOTE);
                     input."notheme" type="submit" value="-" title="Downvote" data-current[real_vote==DOWNVOTE];
                 }
@@ -50,7 +50,7 @@ pub fn render(data: MainLayoutData, content: Content, user_vote: Option<ContentE
                 div #"votecount" { (totalvotes) }
             }
             @if data.user.is_some() {
-                form."nospacing" #"upvote" method="POST" action=(data.current_path) { 
+                form."nospacing" #"upvote" method="POST" action=(data.current()) { 
                     input type="hidden" name="vote" value=(UPVOTE);
                     input."notheme" type="submit" value="+" title="Upvote" data-current[real_vote==UPVOTE];
                 }

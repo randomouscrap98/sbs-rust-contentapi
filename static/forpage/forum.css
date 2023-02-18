@@ -197,6 +197,7 @@
     overflow: hidden;
     margin-left: auto;
     flex-wrap: wrap;
+    gap: var(--space_medium) 0;
 }
 
 .foruminfo .votes {
