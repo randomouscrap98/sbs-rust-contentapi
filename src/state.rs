@@ -66,7 +66,7 @@ impl RequestContext {
             user: context.get_me_safe().await,
             user_token: token,
             about_api: context.get_about().await?,
-            raw_alert: (common::admin::get_system_alert(&mut context).await?).and_then(|x| x.text),
+            raw_alert: (common::prefab::get_system_alert(&mut context).await?).and_then(|x| x.text),
 
             #[cfg(feature = "profiling")]
             profiler: profiler.clone()

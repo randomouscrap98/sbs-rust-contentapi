@@ -1,5 +1,5 @@
 use common::*;
-use common::search::*;
+use common::prefab::*;
 use common::constants::{DOWNVOTE, UPVOTE, VOTETYPE};
 use common::forms::VoteForm;
 use common::render::layout::*;

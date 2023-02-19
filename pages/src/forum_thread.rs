@@ -4,7 +4,7 @@ use common::forum::*;
 use common::pagination::*;
 use common::render::forum::*;
 use common::data::*;
-use common::search::*;
+use common::prefab::*;
 
 use contentapi::*;
 use contentapi::conversion::*;

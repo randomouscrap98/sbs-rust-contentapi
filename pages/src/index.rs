@@ -29,6 +29,6 @@ pub fn render(data: MainLayoutData, page_raw: Option<String>) -> String {
 }
 
 pub async fn get_render(mut context: PageContext) -> Result<Response, Error> {
-    let frontpage = admin::get_system_frontpage(&mut context.api_context).await?;
+    let frontpage = prefab::get_system_frontpage(&mut context.api_context).await?;
     Ok(Response::Render(render(context.layout_data, frontpage.and_then(|x| x.text))))
 }

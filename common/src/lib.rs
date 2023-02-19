@@ -1,13 +1,12 @@
 pub mod forum;
 pub mod render;
 pub mod pagination;
-pub mod submissions;
-pub mod admin;
+pub mod search;
 pub mod constants;
 pub mod forms;
 pub mod links;
 pub mod data;
-pub mod search;
+pub mod prefab;
 
 use std::collections::HashMap;
 

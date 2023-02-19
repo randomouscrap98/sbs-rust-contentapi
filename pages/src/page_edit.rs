@@ -4,7 +4,7 @@ use common::constants::SBSSYSTEMS;
 use common::constants::SBSValue;
 use common::constants::ANYSYSTEM;
 use common::data::*;
-use common::search::*;
+use common::prefab::*;
 use contentapi::*;
 
 use common::*;

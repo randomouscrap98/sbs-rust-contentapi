@@ -2,9 +2,11 @@ use common::*;
 use common::constants::SBSPageType;
 use common::forms::BasicPage;
 use common::render::*;
+use common::prefab::*;
 use common::render::layout::*;
 use contentapi::forms::*;
 use contentapi::*;
+
 //use contentapi::*;
 //use contentapi::conversion::*;
 use maud::*;
@@ -82,8 +84,8 @@ async fn get_render_internal(mut context: PageContext, registrationconfig_errors
     frontpage_errors: Option<Vec<String>>, banner_errors: Option<Vec<String>>) -> Result<Response, Error>
 {
     let reg_config = context.api_context.get_registrationconfig().await?;
-    let frontpage = common::admin::get_system_frontpage(&mut context.api_context).await?;
-    let banner = common::admin::get_system_alert(&mut context.api_context).await?;
+    let frontpage = get_system_frontpage(&mut context.api_context).await?;
+    let banner = get_system_alert(&mut context.api_context).await?;
     Ok(Response::Render(render(context.layout_data, frontpage, banner, reg_config, 
         registrationconfig_errors, frontpage_errors, banner_errors)))
 }

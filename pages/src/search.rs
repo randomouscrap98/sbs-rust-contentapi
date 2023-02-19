@@ -5,7 +5,7 @@ use contentapi::{*, conversion::map_users};
 use common::*;
 use common::data::*;
 use common::forms::*;
-use common::submissions::*;
+use common::search::*;
 use common::constants::*;
 use common::render::layout::*;
 use common::render::submissions::*;

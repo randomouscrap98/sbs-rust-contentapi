@@ -191,8 +191,6 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     );
     request.requests.push(user_request);
 
-    //println!("Final request: {:#?}", request);
-
     request
 
 }
@@ -223,8 +221,6 @@ pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page
     let users_raw = cast_result_required::<User>(&response, "user")?;
     let users = map_users(users_raw);
     let content = map_content(content_raw);
-
-    //println!("Activity: {:#?}", content_activity);
 
     let mut result : Vec<SbsActivity> = Vec::new();
 

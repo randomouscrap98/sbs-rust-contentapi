@@ -282,8 +282,8 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
     let can_delete; 
 
     if let Some(ref user) = data.user {
-        can_edit = crate::submissions::can_edit_page(user, &thread.thread);
-        can_delete = crate::submissions::can_delete_page(user, &thread.thread);
+        can_edit = crate::search::can_edit_page(user, &thread.thread);
+        can_delete = crate::search::can_delete_page(user, &thread.thread);
     }
     else {
         can_edit = false;

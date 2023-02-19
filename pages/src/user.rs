@@ -11,7 +11,7 @@ use common::forms::*;
 use common::render::*;
 use common::render::layout::*;
 use common::render::submissions::*;
-use common::submissions::*;
+use common::search::*;
 use maud::*;
 
 pub struct UserPackage {
