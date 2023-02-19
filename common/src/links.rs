@@ -1,3 +1,5 @@
+use crate::constants::SBSPageType;
+
 use super::*;
 use contentapi::*;
 use contentapi::forms::*;
@@ -105,6 +107,10 @@ impl LinkConfig {
 
     pub fn page_editor_new(&self, page_type: &str) -> String {
         format!("{}/page/edit?type={}", self.http_root, page_type)
+    }
+
+    pub fn page_editor_new_ptc(&self) -> String {
+        format!("{}/page/edit?type={}&ptc=true", self.http_root, SBSPageType::PROGRAM)
     }
 
     pub fn page_editor_edit(&self, page: &Content) -> String {
