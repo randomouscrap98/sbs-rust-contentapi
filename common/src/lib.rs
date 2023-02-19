@@ -5,7 +5,7 @@ pub mod search;
 pub mod constants;
 pub mod forms;
 pub mod links;
-pub mod data;
+pub mod view;
 pub mod prefab;
 
 use std::collections::HashMap;

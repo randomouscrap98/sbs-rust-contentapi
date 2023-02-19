@@ -3,7 +3,7 @@ use common::render::layout::*;
 use common::forum::*;
 use common::pagination::*;
 use common::render::forum::*;
-use common::data::*;
+use common::view::*;
 use common::prefab::*;
 
 use contentapi::*;

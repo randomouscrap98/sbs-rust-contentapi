@@ -3,7 +3,7 @@ use common::constants::SBSPageType;
 use common::constants::SBSSYSTEMS;
 use common::constants::SBSValue;
 use common::constants::ANYSYSTEM;
-use common::data::*;
+use common::view::*;
 use common::prefab::*;
 use contentapi::*;
 
