@@ -1,8 +1,10 @@
+use common::constants::PTCSYSTEM;
 use common::constants::SBSPageType;
 use common::constants::SBSSYSTEMS;
 use common::constants::SBSValue;
 use common::constants::ANYSYSTEM;
-use common::submissions::*;
+use common::data::*;
+use common::search::*;
 use contentapi::*;
 
 use common::*;
@@ -77,7 +79,7 @@ pub fn render(data: MainLayoutData, form: PageForm, all_categories: Vec<Category
                             table {
                                 tr { th { "Name" } th { "Id" } }
                                 @for (id, name) in SBSSYSTEMS {
-                                    @if *id != ANYSYSTEM {
+                                    @if *id != ANYSYSTEM && *id != PTCSYSTEM {
                                         tr { td{ (name) } td{ (id) }}
                                     }
                                 }

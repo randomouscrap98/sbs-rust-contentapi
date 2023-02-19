@@ -6,6 +6,8 @@ pub mod admin;
 pub mod constants;
 pub mod forms;
 pub mod links;
+pub mod data;
+pub mod search;
 
 use std::collections::HashMap;
 

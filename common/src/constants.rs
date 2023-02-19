@@ -51,13 +51,24 @@ pub const VOTETYPE: &str = "vote";
 
 pub const POPSCORE1SORT: &str = "popScore1_desc";
 pub const ANYSYSTEM: &str = "any";
+pub const PTCSYSTEM: &str = "ptc";
 
 pub const SBSSYSTEMS: &[(&str,&str)] = &[
     (ANYSYSTEM, "Any"), 
+    (PTCSYSTEM, "Petit Computer (DSi)"), 
     ("3ds", "Nintendo 3DS"), 
     ("wiiu", "Nintendo WiiU"), 
     ("switch", "Nintendo Switch")
 ]; 
+
+pub fn get_sbs_system_title(key: &str) -> Option<&str> {
+    for (sys, title) in SBSSYSTEMS {
+        if *sys == key {
+            return Some(title);
+        }
+    }
+    return None;
+}
 
 pub const SEARCHPAGETYPES: &[(&str,&str)] = &[
     ("", "Any"),
@@ -75,3 +86,5 @@ pub const SEARCHPAGEORDERS: &[(&str,&str)] = &[
     ("name_desc", "Alphabetical (Z-A)"),
     ("random", "Random")
 ];
+
+pub const CATEGORYPREFIX: &str = "tag:";

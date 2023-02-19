@@ -1,8 +1,8 @@
 use common::*;
+use common::search::*;
 use common::constants::{DOWNVOTE, UPVOTE, VOTETYPE};
 use common::forms::VoteForm;
 use common::render::layout::*;
-use common::submissions::get_content_vote;
 use maud::*;
 
 use contentapi::*;

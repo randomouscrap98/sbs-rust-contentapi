@@ -1,50 +1,9 @@
-
 use contentapi::*;
-use contentapi::endpoints::ApiContext;
-use contentapi::endpoints::ApiError;
-//use contentapi::endpoints::ApiContext;
-//use contentapi::endpoints::ApiError;
 use crate::constants::*;
 use crate::forms::*;
 use crate::forum::can_delete_thread;
 use crate::forum::can_edit_thread;
-
-pub const CATEGORYPREFIX: &str = "tag:";
-//pub const CATEGORYSEARCHBASE: &str = "contentType = @systemtype and !notdeleted() and literalType = {{}}";
-pub const CATEGORYFIELDS: &str = "id,literalType,contentType,values,name";
-
-pub fn get_allcategory_query() -> String {
-    format!("contentType = {{{{{}}}}} and !notdeleted() and literalType = {{{{{}}}}}", ContentType::SYSTEM, SBSPageType::CATEGORY)
-}
-
-/// Get the list of category ids this content is tagged under
-pub fn get_tagged_categories(content: &Content) -> Vec<i64>
-{
-    let mut result : Vec<i64> = Vec::new();
-
-    if let Some(ref values) = content.values {
-        for (key, _value) in values {
-            if key.starts_with(CATEGORYPREFIX) {
-                if let Ok(category) = (&key[CATEGORYPREFIX.len()..]).parse::<i64>() {
-                    result.push(category)
-                }
-            }
-        }
-    }
-
-    result
-}
-
-/// Add a parsed list of categories from a user form (which should be just ids)
-/// to the given content. It will add them as values
-pub fn add_category_taglist(raw_parsed: Vec<String>, content: &mut Content)
-{
-    if let Some(ref mut values) = content.values {
-        for category in raw_parsed {
-            values.insert(format!("{}{}", CATEGORYPREFIX, category), true.into());
-        }
-    }
-}
+use crate::search::*;
 
 /// Generate the complicated FullRequest for the given search. Could be a "From" if 
 /// the search included a per-page I guess...
@@ -91,18 +50,19 @@ pub fn get_search_request(search: &PageSearch, per_page: i32) -> FullRequest
     if let Some(subtype) = &search.subtype 
     {
         if !subtype.is_empty() {
+            add_value!(request, "systemkey", SBSValue::SYSTEMS);
             add_value!(request, "subtype", subtype.clone());
+            add_value!(request, "ptcsystem", format!("%{}%", PTCSYSTEM));
             query.push_str(" and literalType = @subtype");
             //Ignore certain search criteria
             if subtype == SBSPageType::PROGRAM {
                 //MUST have a key unless the user specifies otherwise
                 if !search.removed {
                     add_value!(request, "dlkeylist", vec![SBSValue::DOWNLOADKEY]);
-                    query.push_str(" and !valuekeyin(@dlkeylist)");
+                    query.push_str(" and (!valuekeyin(@dlkeylist) or !valuelike(@systemkey, @ptcsystem))");
                 }
 
                 if search.system != ANYSYSTEM {
-                    add_value!(request, "systemkey", SBSValue::SYSTEMS);
                     add_value!(request, "system", format!("%{}%", search.system)); //Systems is actually a json list but this should be fine
                     query.push_str(" and !valuelike(@systemkey, @system)");
                 }
@@ -140,67 +100,6 @@ pub fn get_search_request(search: &PageSearch, per_page: i32) -> FullRequest
     request
 }
 
-pub async fn get_all_categories(context: &mut ApiContext, limit: Option<Vec<i64>>) -> Result<Vec<Content>, ApiError> //Box<dyn std::error::Error>>
-{
-    let mut request = FullRequest::new();
-
-    request.requests.push(build_request!(
-        RequestType::content,
-        String::from(CATEGORYFIELDS),
-        format!("{} {}", get_allcategory_query(), 
-            if let Some(limit) = limit {
-                add_value!(request, "limit", limit);
-                " and id in @limit"
-            } else { 
-                "" 
-            }
-        )
-    ));
-
-    let result = context.post_request_profiled_opt(&request, "all_categories").await?;
-    conversion::cast_result_required::<Content>(&result, &RequestType::content.to_string()).map_err(|e| e.into())
-}
-
-#[derive(Debug)]
-pub struct Category {
-    pub id: i64,
-    pub name: String,
-    pub forcontent: String
-}
-
-pub fn map_categories(categories: Vec<Content>) -> Vec<Category>
-{
-    categories.into_iter().map(|c| {
-        Category {
-            id: c.id.unwrap_or(0),
-            name: c.name.unwrap_or_else(|| String::from("")), //Only evaluated on failure
-            forcontent: c.values
-                .and_then(|v| v.get(SBSValue::FORCONTENT).and_then(|v2| v2.as_str()).and_then(|v3| Some(String::from(v3))))
-                .unwrap_or_else(|| String::from(""))
-        }
-    }).collect::<Vec<Category>>()
-}
-
 //Both of these are the same as threads for now
 pub fn can_edit_page(user: &User, page: &Content) -> bool { can_edit_thread(user, page) }
 pub fn can_delete_page(user: &User, page: &Content) -> bool { can_delete_thread(user, page) }
-
-pub async fn get_content_vote(context: &ApiContext, content_id: i64) -> Result<Option<ContentEngagement>, ApiError>
-{
-    let mut request = FullRequest::new();
-    add_value!(request, "contentId", content_id);
-    add_value!(request, "upvote", UPVOTE);
-    add_value!(request, "downvote", DOWNVOTE);
-    add_value!(request, "type", VOTETYPE);
-    let mut creq = build_request!(
-        RequestType::content_engagement,
-        String::from("*"),
-        String::from("contentId = @contentId and type = @type and (engagement = @upvote or engagement = @downvote)")
-    );
-    creq.limit = 1; //Just in case
-    request.requests.push(creq);
-
-    let result = context.post_request(&request).await?;
-    let mut engagement = conversion::cast_result_required::<ContentEngagement>(&result, &RequestType::content_engagement.to_string())?;
-    Ok(engagement.pop())
-}

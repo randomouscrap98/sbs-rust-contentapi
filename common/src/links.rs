@@ -41,6 +41,10 @@ impl LinkConfig {
         format!("{}/widget/votes/{}", self.http_root, content_id)
     }
 
+    pub fn qr_generator(&self, content_id: i64) -> String {
+        format!("{}/widget/qr/{}", self.http_root, content_id)
+    }
+
     pub fn forum_category(&self, category: &Content) -> String {
         self.forum_category_unsafe(opt_s!(category.hash))
     }

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use super::*;
 use crate::*;
+use crate::data::*;
 use crate::constants::*;
 
 use contentapi::*;
@@ -11,20 +12,13 @@ use maud::*;
 
 pub fn pageicon(links: &LinkConfig, page: &Content) -> Markup 
 {
-    let values = match &page.values {
-        Some(values) => values.clone(),
-        None => HashMap::new()
-    };
-    //Is this really inefficient, to continuously make hashes? hopefully not!
-    let systems_map = SBSSYSTEMS.iter().map(|(k,v)| (*k,*v)).collect::<HashMap<&str, &str>>();
+    let systems = get_systems(page);
     html! {
         //Don't forget the program type! if it exists anyway
-        @if let Some(systems) = values.get(SBSValue::SYSTEMS).and_then(|k| k.as_array()) {
+        @if systems.len() > 0 {
             @for system in systems {
-                @if let Some(system) = system.as_str() {
-                    @if let Some(title) = systems_map.get(system) {
-                        img title=(title) class="sysicon" src={(links.resource_root)"/"(system)".svg"};
-                    }
+                @if let Some(title) = get_sbs_system_title(&system) { //systems_map.get(&system) {
+                    img title=(title) class="sysicon" src={(links.resource_root)"/"(system)".svg"};
                 }
             }
         }
@@ -41,6 +35,7 @@ pub fn page_card(links: &LinkConfig, page: &Content, users: &HashMap<i64, User>)
     //very wasteful allocations but whatever
     let link = links.forum_thread(page);
     let values = match &page.values { Some(values) => values.clone(), None => HashMap::new() };
+    let systems = get_systems(page);
     html!{
         div.{"pagecard "(opt_s!(page.literalType))} {
             div."cardmain" {
@@ -62,8 +57,12 @@ pub fn page_card(links: &LinkConfig, page: &Content, users: &HashMap<i64, User>)
                 a."user flatlink" href=(links.user(&user)) { (user.username) }
                 //This may have conditional display? I don't know, depends on how much room there is!
                 time."aside" datetime=(d(&page.createDate)) { (timeago_o(&page.createDate)) } 
+                //All this junk needs "key" so it can display properly... probably should change this?
                 @if let Some(key) = values.get(SBSValue::DOWNLOADKEY).and_then(|k| k.as_str()) {
                     span."key" { (key) }
+                }
+                @else if systems.iter().any(|s| s == &PTCSYSTEM) {
+                    a."key" href=(links.qr_generator(page.id.unwrap_or(0))) { "QR Codes" }
                 }
                 @else if opt_s!(page.literalType) == SBSPageType::PROGRAM {
                     span."key error" { "REMOVED" }
