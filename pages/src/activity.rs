@@ -156,6 +156,16 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     user_request.name = Some(String::from(USERACTIVITYKEY));
     request.requests.push(user_request);
 
+    let mut activity_request = build_request!(
+        RequestType::activity,
+        String::from("*"), //query, order, limit
+        activity_query,
+        order_d.to_string(), //Activity has a stupid specially named date field
+        per_page
+    );
+    activity_request.name = Some(String::from(ACTIVITYKEY));
+    request.requests.push(activity_request);
+
     let mut message_request = build_request!(
         RequestType::message,
         String::from("*"), //query, order, limit
@@ -166,16 +176,6 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     //message_request.expensive = true;
     message_request.name = Some(String::from(POSTACTIVITYKEY));
     request.requests.push(message_request);
-
-    let mut activity_request = build_request!(
-        RequestType::activity,
-        String::from("*"), //query, order, limit
-        activity_query,
-        order_d.to_string(), //Activity has a stupid specially named date field
-        per_page
-    );
-    activity_request.name = Some(String::from(ACTIVITYKEY));
-    request.requests.push(activity_request);
 
     let content_request = build_request!(
         RequestType::content,
@@ -190,6 +190,8 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
         format!("id in @{}.id or id in @{}.createUserId or id in @{}.userId", USERACTIVITYKEY, POSTACTIVITYKEY, ACTIVITYKEY)
     );
     request.requests.push(user_request);
+
+    //println!("Final request: {:#?}", request);
 
     request
 
@@ -221,6 +223,8 @@ pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page
     let users_raw = cast_result_required::<User>(&response, "user")?;
     let users = map_users(users_raw);
     let content = map_content(content_raw);
+
+    //println!("Activity: {:#?}", content_activity);
 
     let mut result : Vec<SbsActivity> = Vec::new();
 

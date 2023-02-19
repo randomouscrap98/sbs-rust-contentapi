@@ -33,7 +33,8 @@ string_const!{ SBSPageType => {
     (DIRECTMESSAGE:"directmessage"),
     (ALERT:"alert"),
     (FRONTPAGE:"frontpage"),
-    (SUBMISSIONS:"submissions")
+    (SUBMISSIONS:"submissions"),
+    (PTCFILES:"ptcfiles")
 }}
 
 

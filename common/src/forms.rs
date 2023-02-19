@@ -74,7 +74,11 @@ pub struct PageForm
     pub key: Option<String>,
     pub version: Option<String>,
     pub size: Option<String>,
-    pub systems: Option<String>     //Same as keywords
+    pub systems: Option<String>,     //Same as keywords
+
+    /// The special ptc field. This requires some js systems to construct an appropriate string,
+    /// the format of which is understood by the rust frontend to generate qr codes on the fly
+    pub ptc_files: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]

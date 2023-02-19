@@ -132,6 +132,7 @@ async fn main()
 
     let fs_static_route = warp::path("static").and(warp::fs::dir("static")).boxed();
     let fs_favicon_route = warp::path("favicon.ico").and(warp::fs::file("static/resources/favicon.ico")).boxed();
+    let fs_robots_route = warp::path("robots.txt").and(warp::fs::file("static/robots.txt")).boxed();
 
     //This "state filter" should be placed at the end of your path but before you start collecting your
     //route-specific data. It will collect the path and the session cookie (if there is one) and create
@@ -392,6 +393,7 @@ async fn main()
     warp::serve(
             fs_static_route
         .or(fs_favicon_route)
+        .or(fs_robots_route)
         .or(get_index_route)
         .or(get_about_route)
         .or(get_search_route)
