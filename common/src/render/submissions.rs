@@ -62,7 +62,7 @@ pub fn page_card(links: &LinkConfig, page: &Content, users: &HashMap<i64, User>)
                     span."key" { (key) }
                 }
                 @else if systems.iter().any(|s| s == &PTCSYSTEM) {
-                    a."key" href=(links.qr_generator(page.id.unwrap_or(0))) { "QR Codes" }
+                    a."key" href=(links.qr_generator(page)) { "QR Codes" }
                 }
                 @else if opt_s!(page.literalType) == SBSPageType::PROGRAM {
                     span."key error" { "REMOVED" }

@@ -207,7 +207,7 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
                         b { "Created: " }
                         time datetime=(d(&thread.thread.createDate)) { (timeago_o(&thread.thread.createDate)) }
                     }
-                    iframe."votes" src={(data.links.votewidget(thread.id))}{}
+                    iframe."votes" src={(data.links.votewidget(&thread.thread))}{}
                 }
             }
         }

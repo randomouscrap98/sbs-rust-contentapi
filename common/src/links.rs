@@ -37,12 +37,12 @@ impl LinkConfig {
         format!("{}/widget/imagebrowser", self.http_root)
     }
 
-    pub fn votewidget(&self, content_id: i64) -> String {
-        format!("{}/widget/votes/{}", self.http_root, content_id)
+    pub fn votewidget(&self, content: &Content) -> String {
+        format!("{}/widget/votes/{}", self.http_root, i(&content.id))
     }
 
-    pub fn qr_generator(&self, content_id: i64) -> String {
-        format!("{}/widget/qr/{}", self.http_root, content_id)
+    pub fn qr_generator(&self, content: &Content) -> String {
+        format!("{}/widget/qr/{}", self.http_root, opt_s!(content.hash))
     }
 
     pub fn forum_category(&self, category: &Content) -> String {
