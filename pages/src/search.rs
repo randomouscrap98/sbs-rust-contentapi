@@ -95,7 +95,7 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
             @if let Some(ref _user) = data.user {
                 div."pagelist smallseparate" {
                     a."coolbutton" #"newprogram" href=(data.links.page_editor_new(SBSPageType::PROGRAM)) { "New SB Program" }
-                    a."coolbutton" #"newprogram" href=(data.links.page_editor_new_ptc()) { "New PTC Program" }
+                    a."coolbutton" #"newprogram" href=(data.links.page_editor_new(PTCSYSTEM)) { "New PTC Program" }
                     a."coolbutton" #"newresource" href=(data.links.page_editor_new(SBSPageType::RESOURCE)) { "New Resource" }
                 }
             }

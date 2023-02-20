@@ -15,34 +15,32 @@ use common::render::layout::*;
 use contentapi::endpoints::ApiContext;
 use maud::*;
 
+
 //Rendering ALWAYS requires the form, even if it's just an empty one
-pub fn render(data: MainLayoutData, form: PageForm, mut mode: Option<String>, all_categories: Vec<Category>, errors: Option<Vec<String>>) -> String 
+pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_categories: Vec<Category>, errors: Option<Vec<String>>) -> String 
 {
-    let title : Option<String>;
+    let title : String;
     let mut submit_value = format!("Submit {}", form.subtype);
 
     //Assume it's new or not based on the values in the form. The form drives this render
     if form.id == 0 {
-        title = Some(format!("Create new {}", form.subtype));
+        title = format!("Create new {}", form.subtype);
     }
     else {
-        title = Some(format!("Edit page: '{}'", form.title));
+        title = format!("Edit page: '{}'", form.title);
         submit_value = format!("Update {}", form.subtype);
     }
 
-    if mode.is_none() {
-        mode = get_mode_from_form(&form);
-    }
-
-    let real_mode = if let Some(ref m) = mode { m } else { "" };
+    let real_mode = if let Some(m) = mode { m } else { get_mode_from_form(&form) };
 
     layout(&data, html!{
         (data.links.style("/forpage/pageeditor.css"))
+        (data.links.script("/forpage/pageeditor.js"))
         section {
-            @if form.subtype != SBSPageType::PROGRAM && form.subtype != SBSPageType::RESOURCE {
+            @if real_mode != SBSPageType::PROGRAM && real_mode != SBSPageType::RESOURCE && real_mode != PTCSYSTEM { //form.subtype != SBSPageType::PROGRAM && form.subtype != SBSPageType::RESOURCE {
                 h1."error" { "Unknown editor type: " (form.subtype) }
             }
-            @else if let Some(title) = title {
+            @else {
                 h1 { (title) }
                 //NOTE: NO ACTION! These kinds of pages always post to themselves
                 form."editor" #"pageedit_form" method="POST" {
@@ -55,12 +53,25 @@ pub fn render(data: MainLayoutData, form: PageForm, mut mode: Option<String>, al
                     input #"pageedit_tagline" type="text" name="description" value=(form.description) required placeholder="Short and sweet!";
                     label for="pageedit_text" { "Main Page:" }
                     (post_textbox(Some("pageedit_text"), Some("text"), Some(&form.text)))
-                    @if form.subtype == SBSPageType::PROGRAM {
-                        @if real_mode == "ptc" {
+                    @if real_mode == SBSPageType::PROGRAM || real_mode == PTCSYSTEM { 
+                        @if real_mode == PTCSYSTEM {
+                            noscript { h2."error" { "The PTC editor requires javascript, I'm very sorry!" }}
                             input #"pageedit_systems" type="hidden" name="systems" value=(PTCSYSTEM) required;
+                            label for="pageedit_newfile" { "Add .PTC file:" }
+                            input #"pageedit_newfile" type="file" accept=".ptc";
+                            p."aside" {
+                                "While in Petit Computer, go to the file manager and export the file or files you want onto your sd card. "
+                                "The files are exported to folders named after the file, and inside is your .ptc file. Every time you export "
+                                "a file with the same name, it creates a new file in that folder, so you generally want the last one. When you "
+                                "upload the file here, we'll parse the name from it and let you add a description. When people visit your page, "
+                                "they'll be able to get the QR codes for each file you added."
+                            }
+                            label { "Manage PTC files:" }
+                            div #"ptc_file_list" { }
                             details."editorinstructions" {
                                 summary."aside" { "Inspect raw PTC form data (readonly, auto-generated)" }
                                 textarea #"pageedit_ptc_files" name="ptc_files" readonly { (opt_s!(form.ptc_files)) }
+                                button type="button" #"ptc_files_refresh" { "Refresh" }
                             }
                         }
                         @else {
@@ -84,7 +95,7 @@ pub fn render(data: MainLayoutData, form: PageForm, mut mode: Option<String>, al
                                 }
                                 p."aside" { 
                                     "Looking for Petit Computer (DSi)? That requires a different editor: "
-                                    a href=(data.links.page_editor_new_ptc()) { "PTC Page Editor" }
+                                    a href=(data.links.page_editor_new(PTCSYSTEM)) { "PTC Page Editor" }
                                     " (you will lose any data entered here!)"
                                 }
                             }
@@ -123,9 +134,6 @@ pub fn render(data: MainLayoutData, form: PageForm, mut mode: Option<String>, al
                     input type="submit" value=(submit_value);
                 }
             }
-            @else {
-                h1."error" { "PAGE EDITOR CANNOT LOAD" }
-            }
         }
     }).into_string()
 }
@@ -136,23 +144,24 @@ pub async fn get_render_categories(mut api_context: &mut ApiContext, subtype: &s
     Ok(all_categories.into_iter().filter(move |c| &c.forcontent == &cloned_subtype).collect())
 }
 
-pub fn get_mode_from_form(form: &PageForm) -> Option<String> {
+pub fn get_mode_from_form(form: &PageForm) -> String {
     if let Some(ref system) = form.systems {
         if system.contains(PTCSYSTEM) {
-            return Some("ptc".to_string())
+            return "ptc".to_string()
         }
     }
-    None
+    return form.subtype.clone()
 }
 
-pub async fn get_render(mut context: PageContext, subtype: Option<String>, mode: Option<String>, page_hash: Option<String>) -> 
+pub fn get_subtype_from_mode(mode: &str) -> String {
+    if mode == "ptc" { SBSPageType::PROGRAM.to_string() }
+    else { mode.to_string() }
+}
+
+pub async fn get_render(mut context: PageContext, mode: Option<String>, page_hash: Option<String>) -> 
     Result<Response, Error> 
 {
     let mut form = PageForm::default();
-
-    if let Some(subtype) = subtype {
-        form.subtype = subtype;
-    }
 
     if let Some(hash) = page_hash 
     {
@@ -179,6 +188,12 @@ pub async fn get_render(mut context: PageContext, subtype: Option<String>, mode:
         form.subtype = page.literalType.unwrap();
         form.text = page.text.unwrap();
         form.title = page.name.unwrap();
+    }
+    else if let Some(ref mode) = mode {
+        form.subtype = get_subtype_from_mode(mode);
+    }
+    else {
+        return Err(Error::Other(String::from("Invalid operating mode: must have hash or mode!")));
     }
 
     let render_categories = get_render_categories(&mut context.api_context, &form.subtype).await?;
