@@ -265,7 +265,7 @@ pub async fn construct_post_content_full(context: &mut ApiContext, form: &PageFo
             let mut ptc_page = Content::default();
             ptc_page.contentType = Some(ContentType::PAGE);
             ptc_page.literalType = Some(PTCSYSTEM.to_string());
-            ptc_page.name = Some(format!("PTC files container for {}", form.text));
+            ptc_page.name = Some(format!("PTC files container for {}", form.title));
             ptc_page.permissions = Some(make_permissions! {
                 "0": "CR" 
             });

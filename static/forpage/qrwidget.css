@@ -1,0 +1,10 @@
+.qrcodes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.tracking {
+    display: flex;
+    justify-content: center;
+}

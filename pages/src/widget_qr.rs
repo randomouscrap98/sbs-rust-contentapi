@@ -40,6 +40,7 @@ pub async fn get_render(mut context: PageContext, hash: &str) -> Result<Response
         //    (context.layout_data.links.style("/forpage/qrwidget.css"))
         //}, html! {
         layout(&context.layout_data, html!{
+            (context.layout_data.links.style("/forpage/qrwidget.css"))
             section {
                 h1 { a."flatlink" href=(context.layout_data.links.forum_thread(&page.main)) { (opt_s!(page.main.name)) } }
                 @if let Some(ptc_files) = page.ptc {
@@ -51,12 +52,14 @@ pub async fn get_render(mut context: PageContext, hash: &str) -> Result<Response
                                 p { (description)}
                             }
                             @let qr_codes = generate_qr_svgs(ptc_file, QrConfig::default())?; 
-                            @for (i, qr) in qr_codes.iter().enumerate()
-                            {
-                                div."qr" {
-                                    (PreEscaped(qr))
-                                    div."tracking" {
-                                        span { ({i + 1}) } " / " span { (qr_codes.len())}
+                            div."qrcodes" {
+                                @for (i, qr) in qr_codes.iter().enumerate()
+                                {
+                                    div."qr" {
+                                        (PreEscaped(qr))
+                                        div."tracking" {
+                                            span { ({i + 1}) } " / " span { (qr_codes.len())}
+                                        }
                                     }
                                 }
                             }
