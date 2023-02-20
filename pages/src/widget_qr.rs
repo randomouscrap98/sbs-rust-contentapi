@@ -10,6 +10,8 @@ use common::prefab::{get_fullpage_by_hash};
 use common::render::layout::*;
 use flate2::write::ZlibEncoder;
 use maud::*;
+use qrcode::QrCode;
+use qrcode::render::svg;
 use serde::{Serialize, Deserialize};
 
 use base64::{Engine as _, engine::general_purpose};
@@ -45,28 +47,13 @@ pub async fn get_render(mut context: PageContext, hash: &str) -> Result<Response
                         @let parsed_data = serde_json::de::from_str::<Vec<PtcData>>(&ptc_data)?;
                         @for ptc_file in parsed_data {
                             h3 { (ptc_file.name) }
-                            @if let Some(description) = ptc_file.description {
+                            @if let Some(ref description) = ptc_file.description {
                                 p { (description)}
                             }
-                            ({
-                                //This is normal code, can do whatever in here
-                                let raw = general_purpose::STANDARD.decode(&ptc_file.base64).map_err(|e| Error::Other(e.to_string()))?;
-                                let rawlength = raw.len() as u32;
-                                let ftype = &raw[8..12]; //The 4 char code that describes the type
-                                println!("raw length: {}\nftype: {}", rawlength, std::str::from_utf8(ftype).unwrap());
-                                let mut enc = ZlibEncoder::new(Vec::new(), flate2::Compression::best());
-                                enc.write_all(&raw).map_err(|e| Error::Other(e.to_string()))?;
-                                let zlibdata = enc.finish().map_err(|e| Error::Other(e.to_string()))?;
-                                let mut result : Vec<u8> = Vec::new();
-                                result.extend_from_slice(ptc_file.name.as_bytes());
-                                //slow but ugh i'm tired. this pads the name
-                                while result.len() < 8 { result.push(0); }
-                                result.extend_from_slice(ftype); //.append(other)//copy_from_slice(ftype);
-                                result.extend((zlibdata.len() as u32).to_le_bytes());
-                                result.extend(rawlength.to_le_bytes());
-                                result.extend(zlibdata);
-                                ""
-                            })
+                            @for qr in generate_qr_svgs(ptc_file)?
+                            {
+                                (PreEscaped(qr))
+                            }
                         }
                     }
                     @else {
@@ -79,6 +66,57 @@ pub async fn get_render(mut context: PageContext, hash: &str) -> Result<Response
             }
         }).into_string()))
 }
+
+pub fn generate_qr_svgs(ptc_file: PtcData) -> Result<Vec<String>, Error>
+{
+    const QRBYTES : i32 = 630; //Only for now, since we're not giving options 
+    const QRVERSION : i16 = 21;
+
+    let raw = general_purpose::STANDARD.decode(&ptc_file.base64).map_err(|e| Error::Other(e.to_string()))?;
+    let rawlength = raw.len() as u32;
+    let ftype = &raw[8..12]; //The 4 char code that describes the type
+    println!("raw length: {}\nftype: {}", rawlength, std::str::from_utf8(ftype).unwrap());
+
+    let mut enc = ZlibEncoder::new(Vec::new(), flate2::Compression::best());
+    enc.write_all(&raw).map_err(|e| Error::Other(e.to_string()))?;
+    let zlibdata = enc.finish().map_err(|e| Error::Other(e.to_string()))?;
+
+    let mut result : Vec<u8> = Vec::new();
+    result.extend_from_slice(ptc_file.name.as_bytes());
+    //slow but ugh i'm tired. this pads the name
+    while result.len() < 8 { result.push(0); }
+    result.extend_from_slice(ftype); //.append(other)//copy_from_slice(ftype);
+    result.extend((zlibdata.len() as u32).to_le_bytes());
+    result.extend(rawlength.to_le_bytes());
+    result.extend(zlibdata);
+
+    let resultmd5 : [u8;16] = md5::compute(&result).into();
+    let qrcount = (result.len() as f32 / QRBYTES as f32).ceil() as u8;
+    println!("QR codes: {}", qrcount);
+
+    let mut qrcodes : Vec<String> = Vec::new();
+    for qrnum in 0u8..qrcount {
+        let mut qrdata : Vec<u8> = vec![0x50u8, 0x54u8, qrnum + 1, qrcount];
+        let start = (QRBYTES * qrnum as i32) as usize;
+        let end = std::cmp::min((start + QRBYTES as usize) as usize, result.len());
+        let resultslice = &result[start..end];
+        let slicemd5 : [u8;16] = md5::compute(resultslice).into();
+        qrdata.extend(slicemd5);
+        qrdata.extend_from_slice(&resultmd5);
+        qrdata.extend_from_slice(resultslice);
+        println!("QR {} size: {}", qrnum + 1, qrdata.len());
+        let code = QrCode::with_version(qrdata, qrcode::Version::Normal(QRVERSION), qrcode::EcLevel::M).map_err(|e| Error::Other(e.to_string()))?;
+        let image = code.render()
+            .min_dimensions(200, 200)
+            .dark_color(svg::Color("#000000"))
+            .light_color(svg::Color("#ffffff"))
+            .build();
+        qrcodes.push(image);
+        //qrdata.extend([50u8, 54u8, q]);
+    }
+    Ok(qrcodes)
+}
+
 
 //pub fn get_qr_element() -> Markup
 //{
