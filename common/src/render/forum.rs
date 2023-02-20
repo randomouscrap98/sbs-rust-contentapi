@@ -219,14 +219,22 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
         //for loop, it then displays pages, which is on the bottom of the thread, so it might seem confusing.
         //maybe the id should be changed to an anchor, idr how to do that.
         section #"thread-top" data-selected=[config.selected_post_id] {
-            @for (index,tree) in reply_tree.iter().enumerate() {
-                @let sequence = config.start_num.and_then(|s| Some(s + index as i32));
-                (walk_post_tree(&context.layout_data, &mut context.bbcode, &config, tree, sequence, &mut post_count))
+            @if reply_tree.len() > 0 {
+                @for (index,tree) in reply_tree.iter().enumerate() {
+                    @let sequence = config.start_num.and_then(|s| Some(s + index as i32));
+                    (walk_post_tree(&context.layout_data, &mut context.bbcode, &config, tree, sequence, &mut post_count))
+                }
+            }
+            @else {
+                //As usual, I'm reusing pagelist to make centered and spaced content
+                p."aside pagelist" { "No posts yet (will you be the first?)" }
             }
             @if let Some(pages) = config.pages {
-                div."smallseparate pagelist" {
-                    @for page in pages {
-                        a."current"[page.current] target="_top" href={(data.links.forum_thread(&thread.thread))"?page="(page.page)"#thread-top"} { (page.text) }
+                @if pages.len() > 1 {
+                    div."smallseparate pagelist" {
+                        @for page in pages {
+                            a."current"[page.current] target="_top" href={(data.links.forum_thread(&thread.thread))"?page="(page.page)"#thread-top"} { (page.text) }
+                        }
                     }
                 }
             }
