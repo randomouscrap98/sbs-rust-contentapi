@@ -110,7 +110,7 @@ impl LinkConfig {
     }
 
     pub fn page_editor_new_ptc(&self) -> String {
-        format!("{}/page/edit?type={}&ptc=true", self.http_root, SBSPageType::PROGRAM)
+        format!("{}/page/edit?type={}&mode=ptc", self.http_root, SBSPageType::PROGRAM)
     }
 
     pub fn page_editor_edit(&self, page: &Content) -> String {

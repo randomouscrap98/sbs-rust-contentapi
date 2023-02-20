@@ -16,7 +16,7 @@ use contentapi::endpoints::ApiContext;
 use maud::*;
 
 //Rendering ALWAYS requires the form, even if it's just an empty one
-pub fn render(data: MainLayoutData, form: PageForm, all_categories: Vec<Category>, errors: Option<Vec<String>>) -> String 
+pub fn render(data: MainLayoutData, form: PageForm, mut mode: Option<String>, all_categories: Vec<Category>, errors: Option<Vec<String>>) -> String 
 {
     let title : Option<String>;
     let mut submit_value = format!("Submit {}", form.subtype);
@@ -29,22 +29,12 @@ pub fn render(data: MainLayoutData, form: PageForm, all_categories: Vec<Category
         title = Some(format!("Edit page: '{}'", form.title));
         submit_value = format!("Update {}", form.subtype);
     }
-/* 
-    pub id: i64, //Should default to 0
-    pub subtype: String, //Has to be SOMETHING, and the post endpoint will reject invalid values
-    pub title: String,
-    pub text: String,
-    pub description: String,    //Making this required now
-    pub keywords: String,       //List of keywords separated by space, gets split afterwards
-    pub images: String,         //Same as keywords
-    pub categories: String,     //Same as keywords
 
-    //These are optional fields, for programs
-    pub key: Option<String>,
-    pub version: Option<String>,
-    pub size: Option<String>,
-    pub systems: Option<String>     //Same as keywords
-    */
+    if mode.is_none() {
+        mode = get_mode_from_form(&form);
+    }
+
+    let real_mode = if let Some(ref m) = mode { m } else { "" };
 
     layout(&data, html!{
         (data.links.style("/forpage/pageeditor.css"))
@@ -66,28 +56,37 @@ pub fn render(data: MainLayoutData, form: PageForm, all_categories: Vec<Category
                     label for="pageedit_text" { "Main Page:" }
                     (post_textbox(Some("pageedit_text"), Some("text"), Some(&form.text)))
                     @if form.subtype == SBSPageType::PROGRAM {
-                        label for="pageedit_key" { "Key:" }
-                        input #"pageedit_key" type="text" name="key" value=(opt_s!(form.key)) required placeholder="The key for people to download your program!";
-                        label for="pageedit_systems" { "Systems:" }
-                        input #"pageedit_systems" type="text" name="systems" value=(opt_s!(form.systems)) required placeholder="What console does this go on?";
-                        details."editorinstructions" {
-                            summary."aside" { "About systems" }
-                            p { "SmileBASIC is available for several systems, so people have to know what system your program is for! "
-                                "Certain systems are interoperable and share keys, so you can add multiple systems if multiple apply. "
-                                "Please use the IDs below for the system, not the name."
+                        @if real_mode == "ptc" {
+                            input #"pageedit_systems" type="hidden" name="systems" value=(PTCSYSTEM) required;
+                            details."editorinstructions" {
+                                summary."aside" { "Inspect raw PTC form data (readonly, auto-generated)" }
+                                textarea #"pageedit_ptc_files" name="ptc_files" readonly { (opt_s!(form.ptc_files)) }
                             }
-                            table {
-                                tr { th { "Name" } th { "Id" } }
-                                @for (id, name) in SBSSYSTEMS {
-                                    @if *id != ANYSYSTEM && *id != PTCSYSTEM {
-                                        tr { td{ (name) } td{ (id) }}
+                        }
+                        @else {
+                            label for="pageedit_key" { "Key:" }
+                            input #"pageedit_key" type="text" name="key" value=(opt_s!(form.key)) required placeholder="The key for people to download your program!";
+                            label for="pageedit_systems" { "Systems:" }
+                            input #"pageedit_systems" type="text" name="systems" value=(opt_s!(form.systems)) required placeholder="What console does this go on?";
+                            details."editorinstructions" {
+                                summary."aside" { "About systems" }
+                                p { "SmileBASIC is available for several systems, so people have to know what system your program is for! "
+                                    "Certain systems are interoperable and share keys, so you can add multiple systems if multiple apply. "
+                                    "Please use the IDs below for the system, not the name."
+                                }
+                                table {
+                                    tr { th { "Name" } th { "Id" } }
+                                    @for (id, name) in SBSSYSTEMS {
+                                        @if *id != ANYSYSTEM && *id != PTCSYSTEM {
+                                            tr { td{ (name) } td{ (id) }}
+                                        }
                                     }
                                 }
-                            }
-                            p."aside" { 
-                                "Looking for Petit Computer (DSi)? That requires a different editor: "
-                                a href=(data.links.page_editor_new_ptc()) { "PTC Page Editor" }
-                                " (you will lose any data entered here!)"
+                                p."aside" { 
+                                    "Looking for Petit Computer (DSi)? That requires a different editor: "
+                                    a href=(data.links.page_editor_new_ptc()) { "PTC Page Editor" }
+                                    " (you will lose any data entered here!)"
+                                }
                             }
                         }
                         label for="pageedit_version" { "Version:" }
@@ -137,7 +136,16 @@ pub async fn get_render_categories(mut api_context: &mut ApiContext, subtype: &s
     Ok(all_categories.into_iter().filter(move |c| &c.forcontent == &cloned_subtype).collect())
 }
 
-pub async fn get_render(mut context: PageContext, subtype: Option<String>, page_hash: Option<String>) -> 
+pub fn get_mode_from_form(form: &PageForm) -> Option<String> {
+    if let Some(ref system) = form.systems {
+        if system.contains(PTCSYSTEM) {
+            return Some("ptc".to_string())
+        }
+    }
+    None
+}
+
+pub async fn get_render(mut context: PageContext, subtype: Option<String>, mode: Option<String>, page_hash: Option<String>) -> 
     Result<Response, Error> 
 {
     let mut form = PageForm::default();
@@ -174,7 +182,7 @@ pub async fn get_render(mut context: PageContext, subtype: Option<String>, page_
     }
 
     let render_categories = get_render_categories(&mut context.api_context, &form.subtype).await?;
-    Ok(Response::Render(render(context.layout_data, form, render_categories, None)))
+    Ok(Response::Render(render(context.layout_data, form, mode, render_categories, None)))
 }
 
 /// Craft the MAIN content to be written to the api for the given post form
@@ -332,7 +340,7 @@ pub async fn post_render(mut context: PageContext, form: PageForm) ->
         else {
             //Otherwise, we stay here and show all the terrifying errors
             let render_categories = get_render_categories(&mut context.api_context, &form.subtype).await?;
-            Ok(Response::Render(render(context.layout_data, form, render_categories, Some(errors))))
+            Ok(Response::Render(render(context.layout_data, form, None, render_categories, Some(errors))))
         }
     }
     else {
