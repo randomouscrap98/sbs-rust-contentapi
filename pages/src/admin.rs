@@ -55,14 +55,14 @@ pub fn render(data: MainLayoutData, frontpage: Option<Content>, banner: Option<C
                     p { "Eventually!" }
                     hr;
                     h3 #"update-frontpage" {"Set frontpage (HTML!):"}
-                    form method="POST" action={(data.links.http_root)"/admin?frontpage=1#update-frontpage"} {
+                    form."editor" method="POST" action={(data.links.http_root)"/admin?frontpage=1#update-frontpage"} {
                         (errorlist(frontpage_errors))
                         input type="hidden" name="id" value=(frontpage_id);
                         textarea type="text" name="text"{(frontpage_text)}
                         input type="submit" value="Update";
                     }
                     h3 #"update-alert" {"Set alert banner (HTML!):"}
-                    form method="POST" action={(data.links.http_root)"/admin?alert=1#update-alert"} {
+                    form."editor" method="POST" action={(data.links.http_root)"/admin?alert=1#update-alert"} {
                         (errorlist(banner_errors))
                         input type="hidden" name="id" value=(banner_id);
                         textarea type="text" name="text"{(banner_text)}

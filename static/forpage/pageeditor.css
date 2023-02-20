@@ -27,6 +27,26 @@
     height: 5em !important;
 }
 
+.checklist {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: var(--space_small);
+}
+
+.checkitem label {
+    display:flex;
+    margin: var(--space_small);
+    align-items: center;
+    min-width: 10em;
+}
+
+.checkitem input[type="checkbox"] {
+    width: unset;
+    margin: 0;
+    margin-right: var(--space_small);
+}
+
 #pageedit_text {
     height: 20em;
 }
@@ -35,5 +55,11 @@
     min-height: 3em;
     border: 1px solid var(--color_divider);
     margin-bottom: var(--space_small);
+}
+
+/* When the aside is directly inside the form, style it differently */
+form > #ptc_editor_aside {
+    margin-top: 0;
+    margin-left: var(--space_small);
 }
 

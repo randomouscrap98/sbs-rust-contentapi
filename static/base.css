@@ -270,6 +270,7 @@ input[readonly], textarea[readonly] {
     justify-content: center;
     flex-wrap: wrap;
     margin-top: var(--space_big);
+    gap: var(--space_small) 0;
 }
 
 .pagelist .current {

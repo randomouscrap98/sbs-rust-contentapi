@@ -1,10 +1,14 @@
 var mode = pageedit_form.getAttribute("data-mode");
+var SYSTEMCHECKLISTID = "systems_checklist";
+var CATEGORYCHECKLISTID = "categories_checklist";
+
+pageedit_form.onsubmit = editor_onsubmit;
 
 if (mode === "ptc") {
+    console.log("Setting up PTC controls");
     //script is defer, put all function calls right here in the script
     pageedit_newfile.addEventListener("change", added_file);
     ptc_files_refresh.onclick = refresh_raw_ptc_list;
-    pageedit_form.onsubmit = finalize_form;
 
     //Need to parse whatever was originally in the raw data and create
     //elements from it. We do this last just in case it fails? Should just 
@@ -13,6 +17,76 @@ if (mode === "ptc") {
 }
 else {
     console.log("Not setting up PTC controls (not in ptc mode)");
+    fix_systems();
+    fix_categories();
+}
+
+function editor_onsubmit()
+{
+    if (mode === "ptc") {
+        refresh_raw_ptc_list();
+    }
+    var systems_checklist = document.getElementById(SYSTEMCHECKLISTID);
+    if(systems_checklist) pageedit_systems.value = systems_checklist.to_list();
+    var categories_checklist = document.getElementById(CATEGORYCHECKLISTID);
+    if(categories_checklist) pageedit_categories.value = categories_checklist.to_list();
+    return true;
+}
+
+function fix_systems()
+{
+    pageedit_systems.setAttribute("type", "hidden");
+    systems_instructions.style.display = "none";
+    var systems = JSON.parse(systems_table.getAttribute("data-raw"));
+    var checklist = make_checklist(systems, SYSTEMCHECKLISTID);
+    pageedit_systems.parentNode.insertBefore(checklist, pageedit_systems);
+    checklist.parentNode.insertBefore(ptc_editor_aside, checklist.nextElementSibling);
+}
+
+function fix_categories()
+{
+    pageedit_categories.setAttribute("type", "hidden");
+    categories_instructions.style.display = "none";
+    var categories = JSON.parse(categories_table.getAttribute("data-raw"));
+    pageedit_categories.parentNode.insertBefore(make_checklist(categories, CATEGORYCHECKLISTID), pageedit_categories);
+}
+
+//Data should be an array of arrays, unfortunately?
+function make_checklist(data, id)
+{
+    var container = document.createElement("div");
+    container.className = "checklist";
+    container.setAttribute("id", id);
+
+    for(var i = 0; i < data.length; i++)
+    {
+        var checkContainer = document.createElement("div");
+        checkContainer.className = "checkitem";
+        var label = document.createElement("label");
+        var input = document.createElement("input");
+        input.setAttribute("type", "checkbox");
+        input.setAttribute("value", data[i][0]);
+        var span = document.createElement("span");
+        span.className = "checkname";
+        span.textContent = data[i][1];
+        label.appendChild(input);
+        label.appendChild(span);
+        checkContainer.appendChild(label);
+        container.appendChild(checkContainer);
+    }
+
+    container.to_list = function()
+    {
+        var result = "";
+        var all_checks = container.querySelectorAll("input:checked");
+        for(var i = 0; i < all_checks.length; i++)
+        {
+            result += all_checks[i].value + " ";
+        }
+        return result;
+    };
+
+    return container;
 }
 
 function refresh_raw_ptc_list()
@@ -23,12 +97,6 @@ function refresh_raw_ptc_list()
     for(var i = 0; i < elements.length; i++)
         result.push(elements[i].getData());
     pageedit_ptc_files.textContent = JSON.stringify(result);
-}
-
-function finalize_form()
-{
-    refresh_raw_ptc_list();
-    return true;    
 }
 
 function preparse_ptc_list() 

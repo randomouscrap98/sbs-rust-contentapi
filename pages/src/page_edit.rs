@@ -21,6 +21,8 @@ pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_ca
 {
     let title : String;
     let mut submit_value = format!("Submit {}", form.subtype);
+    let raw_categories : Vec<(String, String)> = all_categories.iter().map(|c| (c.id.to_string(), c.name.clone())).collect();
+    let raw_systems : Vec<&(&str, &str)> = SBSSYSTEMS.iter().filter(|(id,_)| *id != ANYSYSTEM && *id != PTCSYSTEM).collect(); 
 
     //Assume it's new or not based on the values in the form. The form drives this render
     if form.id == 0 {
@@ -79,21 +81,19 @@ pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_ca
                             input #"pageedit_key" type="text" name="key" value=(opt_s!(form.key)) required placeholder="The key for people to download your program!";
                             label for="pageedit_systems" { "Systems:" }
                             input #"pageedit_systems" type="text" name="systems" value=(opt_s!(form.systems)) required placeholder="What console does this go on?";
-                            details."editorinstructions" {
+                            details."editorinstructions" #"systems_instructions"{
                                 summary."aside" { "About systems" }
                                 p { "SmileBASIC is available for several systems, so people have to know what system your program is for! "
                                     "Certain systems are interoperable and share keys, so you can add multiple systems if multiple apply. "
                                     "Please use the IDs below for the system, not the name."
                                 }
-                                table {
+                                table #"systems_table" data-raw=(serde_json::ser::to_string(&raw_systems).unwrap_or_default()) {
                                     tr { th { "Name" } th { "Id" } }
-                                    @for (id, name) in SBSSYSTEMS {
-                                        @if *id != ANYSYSTEM && *id != PTCSYSTEM {
-                                            tr { td{ (name) } td{ (id) }}
-                                        }
+                                    @for (id, name) in raw_systems {
+                                        tr { td{ (name) } td{ (id) }}
                                     }
                                 }
-                                p."aside" { 
+                                p."aside" #"ptc_editor_aside" { 
                                     "Looking for Petit Computer (DSi)? That requires a different editor: "
                                     a href=(data.links.page_editor_new(PTCSYSTEM)) { "PTC Page Editor" }
                                     " (you will lose any data entered here!)"
@@ -117,12 +117,12 @@ pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_ca
                     }
                     label for="pageedit_categories" { "Categories:" }
                     input #"pageedit_categories" type="text" name="categories" value=(form.categories) placeholder="Space separated";
-                    details."editorinstructions" {
+                    details."editorinstructions" #"categories_instructions" {
                         summary."aside" { "About categories" }
                         p { "You can categorize your page for organization and searching. The category table is below: for each category " 
                             "you want, add the ID to the field above"
                         }
-                        table {
+                        table #"categories_table" data-raw=(serde_json::ser::to_string(&raw_categories).unwrap_or_default()) {
                             tr { th { "Name" } th { "Id" } }
                             @for category in all_categories {
                                 tr { td{ (category.name) } td{ (category.id) }}
