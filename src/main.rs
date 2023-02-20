@@ -332,10 +332,16 @@ async fn main()
             std_resp!(pages::widget_votes::get_render(pc!(context), content_id), context)
     );
 
+    #[derive(Deserialize, Default)]
+    struct QrParam {
+        high_density: Option<bool>
+    }
+
     let get_qrwidget_route = warp_get_async!(
-        warp::path!("widget" / "qr" / String),
-        |hash: String, context:RequestContext| 
-            std_resp!(pages::widget_qr::get_render(pc!(context), &hash), context)
+        warp::path!("widget" / "qr" / String).and(warp::query::<QrParam>()),
+        |hash: String, qr_param : QrParam, context:RequestContext| 
+            std_resp!(pages::widget_qr::get_render(pc!(context), &hash, 
+                if let Some(hd) = qr_param.high_density { hd } else { false }), context)
     );
 
     let post_votewidget_route = warp::post()

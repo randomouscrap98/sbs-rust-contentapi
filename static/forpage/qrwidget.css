@@ -8,3 +8,8 @@
     display: flex;
     justify-content: center;
 }
+
+@media print {
+    header { display: none !important; } 
+    section { border: none; margin: none; }
+}

@@ -1,10 +1,5 @@
-
-//use bbscope::BBCode;
-
 use std::io::Write;
 
-//use base64::alphabet;
-//use base64::engine::{general_purpose, self};
 use common::*;
 use common::prefab::{get_fullpage_by_hash};
 use common::render::layout::*;
@@ -16,9 +11,13 @@ use serde::{Serialize, Deserialize};
 
 use base64::{Engine as _, engine::general_purpose};
 
+//use bbscope::BBCode;
+
 
 // This widget is special: i'm worried about the memory usage, so I'm ensuring everything is 
-// done in each loop iteration rather than precomputing everything.
+// done in each loop iteration rather than precomputing everything. Or at least, I'm setting it
+// up so it can be done that way (I'm not actually, but that's the excuse I'm using for why
+// there's no "render()" like usual)
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct PtcData {
@@ -27,10 +26,11 @@ pub struct PtcData {
     pub description: Option<String>
 }
 
-pub async fn get_render(mut context: PageContext, hash: &str) -> Result<Response, Error>
+pub async fn get_render(mut context: PageContext, hash: &str, high_density: bool) -> Result<Response, Error>
 {
     //First, go lookup the page
     let page = get_fullpage_by_hash(&mut context.api_context, hash).await?;
+    let qrlink = context.layout_data.links.qr_generator(&page.main);
 
     Ok(Response::Render(
         //Eventually, this'll be a real widget. Until then, render normal page
@@ -41,17 +41,29 @@ pub async fn get_render(mut context: PageContext, hash: &str) -> Result<Response
         //}, html! {
         layout(&context.layout_data, html!{
             (context.layout_data.links.style("/forpage/qrwidget.css"))
+            (context.layout_data.links.script("/forpage/qrwidget.js"))
             section {
                 h1 { a."flatlink" href=(context.layout_data.links.forum_thread(&page.main)) { (opt_s!(page.main.name)) } }
+                div."controls mediumseparate" {
+                    @if high_density {
+                        a href=(qrlink) { "Normal density" }
+                        span { "High density (current)"}
+                    }
+                    @else {
+                        span { "Normal density (current)"}
+                        a href={(qrlink)"?high_density=true"} { "High density" }
+                    }
+                }
                 @if let Some(ptc_files) = page.ptc {
                     @if let Some(ptc_data) = ptc_files.text {
                         @let parsed_data = serde_json::de::from_str::<Vec<PtcData>>(&ptc_data)?;
                         @for ptc_file in parsed_data {
+                            hr;
                             h3 { (ptc_file.name) }
                             @if let Some(ref description) = ptc_file.description {
                                 p { (description)}
                             }
-                            @let qr_codes = generate_qr_svgs(ptc_file, QrConfig::default())?; 
+                            @let qr_codes = generate_qr_svgs(ptc_file, if high_density { QrConfig::high_density() } else { QrConfig::default() })?; 
                             div."qrcodes" {
                                 @for (i, qr) in qr_codes.iter().enumerate()
                                 {
@@ -79,15 +91,28 @@ pub async fn get_render(mut context: PageContext, hash: &str) -> Result<Response
 pub struct QrConfig {
     pub bytes_per_qr : i32,
     pub qr_version : i16,
-    pub error_level : qrcode::EcLevel
+    pub error_level : qrcode::EcLevel,
+    pub min_size : u32
 }
 
 impl Default for QrConfig {
     fn default() -> Self {
         Self { 
-            bytes_per_qr: 630,
-            qr_version : 21,     //Doc says 20 but it sometimes fails with medium ecc
-            error_level: qrcode::EcLevel::M
+            bytes_per_qr: 625,  //Doc says 630 but I had issues running out of data sometimes
+            qr_version : 20,    //Doc says 20 
+            error_level: qrcode::EcLevel::M,
+            min_size: 200
+        }
+    }
+}
+
+impl QrConfig {
+    pub fn high_density() -> Self {
+        Self {
+            bytes_per_qr: 1230, //'spec' says 1273 (minus 36 = 1237), but again we have weird errors sometimes
+            qr_version : 25, //This the max from PTCUtilities
+            error_level: qrcode::EcLevel::L,
+            min_size: 250
         }
     }
 }
@@ -107,7 +132,7 @@ pub fn generate_qr_svgs(ptc_file: PtcData, config : QrConfig) -> Result<Vec<Stri
     result.extend_from_slice(ptc_file.name.as_bytes());
     //slow but ugh i'm tired. this pads the name
     while result.len() < 8 { result.push(0); }
-    result.extend_from_slice(ftype); //.append(other)//copy_from_slice(ftype);
+    result.extend_from_slice(ftype);
     result.extend((zlibdata.len() as u32).to_le_bytes());
     result.extend(rawlength.to_le_bytes());
     result.extend(zlibdata);
@@ -129,18 +154,11 @@ pub fn generate_qr_svgs(ptc_file: PtcData, config : QrConfig) -> Result<Vec<Stri
         println!("QR {} size: {}", qrnum + 1, qrdata.len());
         let code = QrCode::with_version(qrdata, qrcode::Version::Normal(config.qr_version), config.error_level).map_err(|e| Error::Other(e.to_string()))?;
         let image = code.render()
-            .min_dimensions(200, 200)
+            .min_dimensions(config.min_size, config.min_size)
             .dark_color(svg::Color("#000000"))
             .light_color(svg::Color("#ffffff"))
             .build();
         qrcodes.push(image);
-        //qrdata.extend([50u8, 54u8, q]);
     }
     Ok(qrcodes)
 }
-
-
-//pub fn get_qr_element() -> Markup
-//{
-//
-//}
