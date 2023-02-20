@@ -332,6 +332,12 @@ async fn main()
             std_resp!(pages::widget_votes::get_render(pc!(context), content_id), context)
     );
 
+    let get_qrwidget_route = warp_get_async!(
+        warp::path!("widget" / "qr" / String),
+        |hash: String, context:RequestContext| 
+            std_resp!(pages::widget_qr::get_render(pc!(context), &hash), context)
+    );
+
     let post_votewidget_route = warp::post()
         .and(warp::path!("widget" / "votes" / i64))
         .and(form_filter.clone())
@@ -433,6 +439,7 @@ async fn main()
         .or(get_votewidget_route)
         .or(post_votewidget_route)
         .or(get_bbcodepreview_route)
+        .or(get_qrwidget_route)
         .or(post_bbcodepreview_route)
         .or(legacy_page_pid)
         .or(get_integrationtest_route)

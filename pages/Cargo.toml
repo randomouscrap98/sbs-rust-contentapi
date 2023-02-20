@@ -16,6 +16,7 @@ onestop = { version = "0.0.1", optional = true }
 bbscope = { version = "0.1.6" }
 qrcode = "0.12.0"
 flate2 = "1.0.25"
+base64 = "0.21.0"
 
 contentapi = { path = "../contentapi" }
 common = { path = "../common" }
