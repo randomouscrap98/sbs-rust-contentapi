@@ -50,9 +50,15 @@ pub async fn get_render(mut context: PageContext, hash: &str) -> Result<Response
                             @if let Some(ref description) = ptc_file.description {
                                 p { (description)}
                             }
-                            @for qr in generate_qr_svgs(ptc_file)?
+                            @let qr_codes = generate_qr_svgs(ptc_file, QrConfig::default())?; 
+                            @for (i, qr) in qr_codes.iter().enumerate()
                             {
-                                (PreEscaped(qr))
+                                div."qr" {
+                                    (PreEscaped(qr))
+                                    div."tracking" {
+                                        span { ({i + 1}) } " / " span { (qr_codes.len())}
+                                    }
+                                }
                             }
                         }
                     }
@@ -67,11 +73,24 @@ pub async fn get_render(mut context: PageContext, hash: &str) -> Result<Response
         }).into_string()))
 }
 
-pub fn generate_qr_svgs(ptc_file: PtcData) -> Result<Vec<String>, Error>
-{
-    const QRBYTES : i32 = 630; //Only for now, since we're not giving options 
-    const QRVERSION : i16 = 21;
+pub struct QrConfig {
+    pub bytes_per_qr : i32,
+    pub qr_version : i16,
+    pub error_level : qrcode::EcLevel
+}
 
+impl Default for QrConfig {
+    fn default() -> Self {
+        Self { 
+            bytes_per_qr: 630,
+            qr_version : 21,     //Doc says 20 but it sometimes fails with medium ecc
+            error_level: qrcode::EcLevel::M
+        }
+    }
+}
+
+pub fn generate_qr_svgs(ptc_file: PtcData, config : QrConfig) -> Result<Vec<String>, Error>
+{
     let raw = general_purpose::STANDARD.decode(&ptc_file.base64).map_err(|e| Error::Other(e.to_string()))?;
     let rawlength = raw.len() as u32;
     let ftype = &raw[8..12]; //The 4 char code that describes the type
@@ -91,21 +110,21 @@ pub fn generate_qr_svgs(ptc_file: PtcData) -> Result<Vec<String>, Error>
     result.extend(zlibdata);
 
     let resultmd5 : [u8;16] = md5::compute(&result).into();
-    let qrcount = (result.len() as f32 / QRBYTES as f32).ceil() as u8;
+    let qrcount = (result.len() as f32 / config.bytes_per_qr as f32).ceil() as u8;
     println!("QR codes: {}", qrcount);
 
     let mut qrcodes : Vec<String> = Vec::new();
     for qrnum in 0u8..qrcount {
         let mut qrdata : Vec<u8> = vec![0x50u8, 0x54u8, qrnum + 1, qrcount];
-        let start = (QRBYTES * qrnum as i32) as usize;
-        let end = std::cmp::min((start + QRBYTES as usize) as usize, result.len());
+        let start = (config.bytes_per_qr * qrnum as i32) as usize;
+        let end = std::cmp::min((start + config.bytes_per_qr as usize) as usize, result.len());
         let resultslice = &result[start..end];
         let slicemd5 : [u8;16] = md5::compute(resultslice).into();
         qrdata.extend(slicemd5);
         qrdata.extend_from_slice(&resultmd5);
         qrdata.extend_from_slice(resultslice);
         println!("QR {} size: {}", qrnum + 1, qrdata.len());
-        let code = QrCode::with_version(qrdata, qrcode::Version::Normal(QRVERSION), qrcode::EcLevel::M).map_err(|e| Error::Other(e.to_string()))?;
+        let code = QrCode::with_version(qrdata, qrcode::Version::Normal(config.qr_version), config.error_level).map_err(|e| Error::Other(e.to_string()))?;
         let image = code.render()
             .min_dimensions(200, 200)
             .dark_color(svg::Color("#000000"))
