@@ -43,7 +43,7 @@ pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_ca
             @else {
                 h1 { (title) }
                 //NOTE: NO ACTION! These kinds of pages always post to themselves
-                form."editor" #"pageedit_form" method="POST" {
+                form."editor" #"pageedit_form" data-mode=(real_mode) method="POST" {
                     (errorlist(errors))
                     input #"pageedit_id" type="hidden" name="id" value=(form.id);
                     input #"pageedit_subtype" type="hidden" name="subtype" value=(form.subtype);

@@ -1,12 +1,19 @@
-//script is defer, put all function calls right here in the script
-pageedit_newfile.addEventListener("change", added_file);
-ptc_files_refresh.onclick = refresh_raw_ptc_list;
-pageedit_form.onsubmit = finalize_form;
+var mode = pageedit_form.getAttribute("data-mode");
 
-//Need to parse whatever was originally in the raw data and create
-//elements from it. We do this last just in case it fails? Should just 
-//add try catch
-preparse_ptc_list();
+if (mode === "ptc") {
+    //script is defer, put all function calls right here in the script
+    pageedit_newfile.addEventListener("change", added_file);
+    ptc_files_refresh.onclick = refresh_raw_ptc_list;
+    pageedit_form.onsubmit = finalize_form;
+
+    //Need to parse whatever was originally in the raw data and create
+    //elements from it. We do this last just in case it fails? Should just 
+    //add try catch
+    preparse_ptc_list();
+}
+else {
+    console.log("Not setting up PTC controls (not in ptc mode)");
+}
 
 function refresh_raw_ptc_list()
 {

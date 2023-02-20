@@ -52,8 +52,8 @@ pub async fn get_render(mut context: PageContext, hash: &str) -> Result<Response
                                 //This is normal code, can do whatever in here
                                 let raw = general_purpose::STANDARD.decode(&ptc_file.base64).map_err(|e| Error::Other(e.to_string()))?;
                                 let rawlength = raw.len() as u32;
-                                let ftype = (&raw[8..12]).clone(); //The 4 char code that describes the type
-                                println!("decoded: {}\nraw length: {}\nftype: {}", std::str::from_utf8(&raw).unwrap(), rawlength, std::str::from_utf8(ftype).unwrap());
+                                let ftype = &raw[8..12]; //The 4 char code that describes the type
+                                println!("raw length: {}\nftype: {}", rawlength, std::str::from_utf8(ftype).unwrap());
                                 let mut enc = ZlibEncoder::new(Vec::new(), flate2::Compression::best());
                                 enc.write_all(&raw).map_err(|e| Error::Other(e.to_string()))?;
                                 let zlibdata = enc.finish().map_err(|e| Error::Other(e.to_string()))?;
