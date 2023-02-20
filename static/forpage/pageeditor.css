@@ -6,6 +6,27 @@
     margin-bottom: var(--space_big);
 }
 
+.ptcfile {
+    margin: var(--space_small);
+    padding: var(--space_small);
+    border-radius: var(--space_small);
+    background-color: var(--bg_altsection);
+}
+
+.ptcfile .topline {
+    display: flex;
+    align-items: stretch;
+}
+
+.ptcname {
+    font-size: 1.1em;
+    margin: 0 !important;
+}
+
+.ptcdescription {
+    height: 5em !important;
+}
+
 #pageedit_text {
     height: 20em;
 }
