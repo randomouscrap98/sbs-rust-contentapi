@@ -7,6 +7,7 @@ use contentapi::permissions::can_user_edit_message;
 use maud::*;
 
 use crate::*;
+use crate::view::*;
 use crate::forms::*;
 use crate::render::*;
 use crate::constants::*;
@@ -290,6 +291,8 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
         can_delete = false;
     }
 
+    let systems = get_systems(&thread.thread);
+
     html!{
         section {
             //First check is if it's a program, then we float this box to the right
@@ -308,6 +311,13 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
                             span."smallseparate" {
                                 b { "Download:" }
                                 span."key" { (key) }
+                                (threadicon(&data.links, &thread))
+                            }
+                        }
+                        @if systems.iter().any(|s| s == &PTCSYSTEM) {
+                            span."smallseparate" {
+                                b { "Download:" }
+                                a."key" href=(data.links.qr_generator(&thread.thread)) { "QR Codes" }
                                 (threadicon(&data.links, &thread))
                             }
                         }
