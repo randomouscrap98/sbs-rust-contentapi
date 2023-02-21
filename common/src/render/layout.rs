@@ -119,11 +119,29 @@ pub fn basic_skeleton(data: &MainLayoutData, head_inner: Markup, body_inner: Mar
     }
 }
 
+pub struct LayoutMeta {
+    pub title : String,
+    pub description : String,
+    pub image : Option<String>
+}
 
 pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
+    layout_with_meta(main_data, LayoutMeta {
+        title: "SmileBASIC Source".to_string(),
+        description: "A community for sharing programs and getting advice on SmileBASIC applications on the Nintendo DSi, 3DS, and Switch".to_string(),
+        image: None
+    }, page)
+}
+
+pub fn layout_with_meta(main_data: &MainLayoutData, meta: LayoutMeta, page: Markup) -> Markup {
     basic_skeleton(main_data, html!{
-        title { "SmileBASIC Source" }
-        meta name="description" content="A community for sharing programs and getting advice on SmileBASIC applications on the Nintendo DSi, 3DS, and Switch";
+        title { (meta.title) }
+        meta name="description" content=(meta.description);
+        @if let Some(meta_image) = meta.image {
+            meta property="og:title" content=(meta.title);
+            meta property="og:description" content=(meta.description);
+            meta property="og:image" content=(meta_image);
+        }
         (main_data.links.style("/layout.css"))
         (main_data.links.script("/sb-highlight.js"))
         //MUST come after, it uses sb-highlight!

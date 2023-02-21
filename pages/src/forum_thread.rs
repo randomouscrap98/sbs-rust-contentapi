@@ -12,8 +12,39 @@ use contentapi::{FullRequest, SpecialCount};
 
 
 pub fn render(mut context: PageContext, config: PostsConfig) -> String {
+    let mut meta = LayoutMeta {
+        title : format!("SBS ⦁ {}", opt_s!(config.thread.thread.name)),
+        description : opt_s!(config.thread.thread.description).to_string(),
+        image : get_thumbnail_hash(&config.thread.thread).and_then(|h| 
+            Some(context.layout_data.links.image(&h, &contentapi::forms::QueryImage { size: Some(200), crop: None })))
+    };
+    if let Some(selected_id) = config.selected_post_id {
+        if let Some(post) = config.thread.posts.iter().find(|p| p.id == Some(selected_id)) {
+            meta.description = short_post(post); 
+        }
+    }
+    else if meta.description.is_empty() {
+        if let Some(start) = config.start_num {
+            if start == 1 {
+                //We KNOW this is the first page, so we can actually give the post as the description!
+                if let Some(post) = config.thread.posts.get(0) {
+                    meta.description = short_post(post); 
+                }
+            }
+        }
+    }
     let main_page = render_posts(&mut context, config);
-    layout(&context.layout_data, main_page).into_string()
+    layout_with_meta(&context.layout_data, meta, main_page).into_string()
+}
+
+fn short_post(message: &Message) -> String {
+    if let Some(ref text) = message.text {
+        text.chars().take(150).collect::<String>()
+    }
+    else {
+        String::from("")
+    }
+    //opt_s!(message.text.and_then(|t| Some(&t[0..std::cmp::min(150, t.len())]))).to_string()
 }
 
 async fn render_thread(mut context: PageContext, pre_request: FullRequest, per_page: i32, 

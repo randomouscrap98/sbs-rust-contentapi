@@ -48,6 +48,9 @@ rsync -avhz -e "ssh -p ${INSTALLPORT}" ./ --exclude 'target' --exclude '.git' \
 # We have to build ON the server itself because glibc (I don't want to use docker)
 echo "Building ${NAME} on remote server ${INSTALLHOST}"
 BUILDCMD="cargo build ${BUILDPARAM}"
+if [ "$INSTALLCLEAN" = "true" ]; then
+   BUILDCMD="cargo clean;${BUILDCMD}"
+fi
 echo "* Build command: ${BUILDCMD}"
 SSHCMD=". /home/${INSTALLUSER}/.cargo/env; cd ${INSTALLDIR}; ${BUILDCMD}"
 

@@ -31,6 +31,20 @@ pub fn add_category_taglist(raw_parsed: Vec<String>, content: &mut Content)
     }
 }
 
+pub fn get_thumbnail_hash(content: &Content) -> Option<String>
+{
+    if let Some(ref values) = content.values {
+        if let Some(ref images) = values.get(SBSValue::IMAGES).and_then(|k| k.as_array()) {
+            if let Some(image) = images.get(0).and_then(|i| i.as_str()) {
+                return Some(image.to_string())
+            }
+        }
+    }
+
+    None
+}
+
+
 /// Get the list of all SBS systems listed in this content
 pub fn get_systems(content: &Content) -> Vec<String>
 {
