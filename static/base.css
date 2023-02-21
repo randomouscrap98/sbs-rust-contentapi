@@ -327,9 +327,18 @@ input[readonly], textarea[readonly] {
 .content .spoiler {
     padding: 0.3em 0.4em;
     margin: 0.3em 0;
+    border-left: 5px solid var(--bg_activeselect);
+    /*border-radius: 0.3em;*/
+    /*border: var(--line_width) solid var(--color_divider);*/
+    /*width: fit-content; /* To fix floating infobox overlap */
+}
+
+/*.content .spoiler summary {
+    padding: 0.3em 0.4em;
     border-radius: 0.3em;
     border: var(--line_width) solid var(--color_divider);
-}
+    width: fit-content;
+}*/
 
 .content .icode {
     font-family: monospace;
