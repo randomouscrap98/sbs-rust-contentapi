@@ -28,9 +28,9 @@ pub fn header(data: &MainLayoutData) -> Markup {
             nav {
                 a."plainlink" #"homelink" href={(data.links.http_root)"/"}{
                     img src={(data.links.resource_root)"/favicon.ico"};
-                    (main_nav_link(data,"Activity","/activity",None))
-                    (main_nav_link(data,"Browse","/search",None))//&format!("/search?subtype={}", SBSPageType::PROGRAM),None))
-                    (main_nav_link(data,"Forums","/forum",None))
+                    (main_nav_link(data,"Activity","/activity",Some("mainactivitylink")))
+                    (main_nav_link(data,"Browse","/search",Some("mainbrowselink")))//&format!("/search?subtype={}", SBSPageType::PROGRAM),None))
+                    (main_nav_link(data,"Forums","/forum",Some("mainforumlink")))
                     @if let Some(user) = &data.user {
                         @if user.admin {
                             //We were already using 'admin', so keep using it! 

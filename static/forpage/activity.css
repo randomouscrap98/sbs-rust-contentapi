@@ -48,3 +48,17 @@
     justify-content: center;
     margin-top: var(--space_medium);
 }
+
+#activityalert {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--space_medium);
+    background: var(--bg_error);
+    padding: var(--space_small);
+    border-radius: var(--space_small);
+}
+
+#activityalert:link, #activityalert:visited {
+    text-decoration: none;
+    color: var(--tc_error);
+}

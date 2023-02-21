@@ -24,13 +24,13 @@ pub fn render(data: MainLayoutData, activity: Vec<SbsActivity>, query: ActivityQ
         start: activity.last().and_then(|a| Some(a.date)),
         end: None
     };
+    let newerlink = format!("{}/activity?{}", data.links.http_root, serde_urlencoded::to_string(prev_query).unwrap_or_default());
+
     layout(&data, html!{
         (data.links.style("/forpage/activity.css"))
-        /*section {
-            h1 { "Activity" }
-        }*/
+        (data.links.script("/forpage/activity.js"))
         section {
-            div."activitylist" {
+            div."activitylist" #"activitylist" {
                 @for (index, a) in activity.iter().enumerate() {
                     (activity_item(&data.links, a))
                     @if index < activity.len() - 1 {
@@ -40,7 +40,10 @@ pub fn render(data: MainLayoutData, activity: Vec<SbsActivity>, query: ActivityQ
             }
             div."activitynav smallseparate" {
                 @if query.start.is_some() || query.end.is_some() { //This isn't EXACTLY correct but it's good enough
-                    a."coolbutton" href={(data.links.http_root) "/activity?" (serde_urlencoded::to_string(prev_query).unwrap_or_default())} { "Newer" }
+                    a."coolbutton" href=(newerlink) { "Newer" }
+                }
+                @else {
+                    span #"newlinkplaceholder" style="display: none" { (newerlink) }
                 }
                 a."coolbutton" href={(data.links.http_root) "/activity?" (serde_urlencoded::to_string(next_query).unwrap_or_default())} { "Older" }
             }
