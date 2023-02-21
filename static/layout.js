@@ -9,7 +9,7 @@ upgrade_deleteconfirm();
 
 function upgrade_forms()
 {
-    var forms = document.querySelectorAll('form[method="POST"]');
+    var forms = document.querySelectorAll('form[method="POST"]:not([data-noupgrade])');
     for(var i = 0; i < forms.length; i++)
     {
         forms[i].addEventListener("submit", stdform_onsubmit);

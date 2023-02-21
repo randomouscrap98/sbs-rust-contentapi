@@ -4,6 +4,8 @@ var CATEGORYCHECKLISTID = "categories_checklist";
 
 pageedit_form.onsubmit = editor_onsubmit;
 
+fix_categories(); //Everything has categories
+
 if (mode === "ptc") {
     console.log("Setting up PTC controls");
     //script is defer, put all function calls right here in the script
@@ -17,17 +19,32 @@ if (mode === "ptc") {
 }
 else {
     console.log("Not setting up PTC controls (not in ptc mode)");
-    fix_systems();
-    fix_categories();
+    fix_systems(); //Systems are non-ptc
 }
 
 function editor_onsubmit()
 {
+    var input = pageedit_form.querySelector('input[type="submit"]');
+    input.setAttribute("disabled", "");
+    var result = editor_onsubmit_check();
+    if(!result) input.removeAttribute("disabled");
+    return result;
+}
+
+function editor_onsubmit_check()
+{
     if (mode === "ptc") {
-        refresh_raw_ptc_list();
+        if(!refresh_raw_ptc_list()) {
+            alert("You must upload at least one PTC file!")
+            return false;
+        }
     }
     var systems_checklist = document.getElementById(SYSTEMCHECKLISTID);
     if(systems_checklist) pageedit_systems.value = systems_checklist.to_list();
+    if(!pageedit_systems.value) {
+        alert("You must select at least one system!");
+        return false;
+    }
     var categories_checklist = document.getElementById(CATEGORYCHECKLISTID);
     if(categories_checklist) pageedit_categories.value = categories_checklist.to_list();
     return true;
@@ -97,6 +114,7 @@ function refresh_raw_ptc_list()
     for(var i = 0; i < elements.length; i++)
         result.push(elements[i].getData());
     pageedit_ptc_files.textContent = JSON.stringify(result);
+    return result.length;
 }
 
 function preparse_ptc_list() 
