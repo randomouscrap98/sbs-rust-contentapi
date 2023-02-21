@@ -12,4 +12,5 @@
 @media print {
     header { display: none !important; } 
     section { border: none; margin: none; }
+    body > .alert { display: none !important; }
 }

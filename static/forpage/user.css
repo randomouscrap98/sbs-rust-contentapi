@@ -20,6 +20,7 @@
 }
 #pageuser #userbio {
     margin: 1em 0;
+    width: 100%;
 }
 
 .badges {

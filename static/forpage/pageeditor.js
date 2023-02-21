@@ -4,7 +4,9 @@ var CATEGORYCHECKLISTID = "categories_checklist";
 
 pageedit_form.onsubmit = editor_onsubmit;
 
-fix_categories(); //Everything has categories
+//These are safe to call, they don't do anything if the respective elements don't exist
+fix_systems(); 
+fix_categories(); 
 
 if (mode === "ptc") {
     console.log("Setting up PTC controls");
@@ -19,7 +21,6 @@ if (mode === "ptc") {
 }
 else {
     console.log("Not setting up PTC controls (not in ptc mode)");
-    fix_systems(); //Systems are non-ptc
 }
 
 function editor_onsubmit()
@@ -52,28 +53,34 @@ function editor_onsubmit_check()
 
 function fix_systems()
 {
+    if(!document.getElementById("systems_table")) return;
     pageedit_systems.setAttribute("type", "hidden");
+    //if(document.getElementById("systems_instructions")) 
     systems_instructions.style.display = "none";
     var systems = JSON.parse(systems_table.getAttribute("data-raw"));
-    var checklist = make_checklist(systems, SYSTEMCHECKLISTID);
+    var checklist = make_checklist(systems, pageedit_systems.value, SYSTEMCHECKLISTID);
     pageedit_systems.parentNode.insertBefore(checklist, pageedit_systems);
+    //if(document.getElementById("ptc_editor_aside")) 
     checklist.parentNode.insertBefore(ptc_editor_aside, checklist.nextElementSibling);
 }
 
 function fix_categories()
 {
+    if(!document.getElementById("categories_table")) return;
     pageedit_categories.setAttribute("type", "hidden");
     categories_instructions.style.display = "none";
     var categories = JSON.parse(categories_table.getAttribute("data-raw"));
-    pageedit_categories.parentNode.insertBefore(make_checklist(categories, CATEGORYCHECKLISTID), pageedit_categories);
+    pageedit_categories.parentNode.insertBefore(make_checklist(categories, pageedit_categories.value, CATEGORYCHECKLISTID), pageedit_categories);
 }
 
 //Data should be an array of arrays, unfortunately?
-function make_checklist(data, id)
+function make_checklist(data, original, id)
 {
     var container = document.createElement("div");
     container.className = "checklist";
     container.setAttribute("id", id);
+
+    var values = original.split(" ").filter(x => x);
 
     for(var i = 0; i < data.length; i++)
     {
@@ -83,6 +90,7 @@ function make_checklist(data, id)
         var input = document.createElement("input");
         input.setAttribute("type", "checkbox");
         input.setAttribute("value", data[i][0]);
+        input.checked = values.includes(data[i][0]);
         var span = document.createElement("span");
         span.className = "checkname";
         span.textContent = data[i][1];
