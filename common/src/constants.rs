@@ -14,6 +14,8 @@ macro_rules! string_const {
     };
 }
 
+pub const CONTENT_CHEAPFIELDS : &str = "~keywordCount,popScore1,lastRevisionId,watchCount,commentCount,lastCommentId,engagement,keywords,permissions";
+
 string_const!{ SBSValue => {
     (DOWNLOADKEY:"dlkey"),
     (VERSION:"version"),
@@ -70,6 +72,12 @@ pub fn get_sbs_system_title(key: &str) -> Option<&str> {
     }
     return None;
 }
+
+pub const ACTIVITYTYPES : &[&str] = &[
+    SBSPageType::PROGRAM, 
+    SBSPageType::RESOURCE,
+    SBSPageType::FORUMTHREAD,
+];
 
 pub const SEARCHPAGETYPES: &[(&str,&str)] = &[
     ("", "Any"),

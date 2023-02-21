@@ -110,16 +110,10 @@ pub struct SbsActivity<'a> {
 pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest //(FullRequest, bool)
 {
     let mut request = FullRequest::new();
-    //let mut inverted = false;
 
     //Note: the allowed list of types for activity is NOT the same as the allowed list of types for
     //displaying as a thread! We don't want to scare people by putting private threads in the activity
-    add_value!(request, "allowed_types", vec![
-        SBSPageType::PROGRAM, 
-        SBSPageType::RESOURCE,
-        SBSPageType::FORUMTHREAD,
-    ]); //common::forum::ALLOWEDTYPES);
-
+    add_value!(request, "allowed_types", ACTIVITYTYPES); 
     add_value!(request, "deleted", UserAction::DELETE);
 
     let mut user_query = String::new();

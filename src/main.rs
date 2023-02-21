@@ -332,6 +332,12 @@ async fn main()
             std_resp!(pages::widget_votes::get_render(pc!(context), content_id), context)
     );
 
+    let get_recentactivity_route = warp_get_async!(
+        warp::path!("widget" / "recentactivity").and(warp::query::<pages::widget_recentactivity::RecentActivityConfig>()),
+        |query, context:RequestContext| 
+            std_resp!(pages::widget_recentactivity::get_render(pc!(context), query), context)
+    );
+
     #[derive(Deserialize, Default)]
     struct QrParam {
         high_density: Option<bool>
@@ -446,6 +452,7 @@ async fn main()
         .or(post_votewidget_route)
         .or(get_bbcodepreview_route)
         .or(get_qrwidget_route)
+        .or(get_recentactivity_route)
         .or(post_bbcodepreview_route)
         .or(legacy_page_pid)
         .or(get_integrationtest_route)

@@ -251,7 +251,9 @@ pub struct Content //Remember, these are files, pages, threads etc. Lovely!
     #[serde(skip_serializing_if = "Option::is_none")]
     pub keywordCount: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub lastRevisionId: Option<i64>
+    pub lastRevisionId: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lastActionDate: Option<DateTime<Utc>>,
 }
 
 impl Content {

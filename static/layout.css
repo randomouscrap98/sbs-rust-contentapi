@@ -153,6 +153,16 @@ form.editor input {
     box-sizing: border-box;
 }
 
+/* Selector: the css querySelector (duh), the rule: the entire thing, the declaration: the individual rule like width:100%;*/
+.frontpagerecent {
+    width: 100%;
+    height: 20em;
+    background: var(--bg_card);
+    padding: var(--space_small);
+    border: none;
+    box-sizing: border-box;
+    border-radius: var(--space_small);
+}
 
 /* ----------------------------- *
  *     MEDIA SPECIALNESS         *

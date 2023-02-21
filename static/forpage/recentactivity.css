@@ -1,0 +1,14 @@
+body {
+    background: none !important;
+}
+
+.recentactivityitem { 
+    margin: calc(0.4 * var(--space_small));
+    display: flex;
+    align-items: center;
+}
+
+.pagetitle {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

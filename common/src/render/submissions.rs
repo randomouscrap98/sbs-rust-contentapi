@@ -9,16 +9,26 @@ use contentapi::*;
 use contentapi::forms::*;
 use maud::*;
 
-
 pub fn pageicon(links: &LinkConfig, page: &Content) -> Markup 
 {
+    pageicon_limited(links, page, 99)
+}
+
+pub fn pageicon_limited(links: &LinkConfig, page: &Content, max: i32) -> Markup 
+{
     let systems = get_systems(page);
+    let mut count = 0;
     html! {
         //Don't forget the program type! if it exists anyway
         @if systems.len() > 0 {
             @for system in systems {
-                @if let Some(title) = get_sbs_system_title(&system) { //systems_map.get(&system) {
+                @if let Some(title) = get_sbs_system_title(&system) { 
                     img title=(title) class="sysicon" src={(links.resource_root)"/"(system)".svg"};
+                    ({
+                        count = count + 1;
+                        if count >= max { break; }
+                        ""
+                    })
                 }
             }
         }
