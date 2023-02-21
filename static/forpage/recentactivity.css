@@ -3,7 +3,8 @@ body {
 }
 
 .recentactivityitem { 
-    margin: calc(0.4 * var(--space_small));
+    /*margin: calc(0.4 * var(--space_small));*/
+    margin: var(--space_small);
     display: flex;
     align-items: center;
 }
@@ -11,4 +12,8 @@ body {
 .pagetitle {
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.recentactivityitem .threadicon img {
+    width: 1.2em;
 }

@@ -78,7 +78,7 @@ body[data-theme="sbs-blue"] {
 }
 
 [data-theme="sbs-blue"] .threadicon > * {
-    filter: hue-rotate(145deg); /*hue-rotate(125deg);*/
+    filter: hue-rotate(145deg) saturate(3); /*hue-rotate(125deg);*/
 }
 
 [data-theme="sbs-blue"] .sysicon {
