@@ -1,3 +1,4 @@
+use chrono::SecondsFormat;
 use chrono::{DateTime, Utc};
 use common::*;
 use common::constants::*;
@@ -38,7 +39,7 @@ pub fn render(data: MainLayoutData, activity: Vec<SbsActivity>, query: ActivityQ
                 }
             }
             div."activitynav smallseparate" {
-                @if query.start.is_some() {
+                @if query.start.is_some() || query.end.is_some() { //This isn't EXACTLY correct but it's good enough
                     a."coolbutton" href={(data.links.http_root) "/activity?" (serde_urlencoded::to_string(prev_query).unwrap_or_default())} { "Newer" }
                 }
                 a."coolbutton" href={(data.links.http_root) "/activity?" (serde_urlencoded::to_string(next_query).unwrap_or_default())} { "Older" }
@@ -89,6 +90,8 @@ pub struct ActivityQuery {
     pub start: Option<DateTime<Utc>>,
     /// Used when moving backward through activity: the "previous" button
     pub end: Option<DateTime<Utc>>
+    //pub start: Option<String>, //Option<DateTime<Utc>>,
+    //pub end: Option<String> //Option<DateTime<Utc>>
 }
 
 pub struct SbsActivity<'a> {
@@ -123,13 +126,13 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     let mut order_d = "date_desc";
 
     let dq_part = if let Some(start) = query.start {
-        add_value!(request, "start", dd(&start));
+        //NOTE: in order for these to be fairly accurate, we have to have millisecond precision
+        add_value!(request, "start", start.to_rfc3339_opts(SecondsFormat::Millis, true));
         //Strictly less than, it's the last date from the previous page
         "< @start"
     }
     else if let Some(end) = query.end {
-        add_value!(request, "end", dd(&end));
-        //inverted = true; //Need to both invert the queries and the resulting data
+        add_value!(request, "end", end.to_rfc3339_opts(SecondsFormat::Millis, true));
         order_cd = "id";
         order_d = "date";
         //Strictly greater than, it's the first date from the next page
@@ -156,16 +159,6 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     user_request.name = Some(String::from(USERACTIVITYKEY));
     request.requests.push(user_request);
 
-    let mut activity_request = build_request!(
-        RequestType::activity,
-        String::from("*"), //query, order, limit
-        activity_query,
-        order_d.to_string(), //Activity has a stupid specially named date field
-        per_page
-    );
-    activity_request.name = Some(String::from(ACTIVITYKEY));
-    request.requests.push(activity_request);
-
     let mut message_request = build_request!(
         RequestType::message,
         String::from("*"), //query, order, limit
@@ -176,6 +169,17 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     //message_request.expensive = true;
     message_request.name = Some(String::from(POSTACTIVITYKEY));
     request.requests.push(message_request);
+
+    let mut activity_request = build_request!(
+        RequestType::activity,
+        String::from("*"), //query, order, limit
+        activity_query,
+        order_d.to_string(), //Activity has a stupid specially named date field
+        per_page
+    );
+    activity_request.name = Some(String::from(ACTIVITYKEY));
+    request.requests.push(activity_request);
+
 
     let content_request = build_request!(
         RequestType::content,
@@ -190,6 +194,8 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
         format!("id in @{}.id or id in @{}.createUserId or id in @{}.userId", USERACTIVITYKEY, POSTACTIVITYKEY, ACTIVITYKEY)
     );
     request.requests.push(user_request);
+
+    //println!("Activity request: {:#?}", &request);
 
     request
 
@@ -292,7 +298,16 @@ pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page
         })
     }
 
-    result.sort_by(|a, b| b.date.partial_cmp(&a.date).unwrap());
+    let real_activity : Vec<SbsActivity> = 
+        if query.end.is_some() {
+            result.sort_by(|a, b| a.date.partial_cmp(&b.date).unwrap());
+            result.into_iter().take(per_page as usize).rev().collect()
+        }
+        else {
+            //Normal ordering, simple take
+            result.sort_by(|a, b| b.date.partial_cmp(&a.date).unwrap());
+            result.into_iter().take(per_page as usize).collect()
+        };
 
-    Ok(Response::Render(render(context.layout_data, result.into_iter().take(per_page as usize).collect(), query)))
+    Ok(Response::Render(render(context.layout_data, real_activity, query)))
 }
