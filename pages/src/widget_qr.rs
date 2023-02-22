@@ -153,14 +153,12 @@ pub fn generate_qr_svgs(ptc_file: PtcData, config : QrConfig) -> Result<Vec<Stri
         qrdata.extend_from_slice(resultslice);
         println!("QR {} size: {}", qrnum + 1, qrdata.len());
         let mut qrbits = qrcode::bits::Bits::new(qrcode::Version::Normal(config.qr_version));
-        qrbits
-            .push_byte_data(&qrdata)
+        qrbits.push_byte_data(&qrdata)
             .map_err(|e| Error::Other(e.to_string()))?;
-            qrbits
-                .push_terminator(config.error_level)
-                .map_err(|e| Error::Other(e.to_string()))?;
-                let code = QrCode::with_bits(qrbits, config.error_level)
-                .map_err(|e| Error::Other(e.to_string()))?;
+        qrbits.push_terminator(config.error_level)
+            .map_err(|e| Error::Other(e.to_string()))?;
+        let code = QrCode::with_bits(qrbits, config.error_level)
+            .map_err(|e| Error::Other(e.to_string()))?;
         let image = code.render()
             .min_dimensions(config.min_size, config.min_size)
             .dark_color(svg::Color("#000000"))
