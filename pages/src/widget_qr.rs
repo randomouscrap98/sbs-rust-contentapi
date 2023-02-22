@@ -7,6 +7,7 @@ use flate2::write::ZlibEncoder;
 use maud::*;
 use qrcode::QrCode;
 use qrcode::render::svg;
+use qrcode::types::QrError;
 use serde::{Serialize, Deserialize};
 
 use base64::{Engine as _, engine::general_purpose};
@@ -92,7 +93,9 @@ pub struct QrConfig {
     pub bytes_per_qr : i32,
     pub qr_version : i16,
     pub error_level : qrcode::EcLevel,
-    pub min_size : u32
+    pub min_size : u32,
+    pub dark_color: String,
+    pub light_color: String
 }
 
 impl Default for QrConfig {
@@ -101,7 +104,9 @@ impl Default for QrConfig {
             bytes_per_qr: 630,  //Doc says 630
             qr_version : 20,    //Doc says 20 
             error_level: qrcode::EcLevel::M,
-            min_size: 200
+            min_size: 200,
+            dark_color: String::from("#000000"),
+            light_color: String::from("#ffffff")
         }
     }
 }
@@ -112,7 +117,9 @@ impl QrConfig {
             bytes_per_qr: 1237, //'spec' says 1273 (minus 36 = 1237)
             qr_version : 25, //This the max from PTCUtilities
             error_level: qrcode::EcLevel::L,
-            min_size: 250
+            min_size: 250,
+            dark_color: String::from("#000000"),
+            light_color: String::from("#ffffff")
         }
     }
 }
@@ -142,29 +149,39 @@ pub fn generate_qr_svgs(ptc_file: PtcData, config : QrConfig) -> Result<Vec<Stri
     println!("QR codes: {}", qrcount);
 
     let mut qrcodes : Vec<String> = Vec::new();
-    for qrnum in 0u8..qrcount {
-        let mut qrdata : Vec<u8> = vec![0x50u8, 0x54u8, qrnum + 1, qrcount];
+    for qrnum in 0u8..qrcount 
+    {
         let start = (config.bytes_per_qr * qrnum as i32) as usize;
         let end = std::cmp::min((start + config.bytes_per_qr as usize) as usize, result.len());
         let resultslice = &result[start..end];
         let slicemd5 : [u8;16] = md5::compute(resultslice).into();
+
+        let mut qrdata : Vec<u8> = vec![0x50u8, 0x54u8, qrnum + 1, qrcount];
         qrdata.extend(slicemd5);
         qrdata.extend_from_slice(&resultmd5);
         qrdata.extend_from_slice(resultslice);
-        println!("QR {} size: {}", qrnum + 1, qrdata.len());
-        let mut qrbits = qrcode::bits::Bits::new(qrcode::Version::Normal(config.qr_version));
-        qrbits.push_byte_data(&qrdata)
-            .map_err(|e| Error::Other(e.to_string()))?;
-        qrbits.push_terminator(config.error_level)
-            .map_err(|e| Error::Other(e.to_string()))?;
-        let code = QrCode::with_bits(qrbits, config.error_level)
+        //println!("QR {} size: {}", qrnum + 1, qrdata.len());
+
+        let code = get_qr_code(&qrdata, &config)
             .map_err(|e| Error::Other(e.to_string()))?;
         let image = code.render()
             .min_dimensions(config.min_size, config.min_size)
-            .dark_color(svg::Color("#000000"))
-            .light_color(svg::Color("#ffffff"))
+            .dark_color(svg::Color(&config.dark_color))
+            .light_color(svg::Color(&config.light_color))
             .build();
+
         qrcodes.push(image);
     }
     Ok(qrcodes)
+}
+
+/// Retrieve a 'qrcode::QrCode' object for the given qrdata. Apparently this takes some setup
+/// because the library can't automatically do it...
+pub fn get_qr_code(qrdata: &[u8], config: &QrConfig) -> Result<QrCode, QrError>
+{
+    let mut qrbits = qrcode::bits::Bits::new(qrcode::Version::Normal(config.qr_version));
+    qrbits.push_byte_data(&qrdata)?;
+    qrbits.push_terminator(config.error_level)?;
+    let code = QrCode::with_bits(qrbits, config.error_level)?;
+    Ok(code)
 }
