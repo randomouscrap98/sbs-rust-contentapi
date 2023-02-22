@@ -186,12 +186,11 @@
     width: 100%;
     height: 13em;
     border: none;
-    /*margin-top: var(--space_big);
-    margin-bottom: var(--space_medium);*/
 }
 
 form.editor[data-widget] {
     flex-grow: 1;
+    max-width: unset;
 }
 form.editor[data-widget] textarea {
     flex: 1;

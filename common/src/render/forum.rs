@@ -229,10 +229,12 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
                 //As usual, I'm reusing pagelist to make centered and spaced content
                 p."aside pagelist" { "No posts yet (will you be the first?)" }
             }
-            @if let Some(ref user) = context.layout_data.user {
-                @if can_create_post(user, &thread.thread) {
-                    hr."smaller";
-                    iframe."postwidget pagelist" src={(data.links.forum_post_editor_new(&thread.thread, None))"&widget=true"} {}
+            @if config.render_controls {
+                @if let Some(ref user) = context.layout_data.user {
+                    @if can_create_post(user, &thread.thread) {
+                        hr."smaller";
+                        iframe."postwidget pagelist" src={(data.links.forum_post_editor_new(&thread.thread, None))"&widget=true"} {}
+                    }
                 }
             }
             @if let Some(pages) = config.pages {
