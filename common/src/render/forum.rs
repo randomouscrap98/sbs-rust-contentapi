@@ -421,10 +421,10 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
                         @if let Some(ref current_user) = layout_data.user {
                             div."postcontrols aside smallseparate" {
                                 @if can_create_post(&current_user, &config.thread.thread) {
-                                    a."postreply flatlink" title="Reply" href=(layout_data.links.forum_post_editor_new(&config.thread.thread, Some(post))) { "⮪ Reply" }
+                                    a."postreply flatlink" data-postid=(i(&post.id)) title="Reply" href=(layout_data.links.forum_post_editor_new(&config.thread.thread, Some(post))) { "⮪ Reply" }
                                 }
                                 @if can_user_edit_message(&current_user, post) {
-                                    a."postedit flatlink" title="Edit" href=(layout_data.links.forum_post_editor_edit(post)) { "✎" }
+                                    a."postedit flatlink" data-postid=(i(&post.id)) title="Edit" href=(layout_data.links.forum_post_editor_edit(post)) { "✎" }
                                 }
                                 @if can_user_delete_message(&current_user, post) {
                                     form."postdelete nospacing" method="POST" action=(layout_data.links.forum_post_delete(post)) {
@@ -444,7 +444,7 @@ pub fn post_item(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Pos
                     (post_reply(layout_data, bbcode, reply_post, &config.thread.thread, &config.users))
                 }
                 @if let Some(text) = &post.text {
-                    div."content bbcode" { (PreEscaped(bbcode.parse_profiled_opt(text, format!("post-{}",i(&post.id))))) }
+                    div."content bbcode" data-postid=(i(&post.id)) { (PreEscaped(bbcode.parse_profiled_opt(text, format!("post-{}",i(&post.id))))) }
                 }
                 div."postfooter mediumseparate" {
                     @if let Some(reply_link) = reply_chain_link {
