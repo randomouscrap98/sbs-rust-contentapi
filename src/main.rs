@@ -588,7 +588,8 @@ fn get_forum_edit_post_route(state_filter: &BoxedFilter<(RequestContext,)>, form
     #[derive(Deserialize, Debug)]
     struct NewPostParameters { 
         thread: String,
-        reply: Option<i64>
+        reply: Option<i64>,
+        widget: Option<bool>
     }
 
     let post_new = warp::any()
@@ -596,7 +597,8 @@ fn get_forum_edit_post_route(state_filter: &BoxedFilter<(RequestContext,)>, form
         .and(state_filter.clone())
         .and_then(|param: NewPostParameters, context:RequestContext| 
             std_resp!(
-                pages::forum_edit_post::get_render(pc!(context), Some(param.thread), None, param.reply),
+                pages::forum_edit_post::get_render(pc!(context), Some(param.thread), None, param.reply, 
+                    if let Some(wid) = param.widget {wid} else { false }),
                 context
             ) 
         ).boxed(); 
@@ -605,7 +607,8 @@ fn get_forum_edit_post_route(state_filter: &BoxedFilter<(RequestContext,)>, form
     #[allow(dead_code)]
     #[derive(Deserialize, Debug)]
     struct EditPostParameter { 
-        post: i64
+        post: i64,
+        widget: Option<bool>
     }
 
     let post_edit = warp::any()
@@ -613,7 +616,8 @@ fn get_forum_edit_post_route(state_filter: &BoxedFilter<(RequestContext,)>, form
         .and(state_filter.clone())
         .and_then(|param: EditPostParameter, context:RequestContext| 
             std_resp!(
-                pages::forum_edit_post::get_render(pc!(context), None, Some(param.post), None),
+                pages::forum_edit_post::get_render(pc!(context), None, Some(param.post), None, 
+                    if let Some(wid) = param.widget {wid} else { false }),
                 context
             )
         ).boxed(); 

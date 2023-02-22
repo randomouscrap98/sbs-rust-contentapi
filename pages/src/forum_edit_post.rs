@@ -11,10 +11,10 @@ use contentapi::endpoints::ApiContext;
 use maud::*;
 
 //Rendering ALWAYS requires the form, even if it's just an empty one
-pub fn render(data: MainLayoutData, form: PostForm, thread_info: Option<Content>, errors: Option<Vec<String>>) -> String 
+pub fn render(data: MainLayoutData, form: PostForm, thread_info: Option<Content>, errors: Option<Vec<String>>, widget: bool) -> String 
 {
     let mut title : Option<String> = None;
-    let mut submit_value = "Submit post";
+    let mut submit_value = "New post";
 
     //Assume it's new or not based on the values in the form. The form drives this render
     if form.id == 0 {
@@ -31,36 +31,53 @@ pub fn render(data: MainLayoutData, form: PostForm, thread_info: Option<Content>
         submit_value = "Edit post";
     }
 
-    layout(&data, html!{
-        (data.links.style("/forpage/forum.css"))
-        section {
-            @if let Some(title) = title {
-                h1 { (title) }
-                //NOTE: NO ACTION! These kinds of pages always post to themselves
-                form."editor" #"postedit_form" method="POST" {
-                    (errorlist(errors))
-                    input #"postedit_content_id" type="hidden" name="content_id" value=(form.content_id);
-                    input #"postedit_id" type="hidden" name="id" value=(form.id);
-                    @if let Some(reply_id) = form.reply_id {
-                        input #"postedit_reply_id" type="hidden" name="reply_id" value=(reply_id);
-                    }
-                    label for="postedit_post" {"Post:"}
-                    (post_textbox(Some("postedit_post"), Some("post"), Some(&form.post)))
-                    input type="submit" value=(submit_value);
+    let form_element = html! {
+        //NOTE: NO ACTION! These kinds of pages always post to themselves
+        form."editor" #"postedit_form" method="POST" target=[if widget{Some("_top")} else {None}]{
+            @if !widget {
+                (errorlist(errors))
+            }
+            input #"postedit_content_id" type="hidden" name="content_id" value=(form.content_id);
+            input #"postedit_id" type="hidden" name="id" value=(form.id);
+            @if let Some(reply_id) = form.reply_id {
+                input #"postedit_reply_id" type="hidden" name="reply_id" value=(reply_id);
+            }
+            @if !widget {
+                label for="postedit_post" {"Post:"}
+            }
+            (post_textbox(Some("postedit_post"), Some("post"), Some(&form.post)))
+            input type="submit" value=(submit_value);
+        }
+    };
+
+    if widget {
+        basic_skeleton(&data, html! {
+            title { "SmileBASIC Source Post Form" }
+            meta name="description" content="The form to make posts";
+            (data.links.style("/layout.css"))
+        }, form_element).into_string()
+    }
+    else {
+        layout(&data, html!{
+            (data.links.style("/forpage/forum.css"))
+            section {
+                @if let Some(title) = title {
+                    h1 { (title) }
+                    (form_element)
+                }
+                @else {
+                    h1."error" { "POST EDITOR CANNOT LOAD" }
                 }
             }
-            @else {
-                h1."error" { "POST EDITOR CANNOT LOAD" }
-            }
-        }
-    }).into_string()
+        }).into_string()
+    }
 }
 
 //You can optimize this later I guess (if it really needs it...)
 const THISCONTENTFIELDS : &str = "*";
 const THISMESSAGEFIELDS : &str = "*";
 
-pub async fn get_render(context: PageContext, thread_hash: Option<String>, post_id: Option<i64>, reply_id: Option<i64>) -> 
+pub async fn get_render(context: PageContext, thread_hash: Option<String>, post_id: Option<i64>, reply_id: Option<i64>, widget: bool) -> 
     Result<Response, Error> 
 {
     let mut thread : Option<Content> = None;
@@ -84,7 +101,7 @@ pub async fn get_render(context: PageContext, thread_hash: Option<String>, post_
         }
     }
 
-    Ok(Response::Render(render(context.layout_data, form, thread, None)))
+    Ok(Response::Render(render(context.layout_data, form, thread, None, widget)))
 }
 
 /// Craft the message to be written to the api for the given post form
@@ -152,7 +169,7 @@ pub async fn post_render(context: PageContext, form: PostForm) ->
         }
         else {
             //Otherwise, we stay here and show all the terrifying errors
-            Ok(Response::Render(render(context.layout_data, form, Some(thread), Some(errors))))
+            Ok(Response::Render(render(context.layout_data, form, Some(thread), Some(errors), false)))
         }
     }
     else {

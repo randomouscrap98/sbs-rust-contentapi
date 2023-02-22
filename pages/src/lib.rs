@@ -7,6 +7,7 @@ pub mod search;
 pub mod widget_imagebrowser;
 pub mod widget_bbcodepreview;
 pub mod widget_recentactivity;
+//pub mod widget_forumpost;
 pub mod widget_thread;
 pub mod widget_votes;
 pub mod widget_qr;

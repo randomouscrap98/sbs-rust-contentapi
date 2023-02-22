@@ -99,6 +99,11 @@ impl LinkConfig {
         format!("{}/forum/edit/post?post={}", self.http_root, i(&post.id))
     }
 
+    pub fn forum_post_editor(&self) -> String {
+        format!("{}/forum/edit/post", self.http_root)
+    }
+
+
     /// Get the link to delete a post. You'll need to POST to this to delete
     pub fn forum_post_delete(&self, post: &Message) -> String {
         format!("{}/forum/delete/post/{}", self.http_root, i(&post.id))

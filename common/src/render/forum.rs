@@ -229,6 +229,11 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
                 //As usual, I'm reusing pagelist to make centered and spaced content
                 p."aside pagelist" { "No posts yet (will you be the first?)" }
             }
+            @if let Some(ref user) = context.layout_data.user {
+                @if can_create_post(user, &thread.thread) {
+                    iframe."postwidget" src={(data.links.forum_post_editor_new(&thread.thread, None))"&widget=true"} {}
+                }
+            }
             @if let Some(pages) = config.pages {
                 @if pages.len() > 1 {
                     div."smallseparate pagelist" {
@@ -243,9 +248,9 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
                 @if let Some(ref user) = context.layout_data.user {
                     //TODO: again, reusing pagelist may be inappropriate. IDK
                     div."smallseparate pagelist" {
-                        @if can_create_post(user, &thread.thread) {
-                            a."coolbutton" #"createpost" href=(data.links.forum_post_editor_new(&thread.thread, None)) { "New post" }
-                        }
+                        //@if can_create_post(user, &thread.thread) {
+                        //    a."coolbutton" #"createpost" href=(data.links.forum_post_editor_new(&thread.thread, None)) { "New post" }
+                        //}
                         @if !is_pagetype {
                             @if can_edit_thread(user, &thread.thread) {
                                 a."coolbutton" #"editthread" href=(data.links.forum_thread_editor_edit(&thread.thread)) { "Edit thread" }
