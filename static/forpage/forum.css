@@ -150,37 +150,53 @@
  *     POST REPLY     *
  *  ----------------- */
 
- .reply {
-    display: flex;
-    align-items: center;
-    /*max-width: 75vw; /* Just too tired to remember how to do this */
-    margin-top: var(--space_small);
- }
+.reply {
+   display: flex;
+   align-items: center;
+   /*max-width: 75vw; /* Just too tired to remember how to do this */
+   margin-top: var(--space_small);
+}
 
- .reply .replylink {
-    margin-right: 0.5em;
-    flex: none;
-    color: var(--tc_link);
- }
+.reply .replylink {
+   margin-right: 0.5em;
+   flex: none;
+   color: var(--tc_link);
+}
 
- .reply img {
-    width: 1em;
-    max-height: 1em;
-    border-radius: 0.2em;
- }
+.reply img {
+   width: 1em;
+   max-height: 1em;
+   border-radius: 0.2em;
+}
 
- .reply > .username {
-    display: block;
-    margin-left: 0.2em;
-    margin-right: 0.3em;
- }
- .reply > .username::after {
-    content: ":";
- }
+.reply > .username {
+   display: block;
+   margin-left: 0.2em;
+   margin-right: 0.3em;
+}
+.reply > .username::after {
+   content: ":";
+}
 
- .reply .content {
-    margin: 0 !important;
- }
+.reply .content {
+   margin: 0 !important;
+}
+
+.postwidget {
+    width: 100%;
+    height: 13em;
+    border: none;
+    /*margin-top: var(--space_big);
+    margin-bottom: var(--space_medium);*/
+}
+
+form.editor[data-widget] {
+    flex-grow: 1;
+}
+form.editor[data-widget] textarea {
+    flex: 1;
+    resize: none;
+}
 
 
 /*  -------------------

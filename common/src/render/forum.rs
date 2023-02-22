@@ -231,7 +231,8 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
             }
             @if let Some(ref user) = context.layout_data.user {
                 @if can_create_post(user, &thread.thread) {
-                    iframe."postwidget" src={(data.links.forum_post_editor_new(&thread.thread, None))"&widget=true"} {}
+                    hr."smaller";
+                    iframe."postwidget pagelist" src={(data.links.forum_post_editor_new(&thread.thread, None))"&widget=true"} {}
                 }
             }
             @if let Some(pages) = config.pages {
@@ -247,11 +248,8 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
             @if config.render_controls {
                 @if let Some(ref user) = context.layout_data.user {
                     //TODO: again, reusing pagelist may be inappropriate. IDK
-                    div."smallseparate pagelist" {
-                        //@if can_create_post(user, &thread.thread) {
-                        //    a."coolbutton" #"createpost" href=(data.links.forum_post_editor_new(&thread.thread, None)) { "New post" }
-                        //}
-                        @if !is_pagetype {
+                    @if !is_pagetype {
+                        div."smallseparate pagelist" {
                             @if can_edit_thread(user, &thread.thread) {
                                 a."coolbutton" #"editthread" href=(data.links.forum_thread_editor_edit(&thread.thread)) { "Edit thread" }
                             }

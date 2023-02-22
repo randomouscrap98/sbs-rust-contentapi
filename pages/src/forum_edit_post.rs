@@ -33,7 +33,7 @@ pub fn render(data: MainLayoutData, form: PostForm, thread_info: Option<Content>
 
     let form_element = html! {
         //NOTE: NO ACTION! These kinds of pages always post to themselves
-        form."editor" #"postedit_form" method="POST" target=[if widget{Some("_top")} else {None}]{
+        form."editor" #"postedit_form" method="POST" data-widget=[if widget{Some("true")} else {None}] target=[if widget{Some("_top")} else {None}]{
             @if !widget {
                 (errorlist(errors))
             }
@@ -55,6 +55,7 @@ pub fn render(data: MainLayoutData, form: PostForm, thread_info: Option<Content>
             title { "SmileBASIC Source Post Form" }
             meta name="description" content="The form to make posts";
             (data.links.style("/layout.css"))
+            (data.links.style("/forpage/forum.css"))
         }, form_element).into_string()
     }
     else {
