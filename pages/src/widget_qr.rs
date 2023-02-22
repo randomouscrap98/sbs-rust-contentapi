@@ -98,7 +98,7 @@ pub struct QrConfig {
 impl Default for QrConfig {
     fn default() -> Self {
         Self { 
-            bytes_per_qr: 625,  //Doc says 630 but I had issues running out of data sometimes
+            bytes_per_qr: 630,  //Doc says 630
             qr_version : 20,    //Doc says 20 
             error_level: qrcode::EcLevel::M,
             min_size: 200
@@ -109,7 +109,7 @@ impl Default for QrConfig {
 impl QrConfig {
     pub fn high_density() -> Self {
         Self {
-            bytes_per_qr: 1230, //'spec' says 1273 (minus 36 = 1237), but again we have weird errors sometimes
+            bytes_per_qr: 1237, //'spec' says 1273 (minus 36 = 1237)
             qr_version : 25, //This the max from PTCUtilities
             error_level: qrcode::EcLevel::L,
             min_size: 250
@@ -152,7 +152,15 @@ pub fn generate_qr_svgs(ptc_file: PtcData, config : QrConfig) -> Result<Vec<Stri
         qrdata.extend_from_slice(&resultmd5);
         qrdata.extend_from_slice(resultslice);
         println!("QR {} size: {}", qrnum + 1, qrdata.len());
-        let code = QrCode::with_version(qrdata, qrcode::Version::Normal(config.qr_version), config.error_level).map_err(|e| Error::Other(e.to_string()))?;
+        let mut qrbits = qrcode::bits::Bits::new(qrcode::Version::Normal(config.qr_version));
+        qrbits
+            .push_byte_data(&qrdata)
+            .map_err(|e| Error::Other(e.to_string()))?;
+            qrbits
+                .push_terminator(config.error_level)
+                .map_err(|e| Error::Other(e.to_string()))?;
+                let code = QrCode::with_bits(qrbits, config.error_level)
+                .map_err(|e| Error::Other(e.to_string()))?;
         let image = code.render()
             .min_dimensions(config.min_size, config.min_size)
             .dark_color(svg::Color("#000000"))
