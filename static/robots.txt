@@ -2,3 +2,5 @@ User-agent: *
 Disallow: /widget/
 Disallow: /activity
 Disallow: /admin
+Disallow: /?p=*
+Disallow: /*&p=*

@@ -1,4 +1,6 @@
 use common::*;
+use common::render::*;
+use common::constants::SBSPageType;
 use common::render::layout::*;
 use common::forum::*;
 use common::pagination::*;
@@ -14,17 +16,21 @@ use contentapi::{FullRequest, SpecialCount};
 pub fn render(mut context: PageContext, config: PostsConfig) -> String {
     let mut meta = LayoutMeta {
         title : format!("SBS ⦁ {}", opt_s!(config.thread.thread.name)),
-        description : opt_s!(config.thread.thread.description).to_string(),
+        description : short_description(&config.thread.thread),
         image : get_thumbnail_hash(&config.thread.thread).and_then(|h| 
-            Some(context.layout_data.links.image(&h, &contentapi::forms::QueryImage { size: Some(200), crop: None })))
+            Some(context.layout_data.links.image(&h, &contentapi::forms::QueryImage { size: Some(200), crop: None }))),
+        canonical: Some(context.layout_data.links.forum_thread(&config.thread.thread))
     };
-    if let Some(selected_id) = config.selected_post_id {
-        if let Some(post) = config.thread.posts.iter().find(|p| p.id == Some(selected_id)) {
-            meta.description = short_post(post); 
+
+    //If the literal type is a forumthread, we generally want to pull text from posts
+    if config.thread.thread.literalType.as_deref() == Some(SBSPageType::FORUMTHREAD) {
+        if let Some(selected_id) = config.selected_post_id {
+            if let Some(post) = config.thread.posts.iter().find(|p| p.id == Some(selected_id)) {
+                meta.description = short_post(post); 
+                meta.canonical = Some(context.layout_data.links.forum_post(&post, &config.thread.thread));
+            }
         }
-    }
-    else if meta.description.is_empty() {
-        if let Some(start) = config.start_num {
+        else if let Some(start) = config.start_num {
             if start == 1 {
                 //We KNOW this is the first page, so we can actually give the post as the description!
                 if let Some(post) = config.thread.posts.get(0) {
@@ -33,18 +39,9 @@ pub fn render(mut context: PageContext, config: PostsConfig) -> String {
             }
         }
     }
+
     let main_page = render_posts(&mut context, config);
     layout_with_meta(&context.layout_data, meta, main_page).into_string()
-}
-
-fn short_post(message: &Message) -> String {
-    if let Some(ref text) = message.text {
-        text.chars().take(150).collect::<String>()
-    }
-    else {
-        String::from("")
-    }
-    //opt_s!(message.text.and_then(|t| Some(&t[0..std::cmp::min(150, t.len())]))).to_string()
 }
 
 async fn render_thread(mut context: PageContext, pre_request: FullRequest, per_page: i32, 

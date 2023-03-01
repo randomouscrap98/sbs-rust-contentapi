@@ -63,6 +63,43 @@ pub fn i(int: &Option<i64>) -> String {
 }
 
 
+// ------------------
+// - SPECIAL FORMAT -
+// ------------------
+
+pub const SHORTDESCRIPTION : usize = 150;
+
+pub fn short_post(message: &Message) -> String {
+    if let Some(ref text) = message.text {
+        text.chars().take(SHORTDESCRIPTION).collect::<String>()
+    }
+    else {
+        String::from("")
+    }
+}
+
+pub fn short_description(thread: &Content) -> String {
+    if let Some(ref description) = thread.description {
+        return description.clone();
+    }
+    else if thread.literalType.as_deref() != Some(constants::SBSPageType::FORUMTHREAD) {
+        //Get some short portion of the body, even if it's bad? We'll fix bbcode stuff later
+        if let Some(ref text) = thread.text {
+            return text.chars().take(SHORTDESCRIPTION).collect::<String>();
+        }
+    }
+    return String::from("");
+}
+
+pub fn short_description_opt(thread: Option<&Content>) -> String {
+    if let Some(thread) = thread {
+        short_description(thread)
+    }
+    else {
+        String::from("")
+    }
+}
+
 // ---------------------
 // *    FRAGMENTS      *
 // ---------------------

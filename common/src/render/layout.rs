@@ -122,14 +122,16 @@ pub fn basic_skeleton(data: &MainLayoutData, head_inner: Markup, body_inner: Mar
 pub struct LayoutMeta {
     pub title : String,
     pub description : String,
-    pub image : Option<String>
+    pub image : Option<String>,
+    pub canonical: Option<String>
 }
 
 pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
     layout_with_meta(main_data, LayoutMeta {
         title: "SmileBASIC Source".to_string(),
         description: "A community for sharing programs and getting advice on SmileBASIC applications on the Nintendo DSi, 3DS, and Switch".to_string(),
-        image: None
+        image: None,
+        canonical: None
     }, page)
 }
 

@@ -75,6 +75,10 @@ pub fn handle_response_with_anycookie(response: common::Response, link_config: &
             builder = builder.status(303).header("Location", loc);
             Ok(errwrap!(builder.body(String::from("")))?) 
         },
+        common::Response::RenderWithStatus(page, status) => {
+            builder = builder.status(status).header("Content-Type", "text/html");
+            Ok(errwrap!(builder.body(page))?)
+        }
         common::Response::Render(page) => {
             builder = builder.status(200).header("Content-Type", "text/html");
             Ok(errwrap!(builder.body(page))?)

@@ -26,10 +26,19 @@ pub struct UserPackage {
 pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: Option<UserPackage>, 
     ban_errors: Option<Vec<String>>, unban_errors: Option<Vec<String>>) -> String 
 {
-    layout(&data, html!{
-        (data.links.style("/forpage/user.css"))
-        @if let Some(user_package) = user_package {
-            @let user = user_package.user;
+    if let Some(user_package) = user_package 
+    {
+        let user = user_package.user;
+
+        let meta = LayoutMeta {
+            title : format!("SBS ⦁ {}", user.username),
+            description : short_description_opt(user_package.userpage.as_ref()),
+            image : Some(data.links.image(&user.avatar, &QueryImage::avatar(200))),
+            canonical: None
+        };
+
+        layout_with_meta(&data, meta, html!{
+            (data.links.style("/forpage/user.css"))
             section {
                 div #"pageuser" {
                     img src={(data.links.image(&user.avatar, &QueryImage::avatar(300)))};
@@ -103,14 +112,17 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: Option<Use
                     }
                 }
             }
-        }
-        @else {
+        }).into_string()
+    }
+    else {
+        layout(&data, html!{
+            (data.links.style("/forpage/user.css"))
             section {
                 //Maybe we do this OR a 404? IDK which one?
                 p."error" {"Couldn't find that user!"}
             }
-        }
-    }).into_string()
+        }).into_string()
+    }
 }
 
 

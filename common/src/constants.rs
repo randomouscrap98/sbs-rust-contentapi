@@ -36,7 +36,8 @@ string_const!{ SBSPageType => {
     (ALERT:"alert"),
     (FRONTPAGE:"frontpage"),
     (SUBMISSIONS:"submissions"),
-    (PTCFILES:"ptcfiles")
+    (PTCFILES:"ptcfiles"),
+    (DOCPARENT:"docparent")
 }}
 
 

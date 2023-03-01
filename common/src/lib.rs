@@ -88,6 +88,7 @@ pub struct PageContext {
 #[derive(Debug)]
 pub enum Response {
     Render(String), //string is the markup
+    RenderWithStatus(String, u16), //string is the markup, status is the status code returned
     Redirect(String)
 }
 
