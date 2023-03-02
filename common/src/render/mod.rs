@@ -80,9 +80,11 @@ pub fn short_post(message: &Message) -> String {
 
 pub fn short_description(thread: &Content) -> String {
     if let Some(ref description) = thread.description {
-        return description.clone();
+        if !description.is_empty() {
+            return description.clone();
+        }
     }
-    else if thread.literalType.as_deref() != Some(constants::SBSPageType::FORUMTHREAD) {
+    if thread.literalType.as_deref() != Some(constants::SBSPageType::FORUMTHREAD) {
         //Get some short portion of the body, even if it's bad? We'll fix bbcode stuff later
         if let Some(ref text) = thread.text {
             return text.chars().take(SHORTDESCRIPTION).collect::<String>();
