@@ -23,106 +23,94 @@ pub struct UserPackage {
     pub ban: Option<UserBan>
 }
 
-pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: Option<UserPackage>, 
+pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackage, 
     ban_errors: Option<Vec<String>>, unban_errors: Option<Vec<String>>) -> String 
 {
-    if let Some(user_package) = user_package 
-    {
-        let user = user_package.user;
+    let user = user_package.user;
 
-        let meta = LayoutMeta {
-            title : format!("SBS ⦁ {}", user.username),
-            description : short_description_opt(user_package.userpage.as_ref()),
-            image : Some(data.links.image(&user.avatar, &QueryImage::avatar(200))),
-            canonical: None
-        };
+    let meta = LayoutMeta {
+        title : format!("SBS ⦁ {}", user.username),
+        description : short_description_opt(user_package.userpage.as_ref()),
+        image : Some(data.links.image(&user.avatar, &QueryImage::avatar(200))),
+        canonical: None
+    };
 
-        layout_with_meta(&data, meta, html!{
-            (data.links.style("/forpage/user.css"))
+    layout_with_meta(&data, meta, html!{
+        (data.links.style("/forpage/user.css"))
+        section {
+            div #"pageuser" {
+                img src={(data.links.image(&user.avatar, &QueryImage::avatar(300)))};
+                div #"infoblock" {
+                    h1 {(user.username)}
+                    div."aside mediumseparate" #"userinfo" {
+                        // Some info about the user 
+                        div { "Member since: " time { (user.createDate.to_rfc3339()) } }
+                        div { "ID: "(user.id) }
+                    }
+                    //If the user has no bio, that's ok! 
+                    @if let Some(userpage) = user_package.userpage {
+                        div."content" #"userbio" { (PreEscaped(bbcode.parse_profiled_opt(opt_s!(userpage.text), format!("userpage-{}", i(&userpage.id))))) } 
+                    }
+                }
+            }
+        }
+        section {
+            h1 { "Submissions:" }
+            @if user_package.submissions.len() == 0 {
+                p."aside" { "None!" }
+            }
+            @else {
+                div."cardslist" {
+                    @for page in &user_package.submissions {
+                        (page_card(&data.links, page, &user_package.users))
+                    }
+                }
+            }
+        }
+        @if user_package.badges.len() > 0 {
             section {
-                div #"pageuser" {
-                    img src={(data.links.image(&user.avatar, &QueryImage::avatar(300)))};
-                    div #"infoblock" {
-                        h1 {(user.username)}
-                        div."aside mediumseparate" #"userinfo" {
-                            // Some info about the user 
-                            div { "Member since: " time { (user.createDate.to_rfc3339()) } }
-                            div { "ID: "(user.id) }
-                        }
-                        //If the user has no bio, that's ok! 
-                        @if let Some(userpage) = user_package.userpage {
-                            div."content" #"userbio" { (PreEscaped(bbcode.parse_profiled_opt(opt_s!(userpage.text), format!("userpage-{}", i(&userpage.id))))) } 
-                        }
+                h2 { "Legacy badges:" }
+                div."badges" {
+                    @for ref badge in user_package.badges {
+                        img."badge" title=(opt_s!(badge.name)) src=(data.links.image_default(opt_s!(badge.hash)));
                     }
                 }
+                p."aside" {"Don't worry if you don't have these!"}
             }
-            section {
-                h1 { "Submissions:" }
-                @if user_package.submissions.len() == 0 {
-                    p."aside" { "None!" }
-                }
-                @else {
-                    div."cardslist" {
-                        @for page in &user_package.submissions {
-                            (page_card(&data.links, page, &user_package.users))
-                        }
-                    }
-                }
-            }
-            @if user_package.badges.len() > 0 {
-                section {
-                    h2 { "Legacy badges:" }
-                    div."badges" {
-                        @for ref badge in user_package.badges {
-                            img."badge" title=(opt_s!(badge.name)) src=(data.links.image_default(opt_s!(badge.hash)));
-                        }
-                    }
-                    p."aside" {"Don't worry if you don't have these!"}
-                }
-            }
-            @if let Some(current_user) = &data.user {
-                @if current_user.admin {
-                    section #"admincontrols" {
-                        h2 { "Admin controls:" }
-                        @if let Some(ban) = &user_package.ban {
-                            form #"unbanform" method="POST" action={(data.links.http_root)"/user/"(user.username)"?unban=1#admincontrols"} {
-                                (errorlist(unban_errors))
-                                p."error" { 
-                                    "ALREADY BANNED for: "  
-                                    time datetime=(dd(&ban.expireDate)) { (timeago_future(&ban.expireDate)) }
-                                    " - " (opt_s!(ban.message))
-                                }
-                                label for="unban_reason"{"Unban Reason (for admin logs):"}
-                                input."largeinput" #"unban_reason" type="text" required="" name="new_reason";
-                                input type="hidden" name="id" value=(ban.id);
-                                input type="submit" value="Unban";
+        }
+        @if let Some(current_user) = &data.user {
+            @if current_user.admin {
+                section #"admincontrols" {
+                    h2 { "Admin controls:" }
+                    @if let Some(ban) = &user_package.ban {
+                        form #"unbanform" method="POST" action={(data.links.http_root)"/user/"(user.username)"?unban=1#admincontrols"} {
+                            (errorlist(unban_errors))
+                            p."error" { 
+                                "ALREADY BANNED for: "  
+                                time datetime=(dd(&ban.expireDate)) { (timeago_future(&ban.expireDate)) }
+                                " - " (opt_s!(ban.message))
                             }
+                            label for="unban_reason"{"Unban Reason (for admin logs):"}
+                            input."largeinput" #"unban_reason" type="text" required="" name="new_reason";
+                            input type="hidden" name="id" value=(ban.id);
+                            input type="submit" value="Unban";
                         }
-                        @else {
-                            form #"banform" method="POST" action={(data.links.http_root)"/user/"(user.username)"?ban=1#admincontrols"} {
-                                (errorlist(ban_errors))
-                                label for="ban_hours"{"Ban hours:"}
-                                input #"ban_hours" type="text" required="" name="hours";
-                                label for="ban_reason"{"Ban Reason (shown to user):"}
-                                input."largeinput" #"ban_reason" type="text" required="" name="reason";
-                                input type="hidden" name="user_id" value=(user.id);
-                                input type="submit" value="Ban";
-                            }
+                    }
+                    @else {
+                        form #"banform" method="POST" action={(data.links.http_root)"/user/"(user.username)"?ban=1#admincontrols"} {
+                            (errorlist(ban_errors))
+                            label for="ban_hours"{"Ban hours:"}
+                            input #"ban_hours" type="text" required="" name="hours";
+                            label for="ban_reason"{"Ban Reason (shown to user):"}
+                            input."largeinput" #"ban_reason" type="text" required="" name="reason";
+                            input type="hidden" name="user_id" value=(user.id);
+                            input type="submit" value="Ban";
                         }
                     }
                 }
             }
-        }).into_string()
-    }
-    else {
-        layout(&data, html!{
-            (data.links.style("/forpage/user.css"))
-            section {
-                //Maybe we do this OR a 404? IDK which one?
-                p."error" {"Couldn't find that user!"}
-            }
-        }).into_string()
-    }
+        }
+    }).into_string()
 }
 
 
@@ -176,7 +164,8 @@ pub async fn get_render_internal(context: PageContext, username: String, ban_err
     let badges_raw = contentapi::conversion::cast_result_required::<Content>(&result, "badges")?;
 
     let user = users_raw.pop();
-    let package: Option<UserPackage> = if let Some(user) = user {
+    
+    if let Some(user) = user {
         //OK we did the standard user request. we COULD'VE merged these two, but it's just easier to 
         //make a second request for their submissions!
         let mut search = PageSearch::default();
@@ -187,26 +176,27 @@ pub async fn get_render_internal(context: PageContext, username: String, ban_err
 
         let result = context.api_context.post_request(&request).await?;
 
-        Some(UserPackage {
+        let package = UserPackage {
             user,
             userpage: content_raw.pop(),
             badges: badges_raw,
             ban: bans_raw.pop(),
             submissions: conversion::cast_result_safe::<Content>(&result, "content")?,
             users: conversion::map_users(conversion::cast_result_safe::<User>(&result, "user")?)
-        })
+        };
+
+        Ok(Response::Render(render(
+            context.layout_data, 
+            context.bbcode, 
+            package,
+            ban_errors,
+            unban_errors
+        )))
     }
     else {
-        None
-    };
+        Err(Error::NotFound(String::from("User not found!")))
+    }
 
-    Ok(Response::Render(render(
-        context.layout_data, 
-        context.bbcode, 
-        package,
-        ban_errors,
-        unban_errors
-    )))
 }
 
 pub async fn get_render(context: PageContext, username: String) -> Result<Response, Error>

@@ -1,6 +1,3 @@
-
-use std::convert::Infallible;
-
 use super::*;
 use common::*;
 use common::render::*;
@@ -31,7 +28,7 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, username: Optio
 
 
 
-pub async fn post_render(context: PageContext, registration: &contentapi::forms::Register) -> Result<Response, Infallible>
+pub async fn post_render(context: PageContext, registration: &contentapi::forms::Register) -> Result<Response, Error>
 {
     let email = registration.email.clone(); //make a copy for later
     let username = registration.username.clone();

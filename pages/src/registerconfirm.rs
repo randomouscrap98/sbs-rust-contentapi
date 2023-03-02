@@ -1,5 +1,3 @@
-use std::convert::Infallible;
-
 use contentapi::User;
 
 use super::*;
@@ -77,7 +75,7 @@ pub async fn post_render(context: PageContext, confirm: &contentapi::forms::Regi
 
 /// Resend the confirmation email. On both success and failure, it re-renders the page, just with different elements
 /// in the resend form for success or failure.
-pub async fn post_email_render(context: PageContext, resend: &EmailGeneric) -> Result<Response, Infallible>
+pub async fn post_email_render(context: PageContext, resend: &EmailGeneric) -> Result<Response, Error>
 {
     let email = resend.email.clone(); //make a copy for later
     let errors = email_errors!(context.api_context.post_email_sendregistration(&email).await);

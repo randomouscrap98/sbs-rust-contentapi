@@ -129,6 +129,7 @@ pub async fn get_ftid_render(context: PageContext, ftid: i64, per_page: i32, pag
 //Most old links may be to posts directly? idk
 pub async fn get_fpid_render(context: PageContext, fpid: i64, per_page: i32) -> Result<Response, Error> 
 {
+    //println!("WOW FPID: {}", fpid);
     render_thread(context,
         get_prepost_request(Some(fpid), None, None, None), 
         per_page, None).await

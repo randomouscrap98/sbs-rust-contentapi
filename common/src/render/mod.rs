@@ -67,7 +67,7 @@ pub fn i(int: &Option<i64>) -> String {
 // - SPECIAL FORMAT -
 // ------------------
 
-pub const SHORTDESCRIPTION : usize = 150;
+pub const SHORTDESCRIPTION : usize = 200;
 
 pub fn short_post(message: &Message) -> String {
     if let Some(ref text) = message.text {

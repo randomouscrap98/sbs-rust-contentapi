@@ -144,6 +144,9 @@ pub fn layout_with_meta(main_data: &MainLayoutData, meta: LayoutMeta, page: Mark
             meta property="og:description" content=(meta.description);
             meta property="og:image" content=(meta_image);
         }
+        @if let Some(ref canonical) = meta.canonical {
+            link rel="canonical" href=(canonical);
+        }
         (main_data.links.style("/layout.css"))
         (main_data.links.script("/sb-highlight.js"))
         //MUST come after, it uses sb-highlight!

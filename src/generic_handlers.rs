@@ -8,29 +8,39 @@ use warp::hyper::{StatusCode};
 
 use crate::{errors::*, SESSIONCOOKIE};
 
+pub fn get_status_from_error(error: &ErrorWrapper) -> (StatusCode, String)
+{
+    let code: StatusCode;
+    let message: String;
+
+    match &error.error {
+        common::Error::Api(apierr) => { 
+            code = StatusCode::from_u16(apierr.to_status()).unwrap();
+            message = apierr.to_verbose_string();
+        },
+        common::Error::Other(otherr) => {
+            code = StatusCode::INTERNAL_SERVER_ERROR;
+            message = otherr.clone();
+        },
+        common::Error::NotFound(otherr) => {
+            code = StatusCode::NOT_FOUND;
+            message = otherr.clone();
+        },
+        common::Error::Data(derr,data) => {
+            code = StatusCode::INTERNAL_SERVER_ERROR;
+            message = derr.clone();
+            println!("DATA ERROR: {}\n{}", derr, data);
+        }
+    }
+
+    (code, message)
+}
+
 pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
     let code: StatusCode;
     let message: String;
     if let Some(error) = err.find::<ErrorWrapper>() {
-        match &error.error {
-            common::Error::Api(apierr) => { 
-                code = StatusCode::from_u16(apierr.to_status()).unwrap();
-                message = apierr.to_verbose_string();
-            },
-            common::Error::Other(otherr) => {
-                code = StatusCode::INTERNAL_SERVER_ERROR;
-                message = otherr.clone();
-            },
-            common::Error::NotFound(otherr) => {
-                code = StatusCode::NOT_FOUND;
-                message = otherr.clone();
-            },
-            common::Error::Data(derr,data) => {
-                code = StatusCode::INTERNAL_SERVER_ERROR;
-                message = derr.clone();
-                println!("DATA ERROR: {}\n{}", derr, data);
-            }
-        }
+        (code, message) = get_status_from_error(error);
     }
     else if let Some(error) = err.find::<BodyDeserializeError>() {
         code = StatusCode::BAD_REQUEST;
@@ -53,6 +63,18 @@ pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> 
 pub fn handle_response(response: common::Response, link_config: &LinkConfig) -> Result<impl Reply, Rejection>
 {
     handle_response_with_token(response, link_config, None, 0)
+}
+
+pub fn handle_response_with_error(response: Result<common::Response, common::Error>, link_config: &LinkConfig) -> Result<impl Reply, Rejection>
+{
+    match response
+    {
+        Ok(result) => handle_response(result, link_config),
+        Err(error) => {
+            let (code, message) = get_status_from_error(&error.into());
+            handle_response(common::Response::MessageWithStatus(message, code.into()), link_config)
+        }
+    }
 }
 
 pub fn handle_response_with_token(response: common::Response, link_config: &LinkConfig, token: Option<String>, expire: i64) -> Result<impl Reply, Rejection>
@@ -78,7 +100,11 @@ pub fn handle_response_with_anycookie(response: common::Response, link_config: &
         common::Response::RenderWithStatus(page, status) => {
             builder = builder.status(status).header("Content-Type", "text/html");
             Ok(errwrap!(builder.body(page))?)
-        }
+        },
+        common::Response::MessageWithStatus(message, status) => {
+            builder = builder.status(status);
+            Ok(errwrap!(builder.body(message))?)
+        },
         common::Response::Render(page) => {
             builder = builder.status(200).header("Content-Type", "text/html");
             Ok(errwrap!(builder.body(page))?)

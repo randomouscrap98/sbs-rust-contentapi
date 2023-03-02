@@ -57,10 +57,18 @@ config::create_config!{
     }
 }
 
+//macro_rules! std_resp_legacy {
+//    ($render:expr,$context:expr) => {
+//        async move {
+//            handle_response(errwrap!($render.await)?, &$context.global_state.link_config)
+//        }
+//    };
+//}
+
 macro_rules! std_resp {
     ($render:expr,$context:expr) => {
         async move {
-            handle_response(errwrap!($render.await)?, &$context.global_state.link_config)
+            handle_response_with_error($render.await, &$context.global_state.link_config)
         }
     };
 }

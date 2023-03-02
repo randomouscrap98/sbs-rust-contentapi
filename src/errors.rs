@@ -16,7 +16,7 @@ impl Reject for ErrorWrapper {}
 impl From<ApiError> for ErrorWrapper { fn from(error: ApiError) -> Self { Self { error: common::Error::Api(error) } } }
 impl From<common::Error> for ErrorWrapper { fn from(error: common::Error) -> Self { Self { error } } }
 impl From<Infallible> for ErrorWrapper { fn from(_: Infallible) -> Self { Self { error: common::Error::Other(String::from("THIS IS IMPOSSIBLE"))} }}
-//
+
 macro_rules! wrap_from_error {
     ($t:ty) => {
         impl From<$t> for ErrorWrapper { fn from(error: $t) -> Self { Self { error: common::Error::Other(error.to_string())} }}
