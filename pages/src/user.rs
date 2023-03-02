@@ -32,7 +32,7 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackag
         title : format!("SBS ⦁ {}", user.username),
         description : short_description_opt(user_package.userpage.as_ref()),
         image : Some(data.links.image(&user.avatar, &QueryImage::avatar(200))),
-        canonical: None
+        canonical: Some(data.links.user(&user))
     };
 
     layout_with_meta(&data, meta, html!{
