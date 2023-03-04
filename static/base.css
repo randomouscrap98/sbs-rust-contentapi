@@ -48,6 +48,10 @@
     --space_medium: 1.0em;
     --space_small: 0.5em;
     --reg_lineheight: 1.4;
+
+    /* Markup stuff always required (ugh) */
+    --T-bg: var(--bg_section);
+    --T-color: var(--tc_main);
 }
 
 [data-compact] {

@@ -23,6 +23,10 @@
     --bg_error: rgba(255,0,0,0.05);
     --tc_success: rgb(178, 254, 178);
     --bg_card: #3a3a3a;
+
+    /* Markup stuff always required (ugh) */
+    --T-bg: var(--bg_section);
+    --T-color: var(--tc_main);
 }
 
 body[data-theme="sbs-dark"] {
@@ -64,6 +68,10 @@ body[data-theme="sbs-dark"] {
     --bg_error: rgba(255, 0, 255, 0.05);
     --tc_success: rgb(0, 115, 128);
     --bg_card: #f6fbff; /*aliceblue;*/
+
+    /* Markup stuff always required (ugh) */
+    --T-bg: var(--bg_section);
+    --T-color: var(--tc_main);
 }
 
 body[data-theme="sbs-blue"] {
@@ -113,6 +121,10 @@ body[data-theme="sbs-blue"] {
     --bg_card: #fff;
 
     --line_width: 2.5px;
+
+    /* Markup stuff always required (ugh) */
+    --T-bg: var(--bg_section);
+    --T-color: var(--tc_main);
 }
 
 [data-theme="sbs-contrast"] .faint { opacity: unset; }
@@ -142,6 +154,10 @@ body[data-theme="sbs-blue"] {
     --bg_card: #000;
 
     --line_width: 2.5px;
+
+    /* Markup stuff always required (ugh) */
+    --T-bg: var(--bg_section);
+    --T-color: var(--tc_main);
 }
 
 body[data-theme="sbs-dark-contrast"] {
@@ -166,8 +182,6 @@ body[data-theme="sbs-dark-contrast"] {
 }
 
 [data-theme="sbs-dark-contrast"] .faint { opacity: unset; }
-
-
 
 
 
