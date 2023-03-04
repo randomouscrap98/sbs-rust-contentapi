@@ -67,10 +67,10 @@ pub struct PageForm
     pub text: String,
     pub description: String,    //Making this required now
     pub keywords: String,       //List of keywords separated by space, gets split afterwards
-    pub images: String,         //Same as keywords
 
     //These are optional; required for pages + resources but not for documentation
     pub categories: Option<String>,     //Same as keywords
+    pub images: Option<String>,         
 
     //These are optional fields, for programs
     pub key: Option<String>,

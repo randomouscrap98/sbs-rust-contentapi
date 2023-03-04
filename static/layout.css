@@ -124,7 +124,7 @@ label.inline {
     margin-bottom: 0.5em;
 }
 
-form:not(.nospacing) input, form:not(.nospacing) textarea {
+form:not(.nospacing) input, form:not(.nospacing) textarea, form:not(.nospacing) select {
     display: block;
     margin-bottom: 0.5em;
 }

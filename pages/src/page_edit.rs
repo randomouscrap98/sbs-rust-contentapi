@@ -43,7 +43,8 @@ pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_ca
         (data.links.style("/forpage/pageeditor.css"))
         (data.links.script("/forpage/pageeditor.js"))
         section {
-            @if real_mode != SBSPageType::PROGRAM && real_mode != SBSPageType::RESOURCE && real_mode != PTCSYSTEM { //form.subtype != SBSPageType::PROGRAM && form.subtype != SBSPageType::RESOURCE {
+            @if real_mode != SBSPageType::PROGRAM && real_mode != SBSPageType::RESOURCE && real_mode != PTCSYSTEM && 
+                real_mode != SBSPageType::DOCUMENTATION { 
                 h1."error" { "Unknown editor type: " (form.subtype) }
             }
             @else {
@@ -56,7 +57,7 @@ pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_ca
                     label for="pageedit_title" { "Title:" }
                     input #"pageedit_title" type="text" name="title" value=(form.title) required placeholder="Careful: first title is used for permanent link text!";
                     label for="pageedit_tagline" { "Tagline:" }
-                    input #"pageedit_tagline" type="text" name="description" value=(form.description) required placeholder="Short and sweet!";
+                    input #"pageedit_tagline" type="text" name="description" value=(form.description) required[real_mode != SBSPageType::DOCUMENTATION] placeholder="Short and sweet!";
                     label for="pageedit_text" { "Main Page:" }
                     (post_textbox(Some("pageedit_text"), Some("text"), Some(&form.text)))
                     @if real_mode == SBSPageType::DOCUMENTATION {
@@ -120,17 +121,17 @@ pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_ca
                         label for="pageedit_size" { "Size (include units):" }
                         input #"pageedit_size" type="text" name="size" value=(opt_s!(form.size)) placeholder="Rough estimate for total size of download (not required)";
                     }
-                    label for="pageedit_images" { "Images:" }
-                    input #"pageedit_images" type="text" name="images" value=(form.images) placeholder="Space separated";
-                    details."editorinstructions" {
-                        summary."aside" { "About images" }
-                        p { "Images are uploaded to your account, not to the page. So, you first upload your images using the form "
-                            "below, then you can copy the unique image id and paste it into the field above. The first image listed "
-                            "becomes the main image for your page"
+                    @if real_mode != SBSPageType::DOCUMENTATION {
+                        label for="pageedit_images" { "Images:" }
+                        input #"pageedit_images" type="text" name="images" value=(opt_s!(form.images)) placeholder="Space separated";
+                        details."editorinstructions" {
+                            summary."aside" { "About images" }
+                            p { "Images are uploaded to your account, not to the page. So, you first upload your images using the form "
+                                "below, then you can copy the unique image id and paste it into the field above. The first image listed "
+                                "becomes the main image for your page"
+                            }
+                            iframe."imagebrowser" src={(data.links.imagebrowser())} {}
                         }
-                        iframe."imagebrowser" src={(data.links.imagebrowser())} {}
-                    }
-                    @if real_mode == SBSPageType::PROGRAM || real_mode == SBSPageType::RESOURCE { 
                         label for="pageedit_categories" { "Categories:" }
                         input #"pageedit_categories" type="text" name="categories" value=(opt_s!(form.categories)) placeholder="Space separated";
                         details."editorinstructions" #"categories_instructions" {
@@ -200,7 +201,7 @@ pub async fn get_render(mut context: PageContext, mode: Option<String>, page_has
         form.markup = page.get_value_string(SBSValue::MARKUP);
         form.docpath = page.get_value_string(SBSValue::DOCPATH);
         if let Some(images) = page.get_value_array(SBSValue::IMAGES) {
-            form.images = images.into_iter().map(|i| i.as_str().unwrap_or("")).collect::<Vec<&str>>().join(" ");
+            form.images = Some(images.into_iter().map(|i| i.as_str().unwrap_or("")).collect::<Vec<&str>>().join(" "));
         }
         if let Some(systems) = page.get_value_array(SBSValue::SYSTEMS) {
             form.systems = Some(systems.into_iter().map(|i| i.as_str().unwrap_or("")).collect::<Vec<&str>>().join(" "));
@@ -209,7 +210,8 @@ pub async fn get_render(mut context: PageContext, mode: Option<String>, page_has
             form.ptc_files = ptcpage.text;
         }
         form.id = page.id.unwrap();
-        form.description = page.description.unwrap();
+        //WARN : APPARENTLY DESCRIPTION CAN BE "NONE" FROM THE DATABASE!!
+        form.description = page.description.unwrap_or_default();
         form.keywords = page.keywords.unwrap().join(" ");
         form.subtype = page.literalType.unwrap();
         form.text = page.text.unwrap();
@@ -320,13 +322,14 @@ pub async fn construct_post_content_full(context: &mut ApiContext, form: &PageFo
     //We KNOW there will be values, but might as well do the thing...
     if let Some(ref mut values) = fullpage.main.values 
     {
-        values.insert(SBSValue::IMAGES.to_string(), parse_compound_value(&form.images).into());
-
         //ALWAYS have a markup, it just might come from different places
         values.insert(String::from(SBSValue::MARKUP), 
             if let Some(ref markup) = form.markup { markup }
             else { MARKUPBBCODE }.into());
 
+        if let Some(ref images) = form.images {
+            values.insert(SBSValue::IMAGES.to_string(), parse_compound_value(images).into());
+        }
         if let Some(ref key) = form.key {
             values.insert(SBSValue::DOWNLOADKEY.to_string(), key.clone().into());
         }

@@ -395,7 +395,7 @@ pub fn render_content(content: &Content, bbcode: &mut BBCode) -> Markup {
             }
         }
         html!(
-            div."content" data-markup=(markup) {
+            div."content" data-markup=(markup) data-prerendered[markup == MARKUPBBCODE] {
                 @if markup == MARKUPBBCODE {
                     (PreEscaped(&bbcode.parse_profiled_opt(text, format!("program-{}", i(&content.id)))))
                 }
