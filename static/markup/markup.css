@@ -1,0 +1,455 @@
+@charset "utf-8";
+L + ratio { }
+:root { --Markup-loaded: yeah; }
+
+.Markup, .Markup * {
+	white-space: pre-wrap;
+	/* ⚠ very important to prevent overflow ⚠ */
+	word-break: break-word;
+}
+
+/**************************
+ **   Theme Variables    **
+ ** (see doc/themes.txt) **
+ **************************/
+
+*:not(*>*) { /* this selects :root with 0 specificity */
+	/* normal colors */
+	--T-bg: white;
+	
+	--T-link-color: #056;
+	--T-link-visited-color: #606;
+	--T-link-hover-color: #089;
+	--T-link-decoration: underline #AAAA; /* idk..*/
+	--T-custom-link-decoration: underline blue;
+	
+	--T-border-color: gray; /* nnnnn... */
+	
+	--T-image-border: 1px solid var(--T-border-color);
+	
+	--T-embed-height: 10vh;
+	
+	/* for colored table cells, etc. */
+	/* these are transparent, so they should work with both dark and light */
+	888;
+	#0F08;
+	 #FF08;
+	 #FA08;
+	08F8;
+	 #C0F8;
+	AAA8;
+	
+	--T-box-bg: #AAA2;
+	
+	/* other values used :
+		--T-tab-size
+		--T-monospace-font
+		
+		--T-table-border
+		--T-table-outer-border
+		--T-table-thick-border
+		
+		--T-code-color
+		--T-code-bg
+		
+		--T-red-bg:
+		--T-green-bg:
+		--T-yellow-bg:
+		--T-orange-bg:
+		--T-blue-bg:
+		--T-purple-bg:
+		--T-gray-bg:
+*/
+}
+
+/** aa */
+
+.Markup {
+	background: var(--T-bg);
+	font-family: inherit;
+	font-variant-ligatures: none;
+	-moz-tab-size: var(--T-tab-size, 2.5); tab-size: var(--T-tab-size, 2.5);
+}
+
+.Markup * {
+	font-family: inherit;
+	margin: 0;
+}
+
+/* fit */
+/* {
+	width: unset;
+	width: fit-content;
+	width: -moz-fit-content;
+}*/
+/* stretch */
+/* {
+	display: block;
+	max-width: 100%;
+	max-width: -webkit-fill-available;
+	max-width: -moz-available;
+	max-width: stretch;
+}*/
+
+/************/
+/** Images **/
+/************/
+
+/* styles and maximum sizes for embedded media */
+.Markup img, .M-image-wrapper {
+	max-height: var(--T-embed-height);
+	border: var(--T-image-border);
+	box-sizing: content-box;
+}
+					 
+.Markup img {
+	display: block;
+	object-fit: scale-down;
+	
+	max-width: calc(100% - 2px);
+	width: auto;
+}
+
+/* before loading, assume image will be larger than --image-max-height */
+.Markup img[data-state="loading"], .Markup img[data-state="error"] {
+	height: var(--T-embed-height);
+	min-width: 2em;
+}
+.Markup img[data-state="loaded"] {
+	height: auto;
+}	
+
+/* ruby text doesn't work if set to white-space: pre */
+.Markup rt {
+	white-space: pre-line;
+}
+
+/*** invalid tag ***/
+.M-invalid {
+	background: #F888;
+}
+
+/*** divider ***/
+.Markup hr {
+	margin: 0.5rem 0;
+}
+
+.Markup pre, .Markup code, .Markup kbd {
+	font-family: var(--T-monospace-font, "Cascadia Code", consolas, monospace);
+	font-size: 0.8125em;
+}
+/*** Inline Code ***/
+/*** ` ***/
+.Markup code {
+	line-break: anywhere;
+	background: #9995;
+	padding: 0 0.1875em;
+	border-radius: 4px;
+	margin: 0 0.1em;
+	vertical-align: 1px;
+	/*-webkit-box-decoration-break: clone; box-decoration-break: clone; - actually we want this disabled since that makes it easier to tell if a code block has been split*/
+}
+.Markup th code {
+	white-space: pre-wrap;
+	line-break: unset;
+	word-break: normal; overflow-wrap: break-word;
+}
+/*** Code Block ***/
+/*** ``` ***/
+.Markup pre {
+	color: var(--T-code-color, white);
+	background: var(--T-code-bg, black);
+	border: 1px solid black;
+	padding: 0.5em;
+	margin: 0.25em 0;
+	line-break: anywhere;
+}
+/*** Keyboard Key ***/
+/*** \kbd ***/
+.Markup kbd {
+	display: inline-block;
+	
+	background: var(--T-box-bg);
+	border: 1px solid var(--T-border-color);
+	border-radius: 3px;
+	padding: 0.1875rem 0.375rem;
+	vertical-align: middle;
+}
+
+/*** Spoiler ***/
+/*** \spoiler \h ***/
+.M-spoiler-label {
+	display: table; /* width... */
+	background: var(--T-box-bg);
+	cursor: pointer;
+	padding: 0 0.3125em;
+	border: 2px solid var(--T-border-color);
+	border-left-width: 4px;
+	border-radius: 5px;
+	margin-top: 1px;
+}
+.M-spoiler-label::before {
+	content: "Show ";
+}
+[open] > .M-spoiler-label {
+	border-style: inset;
+	border-bottom: none;
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 1px;
+}
+[open] > .M-spoiler-label::before {
+	content: "Hide ";
+}
+.M-spoiler-inner {
+	background: var(--T-box-bg);
+	padding: 0.375rem;
+	border: 2px solid var(--T-border-color);
+	border-left-width: 4px;
+	margin-bottom: 1px;
+}
+/* hide the ▼/▶ icon in safari */
+.M-spoiler-label::-webkit-details-marker {
+	display: none;
+}
+
+/***********/
+/** Quote **/
+/***********/
+.M-quote {
+	background: var(--T-box-bg);
+	padding: 0.375rem;
+	border: 2px solid var(--T-border-color);
+	margin: 1px 0;
+}
+.M-quote-label {
+	unicode-bidi: embed;
+	font-weight: bold;
+	font-style: normal;
+}
+.M-quote-inner {
+	margin-left: 0.5rem;
+}
+
+/***********/
+/** Table **/
+/***********/
+.M-table-outer {
+	overflow-x: auto;
+}
+.Markup table, .Markup tr > * {
+	border-collapse: collapse;
+}
+.Markup table {
+	border: var(--T-table-outer-border, 3px solid #222);	
+}
+.Markup tr > * {
+	padding: 0.1875em 0.3125em;
+	/* alternate text wrap mode, produces better table widths (somewhat) */
+	word-break: normal; overflow-wrap: break-word;
+	border: var(--T-table-border, 1px solid #222);
+}
+.Markup tr > .M-wall-top {
+	border-top: var(--T-table-thick-border, 4px solid #222);
+}
+.Markup tr > .M-wall-right {
+	border-right: var(--T-table-thick-border, 4px solid #222);
+}
+
+/**********************/
+/** Background Color **/
+/**********************/
+.Markup [data-bgcolor="red"]    { background: var(--T-red-bg, #F888) }
+.Markup [data-bgcolor="orange"] { background: var(--T-orange-bg, #FA08) }
+.Markup [data-bgcolor="yellow"] { background: var(--T-yellow-bg, #FF08) }
+.Markup [data-bgcolor="green"]  { background: var(--T-green-bg, #0F08) }
+.Markup [data-bgcolor="blue"]   { background: var(--T-blue-bg, #08F8) }
+.Markup [data-bgcolor="purple"] { background: var(--T-purple-bg, #C0F8) }
+.Markup [data-bgcolor="gray"]   { background: var(--T-gray-bg, #AAA8) }
+.Markup table { background: var(--T-bg); } /* reset */
+
+/***********/
+/** Links **/
+/***********/
+.M-link {
+	color: var(--T-link-color, #056);
+	text-decoration: underline;
+	text-decoration: var(--T-link-decoration, underline #AAAA);
+	-webkit-text-decoration: var(--T-link-decoration, underline #AAAA);
+}
+.M-link:visited {
+	color: var(--T-link-visited-color, #606);
+}
+.M-link:hover {
+	color: var(--T-link-hover-color);
+}
+/* links with custom text */
+.M-link-custom {
+	text-decoration: var(--T-custom-link-decoration);
+	-webkit-text-decoration: var(--T-custom-link-decoration);
+}
+.M-link-custom:hover {
+	text-decoration-style: double;
+	-webkit-text-decoration-style: double;
+}
+
+/***********/
+/** Lists **/
+/***********/
+
+/* todo: having 2 separate list tags sucks. let's just use <ol> and style it with css. there's no such thing as an unordered list, right? even if it's not NUMBERED, it's still ORDERED (implicitly, based on which item you wrote first), maybe? */
+.Markup ul, .Markup ol {
+	padding-left: 1.3125em;
+	/*border: 4px solid transparent;
+	border-left: 4px solid var(--T-border-color);*/
+}
+
+/* todo: this isn't valid html, need to change how we generate this */
+.Markup ul > ul, .Markup ol > ul, .Markup ul > ol, .Markup ol > ol, {
+	padding-left: 1em;
+}
+
+.Markup li {
+	margin: 0.25em 0;
+}
+
+.Markup ol > li::marker {
+	font-weight: bold;
+}
+
+/*************/
+/** Preview **/
+/*************/
+
+.M-preview {
+	color: white;
+	background: #444;
+	padding: 0.375rem;
+}
+
+/***********/
+/** Media **/
+/***********/
+
+y12-audio {
+	display: contents;
+}
+y12-audio > audio {
+	display: block;
+	width: 100%;
+}
+y12-audio > a {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	padding: 3px 0.5rem;
+	box-sizing: border-box;
+	height: 40px;
+	background: #555;
+	color: silver;
+	line-break: anywhere;
+	text-decoration: none;
+}
+y12-audio > a > span {
+	padding-left: 0.25rem;
+}
+
+.M-image-wrapper {
+	aspect-ratio: 16/9;
+	contain: strict;
+	position: relative;
+	width: auto !important;
+	max-width: calc(100% - 2px);
+	align-self: flex-start;
+	height: var(--T-embed-height);
+}
+
+.M-image-wrapper > * {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	object-fit: scale-down;
+	background: black;
+}
+
+y12-video > figure > span {
+	z-index: 1;
+	color: white;
+	overflow-y: scroll;
+}
+
+y12-video {
+	display: flex;
+	flex-flow: column;
+	max-width: 100%;
+}
+
+.M-media-controls {
+	display: flex;
+	gap: 3px;
+	align-items: center;
+	padding-right: 3px;
+}
+
+y12-video > .M-media-controls {
+	border: 2px solid var(--T-border-color);
+	background: slategray;
+	border-radius: 0 3px 3px 3px;
+	color: white;
+	width: max-content;
+}
+
+y12-video > * {
+	flex: none;
+}
+
+.M-media-controls > button {
+	padding: 2px;
+	line-height: 1em;
+}
+
+.M-media-time {
+	flex-grow: 1;
+}
+
+.M-media-volume {
+	width: 50px;
+}
+
+.Markup youtube-embed {
+	display: block;
+}
+
+/**************/
+/** Headings **/
+/**************/
+
+.Markup h2, .Markup h3, .Markup h4, .Markup h5 {
+	margin: 0.1em 0;
+	border-bottom: 1px dotted var(--T-border-color);
+}
+
+.Markup h2 {
+	font-size: 2em;
+	font-weight: 500;
+	background: var(--T-gray-bg);
+	padding: 0 0.1em;
+	border-bottom: 1px solid var(--T-border-color);
+	border-top: 1px solid var(--T-border-color);
+}
+
+.Markup h3 {
+	background: var(--T-box-bg);
+	padding: 0 0.1em;
+	font-size: 1.6875em;
+	font-weight: 500;
+}
+
+.Markup h4 {
+	font-size: 1.5em;
+	font-weight: 500;
+}
+
+.Markup h5 {
+	font-size: 1.125em;
+	font-weight: bold;
+}

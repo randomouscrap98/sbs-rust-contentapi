@@ -190,6 +190,12 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
     };
 
     html!{
+        (data.links.script("/markup/langs.js"))
+        (data.links.script("/markup/legacy.js"))
+        (data.links.script("/markup/parse.js"))
+        (data.links.script("/markup/render.js"))
+        (data.links.script("/markup/helpers.js"))
+        (data.links.style("/markup/markup.css"))
         (data.links.style("/forpage/forum.css"))
         (data.links.script("/forpage/forum.js"))
         @if config.render_header {
@@ -381,8 +387,23 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
 //Now that we support multiple markups, rendering content can get a little complex
 pub fn render_content(content: &Content, bbcode: &mut BBCode) -> Markup {
     if let Some(text) = &content.text {
+        let mut markup : &str = "bbcode";
+        if let Some(ref values) = content.values {
+            if let Some(mk) = values.get("markup") {
+                if let Some(mk) = mk.as_str() {
+                    markup = mk;
+                }
+            }
+        }
         html!(
-            div."content bbcode" { (PreEscaped(&bbcode.parse_profiled_opt(&text, format!("program-{}", i(&content.id))))) }
+            div."content" data-markup=(markup) {
+                @if markup == "bbcode" {
+                    (PreEscaped(&bbcode.parse_profiled_opt(text, format!("program-{}", i(&content.id)))))
+                }
+                @else {
+                    (text)
+                }
+            }
         )
     }
     else {
