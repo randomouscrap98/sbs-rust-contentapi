@@ -68,7 +68,9 @@ pub struct PageForm
     pub description: String,    //Making this required now
     pub keywords: String,       //List of keywords separated by space, gets split afterwards
     pub images: String,         //Same as keywords
-    pub categories: String,     //Same as keywords
+
+    //These are optional; required for pages + resources but not for documentation
+    pub categories: Option<String>,     //Same as keywords
 
     //These are optional fields, for programs
     pub key: Option<String>,
@@ -78,7 +80,11 @@ pub struct PageForm
 
     /// The special ptc field. This requires some js systems to construct an appropriate string,
     /// the format of which is understood by the rust frontend to generate qr codes on the fly
-    pub ptc_files: Option<String>
+    pub ptc_files: Option<String>,
+
+    //Documentation fields
+    pub docpath: Option<String>,
+    pub markup: Option<String> //May eventually be more than just documentation;
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]

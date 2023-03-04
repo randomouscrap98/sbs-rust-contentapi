@@ -22,7 +22,9 @@ string_const!{ SBSValue => {
     (SIZE:"size"),
     (SYSTEMS:"systems"),
     (IMAGES:"images"),
-    (FORCONTENT:"forcontent")
+    (FORCONTENT:"forcontent"),
+    (MARKUP:"markup"),
+    (DOCPATH:"docpath")
 }}
 
 string_const!{ SBSPageType => {
@@ -57,6 +59,9 @@ pub const VOTETYPE: &str = "vote";
 pub const POPSCORE1SORT: &str = "popScore1_desc";
 pub const ANYSYSTEM: &str = "any";
 pub const PTCSYSTEM: &str = "ptc";
+pub const MARKUPBBCODE: &str = "bbcode";
+//pub const MARKUP12y: &str = "12y";
+//pub const MARKUP12y2: &str = "12y2";
 
 pub const SBSSYSTEMS: &[(&str,&str)] = &[
     (ANYSYSTEM, "Any"), 
@@ -65,6 +70,12 @@ pub const SBSSYSTEMS: &[(&str,&str)] = &[
     ("wiiu", "Nintendo WiiU"), 
     ("switch", "Nintendo Switch")
 ]; 
+
+pub const SBSMARKUPS: &[(&str,&str)] = &[
+    (MARKUPBBCODE, "BBCode (static rendered!)"),
+    ("12y", "12y original (js rendered!)"),
+    ("12y2", "12y2 (unstable? js rendered!)")
+];
 
 pub fn get_sbs_system_title(key: &str) -> Option<&str> {
     for (sys, title) in SBSSYSTEMS {

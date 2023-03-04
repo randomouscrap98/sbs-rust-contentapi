@@ -1,4 +1,8 @@
+use std::collections::HashMap;
+
+use common::constants::MARKUPBBCODE;
 use common::constants::PTCSYSTEM;
+use common::constants::SBSMARKUPS;
 use common::constants::SBSPageType;
 use common::constants::SBSSYSTEMS;
 use common::constants::SBSValue;
@@ -55,6 +59,17 @@ pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_ca
                     input #"pageedit_tagline" type="text" name="description" value=(form.description) required placeholder="Short and sweet!";
                     label for="pageedit_text" { "Main Page:" }
                     (post_textbox(Some("pageedit_text"), Some("text"), Some(&form.text)))
+                    @if real_mode == SBSPageType::DOCUMENTATION {
+                        //Show the markup selector for documentation (may change in the future)
+                        label for="pageedit_markup"  { "Markup:" }
+                        select #"pageedit_markup" name ="markup" required {
+                            @for (key, value) in SBSMARKUPS {
+                                option value=(key) selected[Some(*key) == form.markup.as_deref()] { (value) }
+                            }
+                        }
+                        label for="pageedit_docpath" { "Documentation Path:" }
+                        input #"pageedit_docpath" type="text" name="docpath" value=(opt_s!(form.docpath)) required placeholder="Select existing or enter new";
+                    }
                     @if real_mode == SBSPageType::PROGRAM || real_mode == PTCSYSTEM { 
                         @if real_mode == PTCSYSTEM {
                             noscript { h2."error" { "The PTC editor requires javascript, I'm very sorry!" }}
@@ -115,17 +130,19 @@ pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_ca
                         }
                         iframe."imagebrowser" src={(data.links.imagebrowser())} {}
                     }
-                    label for="pageedit_categories" { "Categories:" }
-                    input #"pageedit_categories" type="text" name="categories" value=(form.categories) placeholder="Space separated";
-                    details."editorinstructions" #"categories_instructions" {
-                        summary."aside" { "About categories" }
-                        p { "You can categorize your page for organization and searching. The category table is below: for each category " 
-                            "you want, add the ID to the field above"
-                        }
-                        table #"categories_table" data-raw=(serde_json::ser::to_string(&raw_categories).unwrap_or_default()) {
-                            tr { th { "Name" } th { "Id" } }
-                            @for category in all_categories {
-                                tr { td{ (category.name) } td{ (category.id) }}
+                    @if real_mode == SBSPageType::PROGRAM || real_mode == SBSPageType::RESOURCE { 
+                        label for="pageedit_categories" { "Categories:" }
+                        input #"pageedit_categories" type="text" name="categories" value=(opt_s!(form.categories)) placeholder="Space separated";
+                        details."editorinstructions" #"categories_instructions" {
+                            summary."aside" { "About categories" }
+                            p { "You can categorize your page for organization and searching. The category table is below: for each category " 
+                                "you want, add the ID to the field above"
+                            }
+                            table #"categories_table" data-raw=(serde_json::ser::to_string(&raw_categories).unwrap_or_default()) {
+                                tr { th { "Name" } th { "Id" } }
+                                @for category in all_categories {
+                                    tr { td{ (category.name) } td{ (category.id) }}
+                                }
                             }
                         }
                     }
@@ -167,12 +184,21 @@ pub async fn get_render(mut context: PageContext, mode: Option<String>, page_has
     {
         let fullpage = get_fullpage_by_hash(&mut context.api_context, &hash).await?; 
         let page = fullpage.main; 
+        let page_type = page.literalType.as_deref();
 
         //Remember to do all the ref stuff before we move values out of page
-        form.categories = get_tagged_categories(&page).into_iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ");
+        if page_type == Some(SBSPageType::PROGRAM) || page_type == Some(SBSPageType::RESOURCE) {
+            form.categories = Some(get_tagged_categories(&page).into_iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" "));
+        }
+        else {
+            form.categories = None;
+        }
+        //Don't need to check the page type for these, we just pass them through based on if they are Some or not
         form.key = page.get_value_string(SBSValue::DOWNLOADKEY);
         form.size = page.get_value_string(SBSValue::SIZE); 
         form.version = page.get_value_string(SBSValue::VERSION); 
+        form.markup = page.get_value_string(SBSValue::MARKUP);
+        form.docpath = page.get_value_string(SBSValue::DOCPATH);
         if let Some(images) = page.get_value_array(SBSValue::IMAGES) {
             form.images = images.into_iter().map(|i| i.as_str().unwrap_or("")).collect::<Vec<&str>>().join(" ");
         }
@@ -213,12 +239,12 @@ pub async fn construct_post_content_full(context: &mut ApiContext, form: &PageFo
         fullpage = get_fullpage_by_id(context, form.id).await?;
     }
     else {
+        //Setup some defaults. These need to be defaults for ALL editor types!! Anything that's not
+        //may go somewhere else (but may not!). If the form supplies it, it does NOT GO HERE!!!
         fullpage = FullPage::default(); 
         fullpage.main.contentType = Some(ContentType::PAGE);
         fullpage.main.literalType = Some(form.subtype.clone());
-        fullpage.main.values = Some(make_values! {
-            "markup": "bbcode"
-        });
+        fullpage.main.values = Some(HashMap::new());
         fullpage.main.permissions = Some(make_permissions! {
             "0": "CR" 
         });
@@ -226,12 +252,20 @@ pub async fn construct_post_content_full(context: &mut ApiContext, form: &PageFo
         //We HAVE to get the parent of content!
         let mut request = FullRequest::new();
         add_value!(request, "systemtype", ContentType::SYSTEM);
-        add_value!(request, "submissions_type", SBSPageType::SUBMISSIONS);
+
+        //The actual parent type changes based on the form's subtype (we know it must be set appropriately
+        //if we're posting)
+        if form.subtype == SBSPageType::DOCUMENTATION {
+            add_value!(request, "parent_type", SBSPageType::DOCPARENT);
+        }
+        else {
+            add_value!(request, "parent_type", SBSPageType::SUBMISSIONS);
+        }
 
         request.requests.push(build_request!(
             RequestType::content, 
             String::from("id,literalType,contentType"), 
-            String::from("literalType = @submissions_type and contentType = @systemtype")
+            String::from("literalType = @parent_type and contentType = @systemtype")
         )); 
 
         let result = context.post_request(&request).await?;
@@ -239,7 +273,6 @@ pub async fn construct_post_content_full(context: &mut ApiContext, form: &PageFo
         let submission_parent = submission_parents.pop().ok_or_else(|| Error::NotFound(String::from("Couldn't find submissions parent!")))?;
 
         fullpage.main.parentId = submission_parent.id;
-
     }
 
     //Note that at this point, we MAY OR MAY NOT have a filled out ptc data. We ensure everything is set appropriately later.
@@ -249,7 +282,9 @@ pub async fn construct_post_content_full(context: &mut ApiContext, form: &PageFo
     fullpage.main.name = Some(form.title.clone());
     fullpage.main.description = Some(form.description.clone());
     fullpage.main.keywords = Some(parse_compound_value(&form.keywords));
-    add_category_taglist(parse_compound_value(&form.categories), &mut fullpage.main);
+    if let Some(ref categories) = form.categories {
+        add_category_taglist(parse_compound_value(categories), &mut fullpage.main);
+    }
 
     if let Some(ref ptc_files) = form.ptc_files 
     {
@@ -287,6 +322,11 @@ pub async fn construct_post_content_full(context: &mut ApiContext, form: &PageFo
     {
         values.insert(SBSValue::IMAGES.to_string(), parse_compound_value(&form.images).into());
 
+        //ALWAYS have a markup, it just might come from different places
+        values.insert(String::from(SBSValue::MARKUP), 
+            if let Some(ref markup) = form.markup { markup }
+            else { MARKUPBBCODE }.into());
+
         if let Some(ref key) = form.key {
             values.insert(SBSValue::DOWNLOADKEY.to_string(), key.clone().into());
         }
@@ -298,6 +338,9 @@ pub async fn construct_post_content_full(context: &mut ApiContext, form: &PageFo
         }
         if let Some(ref systems) = form.systems {
             values.insert(SBSValue::SYSTEMS.to_string(), parse_compound_value(systems).into());
+        }
+        if let Some(ref docpath) = form.docpath {
+            values.insert(SBSValue::DOCPATH.to_string(), docpath.clone().into());
         }
     }
     else {

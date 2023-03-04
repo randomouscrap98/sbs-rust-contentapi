@@ -386,9 +386,9 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
 //Now that we support multiple markups, rendering content can get a little complex
 pub fn render_content(content: &Content, bbcode: &mut BBCode) -> Markup {
     if let Some(text) = &content.text {
-        let mut markup : &str = "bbcode";
+        let mut markup : &str = MARKUPBBCODE;
         if let Some(ref values) = content.values {
-            if let Some(mk) = values.get("markup") {
+            if let Some(mk) = values.get(SBSValue::MARKUP) {
                 if let Some(mk) = mk.as_str() {
                     markup = mk;
                 }
@@ -396,7 +396,7 @@ pub fn render_content(content: &Content, bbcode: &mut BBCode) -> Markup {
         }
         html!(
             div."content" data-markup=(markup) {
-                @if markup == "bbcode" {
+                @if markup == MARKUPBBCODE {
                     (PreEscaped(&bbcode.parse_profiled_opt(text, format!("program-{}", i(&content.id)))))
                 }
                 @else {
