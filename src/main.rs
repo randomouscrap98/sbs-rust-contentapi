@@ -649,8 +649,7 @@ fn get_page_edit_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filte
     #[allow(dead_code)]
     #[derive(Deserialize, Debug)]
     struct SubtypeParameter { 
-        //r#type: String,
-        mode: Option<String>
+        mode: String
     }
 
     let page_new = warp::any()
@@ -658,7 +657,7 @@ fn get_page_edit_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filte
         .and(state_filter.clone())
         .and_then(|param: SubtypeParameter, context:RequestContext| 
             std_resp!(
-                pages::page_edit::get_render(pc!(context), param.mode, None),
+                pages::page_edit::get_render(pc!(context), Some(param.mode), None),
                 context
             ) 
         ).boxed(); 
