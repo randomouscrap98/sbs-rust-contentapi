@@ -147,6 +147,14 @@ pub fn layout_with_meta(main_data: &MainLayoutData, meta: LayoutMeta, page: Mark
         @if let Some(ref canonical) = meta.canonical {
             link rel="canonical" href=(canonical);
         }
+        //This is a terrible hit to take on all pages but... caching??
+        (main_data.links.script("/markup/langs.js"))
+        (main_data.links.script("/markup/legacy.js"))
+        (main_data.links.script("/markup/parse.js"))
+        (main_data.links.script("/markup/render.js"))
+        (main_data.links.script("/markup/helpers.js"))
+        (main_data.links.style("/markup/markup.css"))
+        //Our actually scripts and styles
         (main_data.links.style("/layout.css"))
         (main_data.links.script("/sb-highlight.js"))
         //MUST come after, it uses sb-highlight!

@@ -190,12 +190,6 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
     };
 
     html!{
-        (data.links.script("/markup/langs.js"))
-        (data.links.script("/markup/legacy.js"))
-        (data.links.script("/markup/parse.js"))
-        (data.links.script("/markup/render.js"))
-        (data.links.script("/markup/helpers.js"))
-        (data.links.style("/markup/markup.css"))
         (data.links.style("/forpage/forum.css"))
         (data.links.script("/forpage/forum.js"))
         @if config.render_header {

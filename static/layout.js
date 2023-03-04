@@ -6,6 +6,7 @@ upgrade_forms();
 upgrade_times();
 upgrade_code();
 upgrade_deleteconfirm();
+upgrade_markup();
 
 function upgrade_forms()
 {
@@ -13,6 +14,15 @@ function upgrade_forms()
     for(var i = 0; i < forms.length; i++)
     {
         forms[i].addEventListener("submit", stdform_onsubmit);
+    }
+}
+
+function upgrade_markup()
+{
+    var markups = document.querySelectorAll(".content[data-markup]");
+    for(var i = 0; i < markups.length; i++)
+    {
+        Markup.convert_lang(markups[i].textContent, markups[i].getAttribute("data-markup") || "plaintext", markups[i]);
     }
 }
 
