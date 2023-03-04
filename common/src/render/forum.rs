@@ -164,15 +164,20 @@ fn walk_post_tree(layout_data: &MainLayoutData, bbcode: &mut BBCode, config: &Po
 pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
 {
     let thread = &config.thread;
+    let thread_type = thread.thread.literalType.as_deref();
 
-    let is_pagetype = thread.thread.literalType.as_deref() == Some(SBSPageType::PROGRAM) ||
-            thread.thread.literalType.as_deref() == Some(SBSPageType::RESOURCE) ||
-            thread.thread.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION);
+    let is_pagetype = thread_type == Some(SBSPageType::PROGRAM) ||
+            thread_type == Some(SBSPageType::RESOURCE) ||
+            thread_type == Some(SBSPageType::DOCUMENTATION);
 
-    if is_pagetype {
+    //Here, we choose how the override works
+    if thread_type == Some(SBSPageType::PROGRAM) || thread_type == Some(SBSPageType::RESOURCE){
         context.layout_data.override_nav_path = Some("/search");
     }
-    else if thread.thread.literalType.as_deref() == Some(SBSPageType::DIRECTMESSAGE) {
+    else if thread_type == Some(SBSPageType::DOCUMENTATION) {
+        context.layout_data.override_nav_path = Some("/documentation");
+    }
+    else if thread_type == Some(SBSPageType::DIRECTMESSAGE) {
         context.layout_data.override_nav_path = Some("/userhome");
     }
 
