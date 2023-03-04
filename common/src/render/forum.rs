@@ -355,6 +355,11 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
                     }
                 }
             }
+            @if thread.thread.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION) {
+                div."documenttree" {
+                    "Coming soon"
+                }
+            }
             (render_content(&thread.thread, bbcode))
             @if can_edit || can_delete {
                 div."pagelist smallseparate" {

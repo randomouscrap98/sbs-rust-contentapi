@@ -1,5 +1,5 @@
 
-use std::collections::HashMap;
+use std::{collections::HashMap, cell::RefCell};
 
 use contentapi::*;
 use crate::{constants::*, opt_s};
@@ -124,4 +124,91 @@ pub fn get_all_docpaths(documentation: &Vec<Content>) -> HashMap<String, Vec<&Co
     }
 
     result
+}
+
+/// A single node in a document tree. Each node contains 0 or more subsequent tree nodes to go deeper,
+/// and 0 or more immediate page leaves. If the tree is build directly from documentation, the tree should
+/// not have any nodes with no content.
+#[derive(Default)]
+pub struct DocTreeNode<'a> {
+    pub name : String,
+    pub tree_nodes : RefCell<Vec<DocTreeNode<'a>>>,
+    pub page_nodes : RefCell<Vec<&'a Content>>
+}
+
+impl<'a> DocTreeNode<'a> 
+{
+    pub fn new(name: &str) -> Self {
+        DocTreeNode { 
+            name: name.to_string(), 
+            tree_nodes: RefCell::new(Vec::new()), 
+            page_nodes: RefCell::new(Vec::new())
+        }
+    }
+
+    pub fn get_or_add_named_node(&mut self, name: &str) -> &'a DocTreeNode {
+        //let nodes = &mut self.tree_nodes;
+        //Having trouble with mutable borrows, so I have to borrow mutably inside the if scope, making
+        //the search happen twice. It's not a HUGE deal because there's not that much documentation but...
+        if let Some(existing) = self.tree_nodes.borrow().iter().find(|x| x.name == name) { //nodes.iter().any(|n| n.name == name) {
+            existing
+            //nodes.iter_mut().find(|n| n.name == name).unwrap()
+        }
+        else {
+            let new_node = DocTreeNode::new(name);
+            self.tree_nodes.borrow_mut().push(new_node);
+            self.tree_nodes.borrow().last().unwrap()
+        }
+    }
+
+    //Path's first element should not be the node itself, but the next node in the path. For instance, if you
+    //are at a "root" node, the path should start with "SmileBASIC 4" (if we're talking documentation)
+    /// Add the given page nodes to this doc tree node, or fill out the missing tree links and add them deeper.
+    pub fn add_pagenodes(&mut self, path: &Vec<&str>, nodes: Vec<&'a Content>) -> &'a DocTreeNode {
+        //If there's still a path, we want to find the next node to operate on. 
+        if let Some(part) = path.get(0) {
+            let new_path = path.iter().skip(1).map(|x| *x).collect::<Vec<&str>>();
+            let node = self.get_or_add_named_node(part);
+            node.add_pagenodes(&new_path, nodes)
+        }
+        else { //The path is empty, so this must be the current node!
+            self.page_nodes.extend(nodes);
+            self
+        }
+    }
+}
+
+/// Build a document tree and return the root node, which you can use to traverse the whole tree. The root node
+/// has no name, and all other actual roots go below (since there could be multiple, such as SB4, SB3, etc)
+pub fn get_doctree<'a>(documentation: &'a Vec<Content>) -> DocTreeNode<'a>
+{
+    //Easiest to just pre-compute the paths (it's a little wasteful but whatever)
+    let docpaths = get_all_docpaths(documentation);
+
+    let root_node = RefCell::new(DocTreeNode::default());
+
+    for (path, content) in docpaths {
+        //Split the path up into parts
+        let path_parts = path.split("/").collect::<Vec<&str>>();
+
+        if let Some(root_path) = path_parts.get(0) {
+            //This indicates the path did NOT start with /, meaning we don't know where to place it. We COULD make an assumption I guess...
+            //but I'll wait until later to do that
+            if !root_path.is_empty() { 
+                println!("{} DOCUMENTATION DROPPED WITH NON-ROOTED PATH", content.len());
+                continue;
+            }
+
+            let mut mut_root = root_node.borrow_mut();
+            mut_root.add_pagenodes(&path_parts.into_iter().skip(1).collect(), content);
+            //AND THEN IT GOES OUT OF SCOPE, COME ONNNN
+        }
+        else {
+            println!("{} DOCUMENTATION DROPPED WITH EMPTY PATH", content.len());
+            continue;
+        }
+    }
+
+    let a = root_node.take();
+    a
 }

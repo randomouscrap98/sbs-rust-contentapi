@@ -263,6 +263,18 @@ form.editor[data-widget] textarea {
     align-items: center;
 }
 
+.documenttree { 
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--bg_altsection);
+    border-radius: var(--space_medium);
+    margin-bottom: var(--space_medium);
+    padding: var(--space_medium);
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .categorylist {
     display: flex;
     align-items: center;
