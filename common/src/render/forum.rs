@@ -239,7 +239,7 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
                 @if let Some(ref user) = context.layout_data.user {
                     @if can_create_post(user, &thread.thread) {
                         hr."smaller";
-                        iframe."postwidget pagelist" src={(data.links.forum_post_editor_new(&thread.thread, None))"&widget=true"} {}
+                        iframe."postwidget pagelist" #"createpost" src={(data.links.forum_post_editor_new(&thread.thread, None))"&widget=true"} {}
                     }
                 }
             }

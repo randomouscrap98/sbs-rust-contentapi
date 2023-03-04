@@ -252,6 +252,10 @@ function runtests()
         [ forum_newpost_form_tests, (cb) => loadIframe(newthread_post_link, cb) ],
         [ forum_newpost_tests, (cb) => postIframeData("postedit_form", newpost_data, cb)], //We're already on the right page, so just post and check
         [ random_submission_tests, (cb) => loadIframe(random_submission_link, cb)],
+        [ program_editor_general_tests, (cb) => loadIframe("/page/edit?mode=program", cb)],
+        [ resource_editor_general_tests, (cb) => loadIframe("/page/edit?mode=resource", cb)],
+        [ ptc_editor_general_tests, (cb) => loadIframe("/page/edit?mode=ptc", cb)],
+        [ documentation_editor_general_tests, (cb) => loadIframe("/page/edit?mode=documentation", cb)],
         //This should normally come WAY later, after you are FULLY done with the 'currentTestUser', so add other tests to do with 
         //the actual currentTestUser above this.
         [ register_confirm_tests, (cb) => {
@@ -360,7 +364,7 @@ function forum_newthread_tests()
     var editThread = selectorSingle("#editthread");
     newthread_edit_link = editThread.getAttribute("href");
     var createPost = selectorSingle("#createpost");
-    newthread_post_link = createPost.getAttribute("href");
+    newthread_post_link = createPost.getAttribute("src").replace("widget", "notwidget"); //createPost.getAttribute("href");
 }
 
 function forum_newpost_form_tests()
@@ -401,3 +405,65 @@ function register_resend_tests()
     //And there should be a success message! This may not be in the resend form in the future but...
     test("success_shown", () => assertExists('//form[@id="resend_form"]/p[contains(text(),"resent") and contains(@class,"success")]'));
 }
+
+function editor_general_test_base(type)
+{
+    test("has_id", () => assertExists("#pageedit_id"));
+    test("has_subtype", () => assertExists("#pageedit_subtype"));
+    //The subtype for ptc is still program
+    test("subtype_equals", () => assertExists(`//input[@id="pageedit_subtype" and @value="${(type === "ptc" ? "program" : type)}"]`));
+    test("has_title", () => assertExists("#pageedit_title"));
+    test("has_tagline", () => assertExists("#pageedit_tagline"));
+    test("has_text", () => assertExists("#pageedit_text"));
+    test("has_keywords", () => assertExists("#pageedit_keywords"));
+
+    //Stuff specific to documentation
+    if(type === "documentation") 
+    {
+        test("has_markup", () => assertExists("#pageedit_markup"));
+        test("has_docpath", () => assertExists("#pageedit_docpath"));
+        test("no_images", () => assertNotExists("#pageedit_images"));
+        test("no_categories", () => assertNotExists("#pageedit_categories"));
+    }
+    else 
+    {
+        test("no_markup", () => assertNotExists("#pageedit_markup"));
+        test("no_docpath", () => assertNotExists("#pageedit_docpath"));
+        test("has_images", () => assertExists("#pageedit_images"));
+        test("has_categories", () => assertExists("#pageedit_categories"));
+    }
+
+    //Stuff specific to arbitrary "program" pages (including ptc)
+    if(type === "ptc" || type === "program") {
+        test("has_systems", () => assertExists("#pageedit_systems"));
+        test("has_version", () => assertExists("#pageedit_version"));
+        test("has_size", () => assertExists("#pageedit_size"));
+    }
+    else {
+        test("no_systems", () => assertNotExists("#pageedit_systems"));
+        test("no_version", () => assertNotExists("#pageedit_version"));
+        test("no_size", () => assertNotExists("#pageedit_size"));
+    }
+
+    if(type === "ptc")
+    {
+        test("system_equals", () => assertExists(`//input[@id="pageedit_systems" and @value="${type}"]`));
+        test("has_newfile", () => assertExists("#pageedit_newfile"));
+        test("has_filelist", () => assertExists("#ptc_file_list"));
+        //This is the important one
+        test("has_ptc_files", () => assertExists("#pageedit_ptc_files"));
+    }
+    else
+    {
+        test("no_newfile", () => assertNotExists("#pageedit_newfile"));
+        test("no_filelist", () => assertNotExists("#ptc_file_list"));
+        //This is the important one
+        test("no_ptc_files", () => assertNotExists("#pageedit_ptc_files"));
+    }
+}
+
+function program_editor_general_tests() { editor_general_test_base("program") }
+    //test("at_neweditor", () => assertAtPathQuery("/page/edit?mode=program"));
+function resource_editor_general_tests() { editor_general_test_base("resource") }
+function ptc_editor_general_tests() { editor_general_test_base("ptc") }
+function documentation_editor_general_tests() { editor_general_test_base("documentation") }
