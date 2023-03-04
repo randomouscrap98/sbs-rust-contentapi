@@ -166,7 +166,8 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
     let thread = &config.thread;
 
     let is_pagetype = thread.thread.literalType.as_deref() == Some(SBSPageType::PROGRAM) ||
-            thread.thread.literalType.as_deref() == Some(SBSPageType::RESOURCE);
+            thread.thread.literalType.as_deref() == Some(SBSPageType::RESOURCE) ||
+            thread.thread.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION);
 
     if is_pagetype {
         context.layout_data.override_nav_path = Some("/search");
@@ -349,10 +350,7 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
                     }
                 }
             }
-            //Next check is if there's even any text to show
-            @if let Some(text) = &thread.thread.text {
-                div."content bbcode" { (PreEscaped(&bbcode.parse_profiled_opt(&text, format!("program-{}", i(&thread.thread.id))))) }
-            }
+            (render_content(&thread.thread, bbcode))
             @if can_edit || can_delete {
                 div."pagelist smallseparate" {
                     @if can_edit {
@@ -362,19 +360,33 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
                         form."nospacing" #"deletepage" method="POST" action=(data.links.page_delete(&thread.thread)) {
                             input."coolbutton notheme" data-confirmdelete=(format!("page '{}'", opt_s!(&thread.thread.name))) type="submit" value="Delete page";
                         }
-                        //a."coolbutton" #"deletepage" data-confirmdelete=(format!("page '{}'", opt_s!(&thread.thread.text))) href=(data.links.page_delete(&thread.thread)) { "Delete page" }
                     }
                 }
             }
-            @if let Some(categories) = &thread.categories { //categories.len() > 0 {
-                hr."smaller";
-                div."categorylist smallseparate" {
-                    @for category in categories {
-                        a."flatlink" href=(data.links.search_category(category.id.unwrap_or_default())) { (opt_s!(category.name)) }
+            @if let Some(categories) = &thread.categories { 
+                //Documentation has no categories
+                @if thread.thread.literalType.as_deref() != Some(SBSPageType::DOCUMENTATION) {
+                    hr."smaller";
+                    div."categorylist smallseparate" {
+                        @for category in categories {
+                            a."flatlink" href=(data.links.search_category(category.id.unwrap_or_default())) { (opt_s!(category.name)) }
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+//Now that we support multiple markups, rendering content can get a little complex
+pub fn render_content(content: &Content, bbcode: &mut BBCode) -> Markup {
+    if let Some(text) = &content.text {
+        html!(
+            div."content bbcode" { (PreEscaped(&bbcode.parse_profiled_opt(&text, format!("program-{}", i(&content.id))))) }
+        )
+    }
+    else {
+        html!(div."error" { "No content found? That's not supposed to happen!" })
     }
 }
 

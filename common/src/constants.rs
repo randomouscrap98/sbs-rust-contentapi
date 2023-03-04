@@ -37,7 +37,8 @@ string_const!{ SBSPageType => {
     (FRONTPAGE:"frontpage"),
     (SUBMISSIONS:"submissions"),
     (PTCFILES:"ptcfiles"),
-    (DOCPARENT:"docparent")
+    (DOCPARENT:"docparent"),
+    (DOCUMENTATION:"documentation")
 }}
 
 
@@ -78,6 +79,21 @@ pub const ACTIVITYTYPES : &[&str] = &[
     SBSPageType::PROGRAM, 
     SBSPageType::RESOURCE,
     SBSPageType::FORUMTHREAD,
+    SBSPageType::DOCUMENTATION
+];
+
+pub const THREADTYPES : &[&str] = &[
+    SBSPageType::FORUMTHREAD,
+    SBSPageType::PROGRAM,
+    SBSPageType::RESOURCE,
+    SBSPageType::DIRECTMESSAGE,
+    SBSPageType::DOCUMENTATION
+];
+
+pub const FORUMCATEGORYTYPES : &[&str] = &[
+    SBSPageType::FORUMCATEGORY,
+    SBSPageType::SUBMISSIONS,
+    SBSPageType::DOCPARENT
 ];
 
 pub const SEARCHPAGETYPES: &[(&str,&str)] = &[

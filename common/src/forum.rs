@@ -19,13 +19,6 @@ pub static CATEGORYKEY: &str = "category";
 pub static PREMESSAGEKEY: &str = "premessage";
 pub static PREMESSAGEINDEXKEY: &str = "premessage_index";
 
-pub const ALLOWEDTYPES: &[&str] = &[
-    SBSPageType::FORUMTHREAD,
-    SBSPageType::PROGRAM,
-    SBSPageType::RESOURCE,
-    SBSPageType::DIRECTMESSAGE
-];
-
 struct Keygen();
 
 impl Keygen {
@@ -278,10 +271,7 @@ pub fn get_category_request(hash: Option<String>, fcid: Option<i64>) -> FullRequ
     else {
         //This is the "general" case, where yes, we actually do want to limit to categories. Otherwise,
         //if you pass a hash... it'll just work, regardless if it's a category or not.
-        add_value!(request, "category_literals", vec![
-            SBSPageType::FORUMCATEGORY,
-            SBSPageType::SUBMISSIONS
-        ]);
+        add_value!(request, "category_literals", FORUMCATEGORYTYPES);
         real_query.push_str(" and literalType in @category_literals");
     }
 
@@ -301,7 +291,7 @@ pub fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip
 {
     let mut request = FullRequest::new();
     add_value!(request, "page_type", ContentType::PAGE);
-    add_value!(request, "allowed_types", ALLOWEDTYPES);
+    add_value!(request, "allowed_types", THREADTYPES);
 
     let mut keys = Vec::new();
 
@@ -400,7 +390,7 @@ pub fn get_prepost_request(fpid: Option<i64>, post_id: Option<i64>, ftid: Option
         post_limited = true;
     }
 
-    add_value!(request, "allowed_types", ALLOWEDTYPES);
+    add_value!(request, "allowed_types", THREADTYPES);
     let mut thread_query = String::from("!notdeleted() and literalType in @allowed_types");
 
     //Add the pre-lookup post get so we can limit the thread by it. This will prevent users

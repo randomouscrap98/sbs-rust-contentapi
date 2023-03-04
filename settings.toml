@@ -18,7 +18,7 @@ default_activity_count = 50 # The amount of activity to show per page
 
 # Special SBS stuff (may store in database instead?)
 # Category order is a "starts with" matching for order
-forum_category_order = ["Programming", "FAQ", "General", "Talk", "SmileBASIC Bug", "Submissions", "Site"]
+forum_category_order = ["Programming", "FAQ", "General", "Talk", "SmileBASIC Bug", "Submissions", "Documentation", "Site"]
 
 # file limit is 10 MB, but server will resize as necessary
 body_maxsize = 10000000
