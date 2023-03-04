@@ -185,7 +185,8 @@ pub struct User
     pub avatar: String,
     pub special: Option<String>,
     //pub deleted: bool,
-    #[serde(alias = "super", deserialize_with = "deserialize_bool_from_anything")]
+    //Note that we used "alias" before, but that's just for deserialization. Rename is what you want for both
+    #[serde(rename = "super", deserialize_with = "deserialize_bool_from_anything")]
     pub admin: bool,
     pub createDate : DateTime<Utc>,
     pub groups: Vec<i64>
