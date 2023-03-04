@@ -21,7 +21,8 @@ use maud::*;
 
 
 //Rendering ALWAYS requires the form, even if it's just an empty one
-pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_categories: Vec<Category>, errors: Option<Vec<String>>) -> String 
+pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_categories: Vec<Category>, 
+    all_docpaths: Vec<String>, errors: Option<Vec<String>>) -> String 
 {
     let title : String;
     let mut submit_value = format!("Submit {}", form.subtype);
@@ -69,7 +70,13 @@ pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_ca
                             }
                         }
                         label for="pageedit_docpath" { "Documentation Path:" }
-                        input #"pageedit_docpath" type="text" name="docpath" value=(opt_s!(form.docpath)) required placeholder="Select existing or enter new";
+                        input #"pageedit_docpath" type="text" name="docpath" value=(opt_s!(form.docpath)) required 
+                            list="all_docpaths" placeholder="Select existing or enter new";
+                        datalist #"all_docpaths" {
+                            @for ref docpath in all_docpaths {
+                                option value=(docpath);
+                            }
+                        }
                     }
                     @if real_mode == SBSPageType::PROGRAM || real_mode == PTCSYSTEM { 
                         @if real_mode == PTCSYSTEM {
@@ -156,10 +163,18 @@ pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_ca
     }).into_string()
 }
 
-pub async fn get_render_categories(mut api_context: &mut ApiContext, subtype: &str) -> Result<Vec<Category>, Error> {
-    let all_categories = map_categories(get_all_categories(&mut api_context, None).await?);
+pub async fn get_render_categories(api_context: &mut ApiContext, subtype: &str) -> Result<Vec<Category>, Error> {
+    let all_categories = map_categories(get_all_categories(api_context, None).await?);
     let cloned_subtype = subtype.clone();
     Ok(all_categories.into_iter().filter(move |c| &c.forcontent == &cloned_subtype).collect())
+}
+
+pub async fn get_render_docpaths(api_context: &mut ApiContext) -> Result<Vec<String>, Error> {
+    let all_documentation = get_all_documentation(api_context).await?;
+    let docpath_map = get_all_docpaths(&all_documentation);
+    let mut docpaths : Vec<String> = docpath_map.keys().map(|k| k.clone()).collect();
+    docpaths.sort_by(|a, b| a.len().cmp(&b.len()));
+    Ok(docpaths)
 }
 
 pub fn get_mode_from_form(form: &PageForm) -> String {
@@ -225,7 +240,8 @@ pub async fn get_render(mut context: PageContext, mode: Option<String>, page_has
     }
 
     let render_categories = get_render_categories(&mut context.api_context, &form.subtype).await?;
-    Ok(Response::Render(render(context.layout_data, form, mode, render_categories, None)))
+    let render_docpaths = get_render_docpaths(&mut context.api_context).await?;
+    Ok(Response::Render(render(context.layout_data, form, mode, render_categories, render_docpaths, None)))
 }
 
 /// Craft the MAIN content to be written to the api for the given post form
@@ -401,7 +417,8 @@ pub async fn post_render(mut context: PageContext, form: PageForm) ->
         else {
             //Otherwise, we stay here and show all the terrifying errors
             let render_categories = get_render_categories(&mut context.api_context, &form.subtype).await?;
-            Ok(Response::Render(render(context.layout_data, form, None, render_categories, Some(errors))))
+            let render_docpaths = get_render_docpaths(&mut context.api_context).await?;
+            Ok(Response::Render(render(context.layout_data, form, None, render_categories, render_docpaths, Some(errors))))
         }
     }
     else {

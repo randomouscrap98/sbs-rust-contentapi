@@ -14,6 +14,9 @@ pub mod conversion;
 pub mod search;
 pub mod permissions;
 
+//ALL REQUESTS ARE BOUND BY THIS LIMIT!
+pub const REQUESTRESULTLIMIT : usize = 1000;
+
 /// Create the values for ['Content'] or ['Message'] from a simple list of key : value pairs
 #[macro_export]
 macro_rules! make_values {

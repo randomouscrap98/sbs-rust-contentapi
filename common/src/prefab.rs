@@ -6,6 +6,8 @@ use serde_json::Value;
 use crate::constants::*;
 use contentapi::conversion::*;
 
+//This is for pre-constructed searches SPECIFICALLY within the API, hence "prefab".
+
 // ------------------------------
 //     CATEGORIES (FOR PAGES)
 // ------------------------------
@@ -143,3 +145,54 @@ pub async fn get_fullpage_by_id(context: &mut ApiContext, id: i64) -> Result<Ful
 {
     get_fullpage(context, "id", id.into()).await
 }
+
+
+// --------------------
+//    DOCUMENTATION
+// --------------------
+
+pub const DOCUMENTATIONFIELDS: &str = "id,literalType,contentType,hash,values,name";
+
+pub fn get_alldocumentation_query() -> String {
+    format!("contentType = {{{{{}}}}} and !notdeleted() and literalType = {{{{{}}}}}", ContentType::PAGE, SBSPageType::DOCUMENTATION)
+}
+
+/// Find all the documentation available on the system (regardless of parent!!), BUT you only get limited
+/// fields. Note that this may make several requests if there's more than 1000 pages of documentation
+pub async fn get_all_documentation(context: &mut ApiContext) -> Result<Vec<Content>, ApiError> 
+{
+    let mut result : Vec<Content> = Vec::new();
+    let mut skip = 0;
+
+    //REMEMBER: loop is the "while true" of rust!!
+    loop {
+        let mut request = FullRequest::new();
+
+        let mut doc_request = build_request!(
+            RequestType::content,
+            String::from(DOCUMENTATIONFIELDS),
+            get_alldocumentation_query()
+        );
+        doc_request.order = Some(String::from("id")); //Just in case
+        doc_request.skip = skip;
+
+        request.requests.push(doc_request);
+
+        let api_result = context.post_request_profiled_opt(&request, &format!("all_documentation_treeonly_skip{}", skip)).await?;
+        let this_block = conversion::cast_result_required::<Content>(&api_result, &RequestType::content.to_string())?;
+        let result_count = this_block.len();
+
+        //Add the current result 
+        result.extend(this_block);
+
+        if result_count != REQUESTRESULTLIMIT {
+            break;
+        }
+
+        //Request the next block of documentation (hopefully this won't be necessary!)
+        skip += REQUESTRESULTLIMIT as i64;
+    }
+
+    Ok(result)
+}
+

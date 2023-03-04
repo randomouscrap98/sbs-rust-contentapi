@@ -1,6 +1,10 @@
 
+use std::collections::HashMap;
+
 use contentapi::*;
-use crate::constants::*;
+use crate::{constants::*, opt_s};
+
+// This is for NON-API basic data conversion / organization related to views.
 
 /// Get the list of category ids this content is tagged under
 pub fn get_tagged_categories(content: &Content) -> Vec<i64>
@@ -81,4 +85,43 @@ pub fn map_categories(categories: Vec<Content>) -> Vec<Category>
                 .unwrap_or_else(|| String::from(""))
         }
     }).collect::<Vec<Category>>()
+}
+
+
+// ----------------------
+//    DOCUMENTATION
+// ----------------------
+
+// A very simple document path that contains the list of content associated with that path
+//pub struct Docpath<'a> {
+//    pub path : String,
+//    pub content : Vec<&'a Content>
+//}
+
+/// Map content into paths containing the list of content within each path. Can be used to later
+/// build a tree, or to get a list of all paths (they keys of result)
+pub fn get_all_docpaths(documentation: &Vec<Content>) -> HashMap<String, Vec<&Content>>
+{
+    let mut result : HashMap<String, Vec<&Content>> = HashMap::new();
+
+    for doc in documentation {
+        //Go through the absurd unwrapping to get to the actual docpath
+        if let Some(ref values) = doc.values {
+            if let Some(docpath) = values.get(SBSValue::DOCPATH) {
+                if let Some(docpath) = docpath.as_str() {
+                    //Finally, either add the content to the list or insert a new key if the hashmap didn't have it
+                    if let Some(list) = result.get_mut(docpath) {
+                        list.push(doc);
+                    }
+                    else {
+                        result.insert(docpath.to_string(), vec![doc]);
+                    }
+                    continue;
+                }
+            }
+        }
+        println!("WARNING: documentation {} didn't have a docpath!", opt_s!(doc.name));
+    }
+
+    result
 }
