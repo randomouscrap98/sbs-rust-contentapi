@@ -91,6 +91,9 @@ pub async fn get_system_frontpage(context: &mut ApiContext) -> Result<Option<Con
     get_system_any(context, SBSPageType::FRONTPAGE).await
 }
 
+pub async fn get_system_docscustom(context: &mut ApiContext) -> Result<Option<Content>, Error> {
+    get_system_any(context, SBSPageType::DOCSCUSTOM).await
+}
 
 // ----------------------
 //    GENERAL CONTENT

@@ -12,8 +12,9 @@ use contentapi::*;
 use maud::*;
 //use serde::{Serialize, Deserialize};
 
-pub fn render(data: MainLayoutData, frontpage: Option<Content>, banner: Option<Content>, registration_config: RegistrationConfig, 
-    registrationconfig_errors: Option<Vec<String>>, frontpage_errors: Option<Vec<String>>, banner_errors: Option<Vec<String>>) -> String
+pub fn render(data: MainLayoutData, frontpage: Option<Content>, banner: Option<Content>, docpage: Option<Content>, registration_config: RegistrationConfig, 
+    registrationconfig_errors: Option<Vec<String>>, frontpage_errors: Option<Vec<String>>, banner_errors: Option<Vec<String>>,
+    docpage_errors: Option<Vec<String>>) -> String
 {
     let mut frontpage_id: i64 = 0;
     let mut frontpage_text: String = String::from("");
@@ -26,6 +27,12 @@ pub fn render(data: MainLayoutData, frontpage: Option<Content>, banner: Option<C
     if let Some(banner) = banner {
         if let Some(id) = banner.id { banner_id = id }
         if let Some(text) = banner.text { banner_text = text.clone() }
+    }
+    let mut docpage_id: i64 = 0;
+    let mut docpage_text: String = String::from("");
+    if let Some(docpage) = docpage{
+        if let Some(id) = docpage.id { docpage_id = id }
+        if let Some(text) = docpage.text { docpage_text = text.clone() }
     }
     layout(&data, html!{
         section {
@@ -68,6 +75,13 @@ pub fn render(data: MainLayoutData, frontpage: Option<Content>, banner: Option<C
                         textarea type="text" name="text"{(banner_text)}
                         input type="submit" value="Update";
                     }
+                    h3 #"update-docpage" {"Set Documentation preamble (HTML!):"}
+                    form."editor" method="POST" action={(data.links.http_root)"/admin?docscustom=1#update-docpage"} {
+                        (errorlist(docpage_errors))
+                        input type="hidden" name="id" value=(docpage_id);
+                        textarea type="text" name="text"{(docpage_text)}
+                        input type="submit" value="Update";
+                    }
                 }
                 @else {
                     p."error" { "You must be an admin to use this page!" }
@@ -81,18 +95,19 @@ pub fn render(data: MainLayoutData, frontpage: Option<Content>, banner: Option<C
 }
 
 async fn get_render_internal(mut context: PageContext, registrationconfig_errors: Option<Vec<String>>,
-    frontpage_errors: Option<Vec<String>>, banner_errors: Option<Vec<String>>) -> Result<Response, Error>
+    frontpage_errors: Option<Vec<String>>, banner_errors: Option<Vec<String>>, docscustom_errors: Option<Vec<String>>) -> Result<Response, Error>
 {
     let reg_config = context.api_context.get_registrationconfig().await?;
     let frontpage = get_system_frontpage(&mut context.api_context).await?;
     let banner = get_system_alert(&mut context.api_context).await?;
-    Ok(Response::Render(render(context.layout_data, frontpage, banner, reg_config, 
-        registrationconfig_errors, frontpage_errors, banner_errors)))
+    let docscustom = get_system_docscustom(&mut context.api_context).await?;
+    Ok(Response::Render(render(context.layout_data, frontpage, banner, docscustom, reg_config, 
+        registrationconfig_errors, frontpage_errors, banner_errors, docscustom_errors)))
 }
 
 pub async fn get_render(context: PageContext) -> Result<Response, Error> 
 {
-    get_render_internal(context, None, None, None).await
+    get_render_internal(context, None, None, None, None).await
 }
 
 pub async fn post_registrationconfig(context: PageContext, form: RegistrationConfig) -> Result<Response, Error>
@@ -102,7 +117,7 @@ pub async fn post_registrationconfig(context: PageContext, form: RegistrationCon
         Ok(_token) => {} //Don't need the token
         Err(error) => { errors.push(error.to_user_string()) }
     };
-    get_render_internal(context, Some(errors), None, None).await
+    get_render_internal(context, Some(errors), None, None, None).await
 }
 
 async fn to_system_content(form: BasicPage, name: String, literal_type: String) -> Result<Content, Error> {
@@ -128,7 +143,7 @@ pub async fn post_frontpage(context: PageContext, form: BasicPage) -> Result<Res
         Ok(_) => {} 
         Err(error) => { errors.push(error.to_user_string()) }
     };
-    get_render_internal(context, None, Some(errors), None).await
+    get_render_internal(context, None, Some(errors), None, None).await
 }
 
 pub async fn post_alert(mut context: PageContext, form: BasicPage) -> Result<Response, Error>
@@ -141,5 +156,18 @@ pub async fn post_alert(mut context: PageContext, form: BasicPage) -> Result<Res
         Ok(new_alert) => { context.layout_data.raw_alert = new_alert.text; } 
         Err(error) => { errors.push(error.to_user_string()) }
     };
-    get_render_internal(context, None, None, Some(errors)).await
+    get_render_internal(context, None, None, Some(errors), None).await
+}
+
+pub async fn post_docscustom(context: PageContext, form: BasicPage) -> Result<Response, Error>
+{
+    let mut errors = Vec::new();
+
+    let content = to_system_content(form, String::from("docscustom"), SBSPageType::DOCSCUSTOM.to_string()).await?;
+
+    match context.api_context.post_content(&content).await {
+        Ok(_new_docspage) => { },
+        Err(error) => { errors.push(error.to_user_string()) }
+    };
+    get_render_internal(context, None, None, None, Some(errors)).await
 }

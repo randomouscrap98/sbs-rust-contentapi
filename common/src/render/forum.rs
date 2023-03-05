@@ -339,7 +339,7 @@ pub fn display_doctree(layout_data: &MainLayoutData, documentation: &Vec<Content
 
 /// Render the page data, such as text and infoboxes, on standard pages. True forum threads don't have main
 /// content like that, so this is only called on programs, resources, etc
-pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThread, docs_content: &Option<Vec<Content>>) -> Markup 
+pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThread, _docs_content: &Option<Vec<Content>>) -> Markup 
 {
     let values = match &thread.thread.values { Some(values) => values.clone(), None => HashMap::new() };
 
@@ -400,19 +400,20 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
                     }
                 }
             }
-            @if thread.thread.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION) {
-                @if let Some(docs) = docs_content {
-                    (display_doctree(data, docs, 0))
-                }
-                @else {
-                    div."error" { 
-                        ({
-                            println!("Tried to render documentation without a doctree!");
-                            "NO DOCTREE FOUND!"
-                        })
-                    }
-                }
-            }
+            //Snail says he doesn't want the doctree on pages
+            //@if thread.thread.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION) {
+            //    @if let Some(docs) = docs_content {
+            //        (display_doctree(data, docs, 0))
+            //    }
+            //    @else {
+            //        div."error" { 
+            //            ({
+            //                println!("Tried to render documentation without a doctree!");
+            //                "NO DOCTREE FOUND!"
+            //            })
+            //        }
+            //    }
+            //}
             (render_content(&thread.thread, bbcode))
             @if can_edit || can_delete {
                 div."pagelist smallseparate" {

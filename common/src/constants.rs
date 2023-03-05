@@ -37,6 +37,7 @@ string_const!{ SBSPageType => {
     (DIRECTMESSAGE:"directmessage"),
     (ALERT:"alert"),
     (FRONTPAGE:"frontpage"),
+    (DOCSCUSTOM: "docscustom"),
     (SUBMISSIONS:"submissions"),
     (PTCFILES:"ptcfiles"),
     (DOCPARENT:"docparent"),

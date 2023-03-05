@@ -833,6 +833,14 @@ fn post_admin_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_fi
             std_resp!(pages::admin::post_frontpage(pc!(context), form), context)
         ).boxed();
 
+    let admin_docscustom_post = warp::any()
+        .and(qflag!(docscustom)) 
+        .and(warp::body::form::<common::forms::BasicPage>())
+        .and(state_filter.clone())
+        .and_then(|_query, form, context: RequestContext| 
+            std_resp!(pages::admin::post_docscustom(pc!(context), form), context)
+        ).boxed();
+
     let admin_alert_post = warp::any()
         .and(qflag!(alert)) 
         .and(warp::body::form::<common::forms::BasicPage>())
@@ -844,7 +852,7 @@ fn post_admin_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_fi
     warp::post()
         .and(warp::path!("admin"))
         .and(form_filter.clone())
-        .and(admin_registrationconfig_post.or(admin_frontpage_post).or(admin_alert_post))
+        .and(admin_registrationconfig_post.or(admin_frontpage_post).or(admin_alert_post).or(admin_docscustom_post))
         .boxed()
 
 }
