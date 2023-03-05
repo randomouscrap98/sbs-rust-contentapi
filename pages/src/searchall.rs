@@ -83,7 +83,7 @@ pub async fn get_render(mut context: PageContext, search_form: SearchAllForm) ->
             //Search for content within the allowed forum types which contain the search, whether name or keywords
             let content_request = build_request!(
                 RequestType::content,
-                String::from("id,name,literalType,hash"),
+                String::from("id,name,literalType,hash,values"), //need values for icon
                 format!("literalType in @allowed_types and name like @search or !keywordlike(@search)")
             );
             request.requests.push(content_request);
