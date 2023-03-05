@@ -36,7 +36,7 @@ pub fn header(data: &MainLayoutData) -> Markup {
                 (main_nav_link(data,"Browse","🎮", "/search",Some("mainbrowselink")))
                 (main_nav_link(data,"Forums","📰", "/forum",Some("mainforumlink")))
                 (main_nav_link(data,"Docs","📖", "/documentation",Some("maindocumentationlink")))
-                (main_nav_link(data,"Search","🔎", "/searchall",Some("mainsearchlink")))
+                (main_nav_link(data,"Search","🔎", "/allsearch",Some("mainsearchlink")))
                 @if let Some(user) = &data.user {
                     @if user.admin {
                         //We were already using 'admin', so keep using it! 

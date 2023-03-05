@@ -276,7 +276,7 @@ async fn main()
     );
 
     let get_searchall_route = warp_get_async!(
-        warp::path!("searchall").and(warp::query::<pages::searchall::SearchAllForm>()),
+        warp::path!("allsearch").and(warp::query::<pages::searchall::SearchAllForm>()),
         |search, context:RequestContext| 
             std_resp!(pages::searchall::get_render(pc!(context), search), context)
     );

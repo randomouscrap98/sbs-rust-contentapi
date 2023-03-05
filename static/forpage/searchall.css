@@ -1,0 +1,30 @@
+
+#searchline {
+    display: flex;
+    flex-wrap: none;
+}
+
+#searchtitle {
+    margin-top: 0;
+}
+
+#searchinput {
+    flex: 1;
+    max-width: 20em;
+}
+
+.searchitem { 
+    /*margin: calc(0.4 * var(--space_small));*/
+    margin: var(--space_small);
+    display: flex;
+    align-items: center;
+}
+
+.searchname {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.searchitem .searchicon img {
+    width: 1.2em;
+}
