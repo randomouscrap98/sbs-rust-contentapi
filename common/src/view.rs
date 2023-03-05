@@ -123,7 +123,7 @@ pub fn get_all_docpaths(documentation: &Vec<Content>) -> HashMap<String, Vec<&Co
 /// A single node in a document tree. Each node contains 0 or more subsequent tree nodes to go deeper,
 /// and 0 or more immediate page leaves. If the tree is build directly from documentation, the tree should
 /// not have any nodes with no content.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct DocTreeNode<'a> {
     pub name : String,
     pub tree_nodes : Vec<DocTreeNode<'a>>, 
@@ -165,11 +165,12 @@ pub fn get_doctree<'a>(documentation: &'a Vec<Content>) -> DocTreeNode<'a>
     //Easiest to just pre-compute the paths (it's a little wasteful but whatever)
     let docpaths = get_all_docpaths(documentation);
 
-    println!("Docpaths used for tree: {:#?}", docpaths);
+    //println!("Docpaths used for tree: {:#?}", docpaths);
 
     let mut root_node = DocTreeNode::default();
 
     for (path, content) in docpaths {
+        //println!("Parsing {} with {} content", path, content.len());
         //Split the path up into parts
         let path_parts = path.split("/").collect::<Vec<&str>>();
 

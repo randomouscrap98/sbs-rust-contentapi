@@ -297,11 +297,14 @@ fn images_to_attr(config: &LinkConfig, images: &Vec<serde_json::Value>) -> Strin
 
 fn walk_doctree_recursive(layout_data: &MainLayoutData, tree: &DocTreeNode, open_levels: i32) -> Markup
 {
+    let mut tree_nodes = tree.tree_nodes.clone();
+    tree_nodes.sort_by(|a, b| a.name.cmp(&b.name));
+
     html! {
         details."docnode" open[open_levels > 0] {
             summary { (tree.name) }
-            @for node in &tree.tree_nodes {
-                (walk_doctree(layout_data, node, open_levels - 1))
+            @for node in &tree_nodes {
+                (walk_doctree_recursive(layout_data, node, open_levels - 1))
             }
             ul {
                 @for content in &tree.page_nodes {
@@ -314,9 +317,12 @@ fn walk_doctree_recursive(layout_data: &MainLayoutData, tree: &DocTreeNode, open
 
 fn walk_doctree(layout_data: &MainLayoutData, tree: &DocTreeNode, open_levels: i32) -> Markup
 {
+    let mut tree_nodes = tree.tree_nodes.clone();
+    tree_nodes.sort_by(|a, b| a.name.cmp(&b.name));
+
     //For the root node, we only list the treenodes and NOT ourselves. Then normal recursion
     html! {
-        @for node in &tree.tree_nodes {
+        @for node in &tree_nodes {
             (walk_doctree_recursive(layout_data, node, open_levels))
         }
     }
@@ -326,7 +332,7 @@ pub fn display_doctree(layout_data: &MainLayoutData, documentation: &Vec<Content
 {
     html! {
         div."documenttree" {
-            (walk_doctree(layout_data, &get_doctree(documentation), open_levels))
+            (walk_doctree(layout_data, &mut get_doctree(documentation), open_levels))
         }
     }
 }
