@@ -92,6 +92,7 @@ pub struct PostsConfig {
     pub pages: Option<Vec<PagelistItem>>,
     pub start_num: Option<i32>,
     pub selected_post_id: Option<i64>,
+    pub docs_content: Option<Vec<Content>>, //DocTreeNode<'a>>,
 
     pub render_header: bool,
     pub render_page: bool,
@@ -117,7 +118,8 @@ impl PostsConfig {
             render_page: true,
             render_reply_chain: false,
             render_reply_link: true,
-            render_controls: true
+            render_controls: true,
+            docs_content: None
         }
     }
     pub fn reply_mode(thread: ForumThread, related: HashMap<i64,Message>, users: HashMap<i64,User>, selected_post_id: Option<i64>) -> Self {
@@ -133,7 +135,8 @@ impl PostsConfig {
             render_page: false,
             render_reply_chain: true,
             render_reply_link: false,
-            render_controls: false
+            render_controls: false,
+            docs_content: None
         }
     }
 }
@@ -219,7 +222,7 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
             }
         }
         @if config.render_page && is_pagetype {
-            (render_page(&data, bbcode, &thread))
+            (render_page(&data, bbcode, &thread, &config.docs_content))
         }
         //it says "thread-top" because it is: it's the beginning of the section that displays posts. After the 
         //for loop, it then displays pages, which is on the bottom of the thread, so it might seem confusing.
@@ -292,9 +295,36 @@ fn images_to_attr(config: &LinkConfig, images: &Vec<serde_json::Value>) -> Strin
     })
 }
 
+fn walk_doctree_recursive(layout_data: &MainLayoutData, tree: &DocTreeNode) -> Markup
+{
+    html! {
+        details."docnode" {
+            summary { (tree.name) }
+            @for node in &tree.tree_nodes {
+                (walk_doctree(layout_data, node))
+            }
+            ul {
+                @for content in &tree.page_nodes {
+                    li { a href=(layout_data.links.forum_thread(content)) { (opt_s!(content.name)) } }
+                }
+            }
+        }
+    }
+}
+
+fn walk_doctree(layout_data: &MainLayoutData, tree: &DocTreeNode) -> Markup
+{
+    //For the root node, we only list the treenodes and NOT ourselves. Then normal recursion
+    html! {
+        @for node in &tree.tree_nodes {
+            (walk_doctree_recursive(layout_data, node))
+        }
+    }
+}
+
 /// Render the page data, such as text and infoboxes, on standard pages. True forum threads don't have main
 /// content like that, so this is only called on programs, resources, etc
-pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThread) -> Markup 
+pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThread, docs_content: &Option<Vec<Content>>) -> Markup 
 {
     let values = match &thread.thread.values { Some(values) => values.clone(), None => HashMap::new() };
 
@@ -356,8 +386,18 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
                 }
             }
             @if thread.thread.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION) {
-                div."documenttree" {
-                    "Coming soon"
+                @if let Some(docs) = docs_content {
+                    div."documenttree" {
+                        (walk_doctree(data, &get_doctree(docs)))
+                    }
+                }
+                @else {
+                    div."error" { 
+                        ({
+                            println!("Tried to render documentation without a doctree!");
+                            "NO DOCTREE FOUND!"
+                        })
+                    }
                 }
             }
             (render_content(&thread.thread, bbcode))

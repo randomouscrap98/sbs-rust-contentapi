@@ -90,7 +90,7 @@ async fn render_thread(mut context: PageContext, pre_request: FullRequest, per_p
     let thread_tags_ids = get_tagged_categories(&thread);
     let mut full_thread = ForumThread::from_content(thread, &messages_raw, &category.stickies)?;
     full_thread.categories = Some(get_all_categories(&mut context.api_context, Some(thread_tags_ids)).await?);
-    Ok(Response::Render(render(context, PostsConfig::thread_mode(
+    let mut post_config = PostsConfig::thread_mode(
         full_thread,
         map_messages(related_raw),
         map_users(users_raw),
@@ -98,7 +98,11 @@ async fn render_thread(mut context: PageContext, pre_request: FullRequest, per_p
         get_pagelist(comment_count as i32, per_page, page),
         1 + per_page * page,
         selected_post.and_then(|m| m.id)
-    ))))
+    );
+    if post_config.thread.thread.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION) {
+        post_config.docs_content = Some(get_all_documentation(&mut context.api_context).await?);
+    }
+    Ok(Response::Render(render(context, post_config)))
 }
 
 
