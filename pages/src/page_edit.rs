@@ -77,6 +77,8 @@ pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_ca
                                 option value=(docpath);
                             }
                         }
+                        label for="pageedit_hash" { "Documentation URL Hash:" }
+                        input #"pageedit_hash" type="text" name="hash" value=(opt_s!(form.hash)) required placeholder="Example: docs-sb4-while";
                     }
                     @if real_mode == SBSPageType::PROGRAM || real_mode == PTCSYSTEM { 
                         @if real_mode == PTCSYSTEM {
@@ -215,6 +217,7 @@ pub async fn get_render(mut context: PageContext, mode: Option<String>, page_has
         form.version = page.get_value_string(SBSValue::VERSION); 
         form.markup = page.get_value_string(SBSValue::MARKUP);
         form.docpath = page.get_value_string(SBSValue::DOCPATH);
+        form.hash = page.hash.clone();
         if let Some(images) = page.get_value_array(SBSValue::IMAGES) {
             form.images = Some(images.into_iter().map(|i| i.as_str().unwrap_or("")).collect::<Vec<&str>>().join(" "));
         }
@@ -300,6 +303,7 @@ pub async fn construct_post_content_full(context: &mut ApiContext, form: &PageFo
     fullpage.main.name = Some(form.title.clone());
     fullpage.main.description = Some(form.description.clone());
     fullpage.main.keywords = Some(parse_compound_value(&form.keywords));
+    fullpage.main.hash = form.hash.clone();
     if let Some(ref categories) = form.categories {
         add_category_taglist(parse_compound_value(categories), &mut fullpage.main);
     }

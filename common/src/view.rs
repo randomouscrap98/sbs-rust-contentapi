@@ -165,6 +165,8 @@ pub fn get_doctree<'a>(documentation: &'a Vec<Content>) -> DocTreeNode<'a>
     //Easiest to just pre-compute the paths (it's a little wasteful but whatever)
     let docpaths = get_all_docpaths(documentation);
 
+    println!("Docpaths used for tree: {:#?}", docpaths);
+
     let mut root_node = DocTreeNode::default();
 
     for (path, content) in docpaths {

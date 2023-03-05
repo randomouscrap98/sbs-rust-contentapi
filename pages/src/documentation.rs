@@ -15,7 +15,7 @@ pub fn render(data: MainLayoutData, documentation: &Vec<Content>, docparent: Con
         (data.links.style("/forpage/forum.css"))
         (data.links.script("/forpage/forum.js"))
         section {
-            (display_doctree(&data, documentation))
+            (display_doctree(&data, documentation, 1))
             @if let Some(ref user) = data.user {
                 @if can_user_action(user, "C", &docparent) {
                     div."pagelist smallseparate" {

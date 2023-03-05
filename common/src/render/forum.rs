@@ -295,13 +295,13 @@ fn images_to_attr(config: &LinkConfig, images: &Vec<serde_json::Value>) -> Strin
     })
 }
 
-fn walk_doctree_recursive(layout_data: &MainLayoutData, tree: &DocTreeNode) -> Markup
+fn walk_doctree_recursive(layout_data: &MainLayoutData, tree: &DocTreeNode, open_levels: i32) -> Markup
 {
     html! {
-        details."docnode" {
+        details."docnode" open[open_levels > 0] {
             summary { (tree.name) }
             @for node in &tree.tree_nodes {
-                (walk_doctree(layout_data, node))
+                (walk_doctree(layout_data, node, open_levels - 1))
             }
             ul {
                 @for content in &tree.page_nodes {
@@ -312,21 +312,21 @@ fn walk_doctree_recursive(layout_data: &MainLayoutData, tree: &DocTreeNode) -> M
     }
 }
 
-fn walk_doctree(layout_data: &MainLayoutData, tree: &DocTreeNode) -> Markup
+fn walk_doctree(layout_data: &MainLayoutData, tree: &DocTreeNode, open_levels: i32) -> Markup
 {
     //For the root node, we only list the treenodes and NOT ourselves. Then normal recursion
     html! {
         @for node in &tree.tree_nodes {
-            (walk_doctree_recursive(layout_data, node))
+            (walk_doctree_recursive(layout_data, node, open_levels))
         }
     }
 }
 
-pub fn display_doctree(layout_data: &MainLayoutData, documentation: &Vec<Content>) -> Markup
+pub fn display_doctree(layout_data: &MainLayoutData, documentation: &Vec<Content>, open_levels: i32) -> Markup
 {
     html! {
         div."documenttree" {
-            (walk_doctree(layout_data, &get_doctree(documentation)))
+            (walk_doctree(layout_data, &get_doctree(documentation), open_levels))
         }
     }
 }
@@ -396,7 +396,7 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
             }
             @if thread.thread.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION) {
                 @if let Some(docs) = docs_content {
-                    (display_doctree(data, docs))
+                    (display_doctree(data, docs, 0))
                 }
                 @else {
                     div."error" { 

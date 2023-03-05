@@ -9,7 +9,7 @@ use contentapi::permissions::can_user_action;
 
 
 //Not sure if we need values, but I NEED permissions to know if the thread is locked
-pub static THREADFIELDS : &str = "id,name,lastCommentId,literalType,contentType,hash,parentId,commentCount,createDate,createUserId,values,permissions";
+pub static THREADFIELDS : &str = "id,name,lastCommentId,literalType,contentType,hash,parentId,commentCount,createDate,createUserId,values,permissions,lastRevisionId";
 //Need values to know the stickies
 pub static CATEGORYFIELDS: &str = "id,hash,name,description,literalType,contentType,values,permissions";
 
@@ -309,7 +309,7 @@ pub fn get_thread_request(categories: &Vec<CleanedPreCategory>, limit: i32, skip
             RequestType::content,
             String::from(THREADFIELDS),
             format!("{} and id not in @{}", base_query, sticky_key),
-            String::from("lastCommentId_desc"),
+            String::from("lastCommentId_desc,lastRevisionId_desc"),
             limit,
             skip
         );
