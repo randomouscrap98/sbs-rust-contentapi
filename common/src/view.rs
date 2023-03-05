@@ -140,54 +140,22 @@ impl<'a> DocTreeNode<'a>
         }
     }
 
-    pub fn fill_path(&mut self, path: &[&str]) -> &'a mut DocTreeNode {
+    pub fn add_content_fill_path(&mut self, path: &[&str], nodes: Vec<&'a Content>) {
         if let Some(part) = path.get(0) {
             //OK this is the next part of the path. We need to find something inside ourselves or add it if not
             if self.tree_nodes.contains_key(*part) { //let Some(node) = self.tree_nodes.get_mut(*part) {
-                self.tree_nodes.get_mut(*part).unwrap().fill_path(&path[1..])
+                self.tree_nodes.get_mut(*part).unwrap().add_content_fill_path(&path[1..], nodes);
             }
             else {
                 self.tree_nodes.insert(part.to_string(), DocTreeNode::new(part));
-                self.tree_nodes.get_mut(*part).unwrap().fill_path(&path[1..])
+                self.tree_nodes.get_mut(*part).unwrap().add_content_fill_path(&path[1..], nodes);
             }
         }
         else {
             //There's no more path, we are it
-            self
+            self.page_nodes.extend(nodes);
         }
     }
-
-    //pub fn get_or_add_named_node(&mut self, name: &str) -> &'a DocTreeNode {
-    //    if let Some(existing) = self.tree_nodes.borrow().iter().find(|x| x.name == name) {
-    //        existing
-    //    }
-    //    else {
-    //        let new_node = DocTreeNode::new(name);
-    //        self.tree_nodes.borrow_mut().push(new_node);
-    //        self.tree_nodes.borrow().last().unwrap()
-    //    }
-    //}
-
-    //Path's first element should not be the node itself, but the next node in the path. For instance, if you
-    //are at a "root" node, the path should start with "SmileBASIC 4" (if we're talking documentation)
-    ///// Add the given page nodes to this doc tree node, or fill out the missing tree links and add them deeper.
-    //pub fn add_pagenodes(&mut self, path: &Vec<&str>, nodes: Vec<&'a Content>) { //} -> &'a DocTreeNode {
-    
-    //pub fn add_pagenodes(&mut self, path: Vec<&str>, content: Vec<&'a Content>) { //} -> &'a DocTreeNode {
-    //    for part in path {
-
-    //    }
-    //    //If there's still a path, we want to find the next node to operate on. 
-    //    if let Some(part) = path.get(0) {
-    //        let new_path = path.iter().skip(1).map(|x| *x).collect::<Vec<&str>>();
-    //        let node = self.get_or_add_named_node(part);
-    //        node.add_pagenodes(&new_path, nodes);
-    //    }
-    //    else { //The path is empty, so this must be the current node!
-    //        self.page_nodes.borrow_mut().extend(nodes);
-    //        //self
-    //    }
-    //}
 }
 
 /// Build a document tree and return the root node, which you can use to traverse the whole tree. The root node
@@ -197,7 +165,7 @@ pub fn get_doctree<'a>(documentation: &'a Vec<Content>) -> DocTreeNode<'a>
     //Easiest to just pre-compute the paths (it's a little wasteful but whatever)
     let docpaths = get_all_docpaths(documentation);
 
-    let root_node = RefCell::new(DocTreeNode::default()); //RefCell::new(DocTreeNode::default());
+    let mut root_node = DocTreeNode::default();
 
     for (path, content) in docpaths {
         //Split the path up into parts
@@ -211,14 +179,7 @@ pub fn get_doctree<'a>(documentation: &'a Vec<Content>) -> DocTreeNode<'a>
                 continue;
             }
 
-            root_node.borrow_mut().fill_path(&path_parts[1..]);
-            //for part in path_parts.into_iter().skip(1) {
-
-            //}
-
-            //let mut mut_root = root_node.borrow_mut();
-            //mut_root.add_pagenodes(&path_parts.into_iter().skip(1).collect(), content);
-            //AND THEN IT GOES OUT OF SCOPE, COME ONNNN
+            root_node.add_content_fill_path(&path_parts[1..], content);
         }
         else {
             println!("{} DOCUMENTATION DROPPED WITH EMPTY PATH", content.len());
@@ -226,7 +187,5 @@ pub fn get_doctree<'a>(documentation: &'a Vec<Content>) -> DocTreeNode<'a>
         }
     }
 
-    //let a = root_node.take();
-    //a
-    root_node.take()
+    root_node
 }
