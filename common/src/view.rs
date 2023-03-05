@@ -126,7 +126,7 @@ pub fn get_all_docpaths(documentation: &Vec<Content>) -> HashMap<String, Vec<&Co
 #[derive(Default)]
 pub struct DocTreeNode<'a> {
     pub name : String,
-    pub tree_nodes : HashMap<String, DocTreeNode<'a>>, 
+    pub tree_nodes : Vec<DocTreeNode<'a>>, 
     pub page_nodes : Vec<&'a Content> 
 }
 
@@ -135,7 +135,7 @@ impl<'a> DocTreeNode<'a>
     pub fn new(name: &str) -> Self {
         DocTreeNode { 
             name: name.to_string(), 
-            tree_nodes: HashMap::new(), 
+            tree_nodes: Vec::new(), 
             page_nodes: Vec::new() 
         }
     }
@@ -143,12 +143,12 @@ impl<'a> DocTreeNode<'a>
     pub fn add_content_fill_path(&mut self, path: &[&str], nodes: Vec<&'a Content>) {
         if let Some(part) = path.get(0) {
             //OK this is the next part of the path. We need to find something inside ourselves or add it if not
-            if self.tree_nodes.contains_key(*part) { //let Some(node) = self.tree_nodes.get_mut(*part) {
-                self.tree_nodes.get_mut(*part).unwrap().add_content_fill_path(&path[1..], nodes);
+            if self.tree_nodes.iter().any(|n| n.name == *part) { //let Some(node) = self.tree_nodes.get_mut(*part) {
+                self.tree_nodes.iter_mut().find(|n| n.name == *part).unwrap().add_content_fill_path(&path[1..], nodes);
             }
             else {
-                self.tree_nodes.insert(part.to_string(), DocTreeNode::new(part));
-                self.tree_nodes.get_mut(*part).unwrap().add_content_fill_path(&path[1..], nodes);
+                self.tree_nodes.push(DocTreeNode::new(part));
+                self.tree_nodes.last_mut().unwrap().add_content_fill_path(&path[1..], nodes);
             }
         }
         else {
