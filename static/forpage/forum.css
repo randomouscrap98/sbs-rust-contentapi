@@ -275,6 +275,20 @@ form.editor[data-widget] textarea {
     margin-right: auto;
 }
 
+.docnode {
+    line-height: var(--reg_lineheight);
+}
+.docnode > .docnode {
+    padding-left: var(--space_medium);
+}
+
+.docnode > ul {
+    margin: 0;
+    /* Need to add the space for the circle, which is constant? */
+    padding-left: calc(1em + var(--space_medium));
+    display: block;
+}
+
 .categorylist {
     display: flex;
     align-items: center;

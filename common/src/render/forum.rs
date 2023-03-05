@@ -305,7 +305,7 @@ fn walk_doctree_recursive(layout_data: &MainLayoutData, tree: &DocTreeNode) -> M
             }
             ul {
                 @for content in &tree.page_nodes {
-                    li { a href=(layout_data.links.forum_thread(content)) { (opt_s!(content.name)) } }
+                    li { a."flatlink" href=(layout_data.links.forum_thread(content)) { (opt_s!(content.name)) } }
                 }
             }
         }
@@ -318,6 +318,15 @@ fn walk_doctree(layout_data: &MainLayoutData, tree: &DocTreeNode) -> Markup
     html! {
         @for node in &tree.tree_nodes {
             (walk_doctree_recursive(layout_data, node))
+        }
+    }
+}
+
+pub fn display_doctree(layout_data: &MainLayoutData, documentation: &Vec<Content>) -> Markup
+{
+    html! {
+        div."documenttree" {
+            (walk_doctree(layout_data, &get_doctree(documentation)))
         }
     }
 }
@@ -387,9 +396,7 @@ pub fn render_page(data: &MainLayoutData, bbcode: &mut BBCode, thread: &ForumThr
             }
             @if thread.thread.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION) {
                 @if let Some(docs) = docs_content {
-                    div."documenttree" {
-                        (walk_doctree(data, &get_doctree(docs)))
-                    }
+                    (display_doctree(data, docs))
                 }
                 @else {
                     div."error" { 

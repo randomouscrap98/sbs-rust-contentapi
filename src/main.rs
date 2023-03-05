@@ -197,6 +197,11 @@ async fn main()
         |context:RequestContext| std_resp!(pages::admin::get_render(pc!(context)), context)
     );
 
+    let get_documentation_route = warp_get_async!(
+        warp::path!("documentation"), 
+        |context:RequestContext| std_resp!(pages::documentation::get_render(pc!(context)), context)
+    );
+
     let get_login_route = warp_get!(warp::path!("login"),
         |context:RequestContext| warp::reply::html(pages::login::render(pc!(context.layout_data), None, None, None)));
 
@@ -424,6 +429,7 @@ async fn main()
         .or(get_about_route)
         .or(get_search_route)
         .or(get_admin_route)
+        .or(get_documentation_route)
         .or(post_admin_multi_route(&state_filter, &form_filter))
         .or(get_activity_route)
             .boxed()

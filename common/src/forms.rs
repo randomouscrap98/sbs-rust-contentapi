@@ -84,7 +84,8 @@ pub struct PageForm
 
     //Documentation fields
     pub docpath: Option<String>,
-    pub markup: Option<String> //May eventually be more than just documentation;
+    pub markup: Option<String>, //May eventually be more than just documentation;
+    pub hash: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
