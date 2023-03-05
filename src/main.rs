@@ -275,6 +275,12 @@ async fn main()
             std_resp!(pages::search::get_render(pc!(context), search, cf!(context.default_display_pages)), context)
     );
 
+    let get_searchall_route = warp_get_async!(
+        warp::path!("searchall").and(warp::query::<pages::searchall::SearchAllForm>()),
+        |search, context:RequestContext| 
+            std_resp!(pages::searchall::get_render(pc!(context), search), context)
+    );
+
     let get_activity_route = warp_get_async!(
         warp::path!("activity").and(warp::query::<pages::activity::ActivityQuery>()),
         |query, context:RequestContext| 
@@ -428,6 +434,7 @@ async fn main()
         .or(get_index_route)
         .or(get_about_route)
         .or(get_search_route)
+        .or(get_searchall_route)
         .or(get_admin_route)
         .or(get_documentation_route)
         .or(post_admin_multi_route(&state_filter, &form_filter))

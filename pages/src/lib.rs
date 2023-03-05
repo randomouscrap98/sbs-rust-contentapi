@@ -27,6 +27,7 @@ pub mod forum_edit_thread;
 pub mod forum_edit_post;
 pub mod page_edit;
 pub mod documentation;
+pub mod searchall;
 
 //Email errors are weird with their true/false return. 
 macro_rules! email_errors {
