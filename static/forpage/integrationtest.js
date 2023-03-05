@@ -256,6 +256,8 @@ function runtests()
         [ resource_editor_general_tests, (cb) => loadIframe("/page/edit?mode=resource", cb)],
         [ ptc_editor_general_tests, (cb) => loadIframe("/page/edit?mode=ptc", cb)],
         [ documentation_editor_general_tests, (cb) => loadIframe("/page/edit?mode=documentation", cb)],
+        [ documentation_general_tests, (cb) => loadIframe("/documentation", cb)],
+        [ documentation_knownpage_tests, (cb) => loadIframe("/forum/thread/docs-sb4-constants", cb)], //fragile, oh well
         //This should normally come WAY later, after you are FULLY done with the 'currentTestUser', so add other tests to do with 
         //the actual currentTestUser above this.
         [ register_confirm_tests, (cb) => {
@@ -422,6 +424,7 @@ function editor_general_test_base(type)
     {
         test("has_markup", () => assertExists("#pageedit_markup"));
         test("has_docpath", () => assertExists("#pageedit_docpath"));
+        test("has_hash", () => assertExists("#pageedit_hash"));
         test("no_images", () => assertNotExists("#pageedit_images"));
         test("no_categories", () => assertNotExists("#pageedit_categories"));
     }
@@ -429,6 +432,7 @@ function editor_general_test_base(type)
     {
         test("no_markup", () => assertNotExists("#pageedit_markup"));
         test("no_docpath", () => assertNotExists("#pageedit_docpath"));
+        test("no_hash", () => assertNotExists("#pageedit_hash"));
         test("has_images", () => assertExists("#pageedit_images"));
         test("has_categories", () => assertExists("#pageedit_categories"));
     }
@@ -467,3 +471,14 @@ function program_editor_general_tests() { editor_general_test_base("program") }
 function resource_editor_general_tests() { editor_general_test_base("resource") }
 function ptc_editor_general_tests() { editor_general_test_base("ptc") }
 function documentation_editor_general_tests() { editor_general_test_base("documentation") }
+
+function documentation_general_tests()
+{
+    test("no_newdoc", () => assertNotExists("#newdocumentation"));
+}
+
+function documentation_knownpage_tests()
+{
+    test("no_editdoc", () => assertNotExists("#editpage"));
+    test("no_deletedoc", () => assertNotExists("#deletepage"));
+}
