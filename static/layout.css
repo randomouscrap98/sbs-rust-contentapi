@@ -101,7 +101,7 @@ nav .headertab.current {
     align-items: center;
 }
 
-#header-user a > * {
+#header-user a > *:not(.navtext) {
     margin-left: 0.5em;
 }
 
@@ -170,7 +170,7 @@ form.editor input {
  *     MEDIA SPECIALNESS         *
  * ----------------------------- */
 
- @media screen and (max-width: 40em) 
+ @media screen and (max-width: 35em) 
  {
     .headertab .navemoji{ display: initial; }
     .headertab .navtext { display: none; }
