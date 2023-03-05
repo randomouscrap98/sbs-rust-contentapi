@@ -38,14 +38,13 @@ pub fn render(data: MainLayoutData, form: ThreadForm, category_info: Option<Cont
                     label for="threadedit_title"{"Thread title:"}
                     input #"threadedit_title" type="text" name="title" value=(form.title) required;
                     input #"threadedit_id" type="hidden" name="id" value=(form.id);
-                    @if edit {
-                        input type="submit" value="Update thread";
-                    }
-                    @else {
+                    @if !edit {
                         label for="threadedit_post" {"Post:"}
                         (post_textbox(Some("threadedit_post"), Some("post"), None))
-                        input type="submit" value="Post thread";
                     }
+                    label for="threadedit_keywords"{"Keywords:"}
+                    input #"threadedit_keywords" type="text" name="keywords" value=(form.keywords) placeholder="Space separated";
+                    input type="submit" value=({if edit { "Update thread" } else { "Post thread"}});
                 }
             }
             @else {
@@ -72,6 +71,7 @@ pub async fn get_render(context: PageContext, category_hash: Option<String>, thr
     if let Some(hash) = thread_hash {
         let thread = context.api_context.get_content_by_hash(&hash, THISCONTENTFIELDS).await?;
         form.title = thread.name.unwrap(); 
+        form.keywords = thread.keywords.unwrap().join(" ");
         form.parent_id = thread.parentId.unwrap(); 
         form.id = thread.id.unwrap(); 
     }
@@ -99,7 +99,7 @@ pub async fn construct_thread_content(context: &ApiContext, form: &ThreadForm)
         content.contentType = Some(ContentType::PAGE);
         content.literalType = Some(SBSPageType::FORUMTHREAD.to_string());
         content.permissions = Some(make_permissions! {
-            "0": "CR" //Create so people can post on your "wall" (idk if that'll ever happen)
+            "0": "CR" 
         });
         content.values = Some(make_values! {
             "markup": "bbcode"
@@ -109,6 +109,7 @@ pub async fn construct_thread_content(context: &ApiContext, form: &ThreadForm)
     //These are currently the ONLY things settable by the editor
     content.name = Some(form.title.clone());
     content.parentId = Some(form.parent_id);
+    content.keywords = Some(parse_compound_value(&form.keywords));
 
     Ok(content)
 }

@@ -5,8 +5,11 @@ use super::super::*;
 use contentapi::forms::*;
 
 //Render basic navigation link with only text as the body
-pub fn main_nav_link(data: &MainLayoutData, text: &str, href: &str, id: Option<&str>) -> Markup {
-    main_nav_link_raw(data, PreEscaped(String::from(text)), href, id)
+pub fn main_nav_link(data: &MainLayoutData, text: &str, emoji: &str, href: &str, id: Option<&str>) -> Markup {
+    main_nav_link_raw(data, html!{
+        span."navemoji" title=(text) { (emoji) }
+        span."navtext" { (text) }
+    }, href, id)
 }
 
 //Produce a link for site navigation which supports highlighting if on current page. Body can be "anything"
@@ -29,14 +32,15 @@ pub fn header(data: &MainLayoutData) -> Markup {
                 a."plainlink" #"homelink" href={(data.links.http_root)"/"} {
                     img src={(data.links.resource_root)"/favicon.ico"} alt="Website Logo";
                 }
-                (main_nav_link(data,"Activity","/activity",Some("mainactivitylink")))
-                (main_nav_link(data,"Browse","/search",Some("mainbrowselink")))
-                (main_nav_link(data,"Forums","/forum",Some("mainforumlink")))
-                (main_nav_link(data,"Documentation","/documentation",Some("maindocumentationlink")))
+                (main_nav_link(data,"Activity","🕒", "/activity",Some("mainactivitylink")))
+                (main_nav_link(data,"Browse","🎮", "/search",Some("mainbrowselink")))
+                (main_nav_link(data,"Forums","📰", "/forum",Some("mainforumlink")))
+                (main_nav_link(data,"Docs","📖", "/documentation",Some("maindocumentationlink")))
+                (main_nav_link(data,"Search","🔎", "/searchall",Some("mainsearchlink")))
                 @if let Some(user) = &data.user {
                     @if user.admin {
                         //We were already using 'admin', so keep using it! 
-                        (main_nav_link(data,"Admin","/admin",None))
+                        (main_nav_link(data,"Admin","🔒","/admin",None))
                     }
                 }
             }
@@ -48,7 +52,7 @@ pub fn header(data: &MainLayoutData) -> Markup {
                     },"/userhome",None))
                 }
                 @else {
-                    (main_nav_link(data,"Login","/login",None))
+                    (main_nav_link(data,"Login","Login","/login",None))
                 }
             }
         }
@@ -57,12 +61,6 @@ pub fn header(data: &MainLayoutData) -> Markup {
                 div."alert" { (PreEscaped(alert)) }
             }
         }
-        //@else {
-        //    div."alert" { 
-        //        b."error" {"This is a preview website!"} " Changes made may get reset and will " b{"not"} " carry over to the final version! "
-        //        "Original website still up at " a href="https://old.smilebasicsource.com" {"https://old.smilebasicsource.com"}
-        //     }//"This is a test alert " a href="#" { "OK?" } span."error" { " ERROR OR SOMETHING"} }
-        //}
     }
 }
 
@@ -72,10 +70,8 @@ pub fn footer(data: &MainLayoutData) -> Markup {
         footer class="controlbar smallseparate" {
             span #"api_about" { (data.about_api.environment) " - " (data.about_api.version) }
             div #"footer-spacer" {}
-            (main_nav_link(data,"Settings","/sessionsettings",Some("footer-settings")))
-            (main_nav_link(data,"About","/about",Some("footer-about")))
-            //<!--<span id="debug">{{client_ip}}</span>-->
-            //<!--<span id="debug">{{route_path}}</span>-->
+            (main_nav_link(data,"Settings","Settings","/sessionsettings",Some("footer-settings")))
+            (main_nav_link(data,"About","About", "/about",Some("footer-about")))
         }
     }
 }

@@ -164,9 +164,17 @@ form.editor input {
     border-radius: var(--space_small);
 }
 
+.headertab .navemoji { display: none; }
+
 /* ----------------------------- *
  *     MEDIA SPECIALNESS         *
  * ----------------------------- */
+
+ @media screen and (max-width: 40em) 
+ {
+    .headertab .navemoji{ display: initial; }
+    .headertab .navtext { display: none; }
+ }
 
  @media screen and (max-width: 30em)
  {

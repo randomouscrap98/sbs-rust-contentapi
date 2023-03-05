@@ -46,6 +46,7 @@ pub struct ThreadForm
     pub id: i64, //Should default to 0
     pub parent_id: i64,
     pub title: String,
+    pub keywords: String,
     pub post: Option<String> //Not present on thread edits
 }
 
