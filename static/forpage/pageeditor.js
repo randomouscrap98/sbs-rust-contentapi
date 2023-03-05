@@ -41,13 +41,17 @@ function editor_onsubmit_check()
         }
     }
     var systems_checklist = document.getElementById(SYSTEMCHECKLISTID);
-    if(systems_checklist) pageedit_systems.value = systems_checklist.to_list();
-    if(!pageedit_systems.value) {
-        alert("You must select at least one system!");
-        return false;
+    if(systems_checklist) {
+        pageedit_systems.value = systems_checklist.to_list();
+        if(!pageedit_systems.value) {
+            alert("You must select at least one system!");
+            return false;
+        }
     }
     var categories_checklist = document.getElementById(CATEGORYCHECKLISTID);
-    if(categories_checklist) pageedit_categories.value = categories_checklist.to_list();
+    if(categories_checklist) {
+        pageedit_categories.value = categories_checklist.to_list();
+    }
     return true;
 }
 

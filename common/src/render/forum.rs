@@ -202,7 +202,7 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
         (data.links.script("/forpage/forum.js"))
         @if config.render_header {
             section {
-                h1 { (opt_s!(thread.thread.name)) }
+                h1 title=(i(&thread.thread.id)) { (opt_s!(thread.thread.name)) }
                 @if let Some(path) = &config.path {
                     (forum_path(&data.links, &path))
                 }

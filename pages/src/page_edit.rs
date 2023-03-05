@@ -387,6 +387,7 @@ pub async fn construct_post_content_full(context: &mut ApiContext, form: &PageFo
 pub async fn post_render(mut context: PageContext, form: PageForm) ->
     Result<Response, Error>
 {
+    //println!("form: {:#?}", form);
     if let Some(ref _user) = context.layout_data.user 
     {
         //This one, we throw all the way, since we can't re-render the page without the parent anyway

@@ -104,16 +104,16 @@ pub fn basic_skeleton(data: &MainLayoutData, head_inner: Markup, body_inner: Mar
                 (data.links.script("/base.js"))
                 (head_inner)
             }
-        }
-        body data-compact[data.user_config.compact]
-             data-theme=(data.user_config.theme) 
-             //data-shadows[data.user_config.shadows]
-        { 
-            (body_inner) 
-            //Gotta do it HERE so everything has already run!
-            @if let Some(profile_data) = profile_data {
-                script {
-                    "var profiler_data = "(PreEscaped(serde_json::to_string(&profile_data).unwrap_or(String::from("{} /* COULD NOT SERIALIZE */"))))";"
+            body data-compact[data.user_config.compact]
+                data-theme=(data.user_config.theme) 
+                //data-shadows[data.user_config.shadows]
+            { 
+                (body_inner) 
+                //Gotta do it HERE so everything has already run!
+                @if let Some(profile_data) = profile_data {
+                    script {
+                        "var profiler_data = "(PreEscaped(serde_json::to_string(&profile_data).unwrap_or(String::from("{} /* COULD NOT SERIALIZE */"))))";"
+                    }
                 }
             }
         }

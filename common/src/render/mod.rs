@@ -110,7 +110,7 @@ impl LinkConfig
 {
     pub fn style(&self, link: &str) -> Markup {
         html! {
-            link rel="stylesheet" href={(self.static_root) (link) "?" (self.cache_bust) } { }
+            link rel="stylesheet" href={(self.static_root) (link) "?" (self.cache_bust) };
         }
     }
 
