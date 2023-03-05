@@ -130,7 +130,7 @@ async fn main()
                 file_root: format!("{}/raw", config.api_fileraw),
                 file_upload_root: format!("{}/low", config.api_fileraw),
                 http_root: root,
-                cache_bust : chrono::offset::Utc::now().to_rfc3339() //.to_string()
+                cache_bust : chrono::offset::Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true) //.to_string()
             }
         },
         config

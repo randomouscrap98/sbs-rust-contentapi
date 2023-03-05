@@ -26,17 +26,17 @@ pub fn header(data: &MainLayoutData) -> Markup {
     html! {
         header."controlbar" {
             nav {
-                a."plainlink" #"homelink" href={(data.links.http_root)"/"}{
-                    img src={(data.links.resource_root)"/favicon.ico"};
-                    (main_nav_link(data,"Activity","/activity",Some("mainactivitylink")))
-                    (main_nav_link(data,"Browse","/search",Some("mainbrowselink")))
-                    (main_nav_link(data,"Forums","/forum",Some("mainforumlink")))
-                    (main_nav_link(data,"Documentation","/documentation",Some("maindocumentationlink")))
-                    @if let Some(user) = &data.user {
-                        @if user.admin {
-                            //We were already using 'admin', so keep using it! 
-                            (main_nav_link(data,"Admin","/admin",None))
-                        }
+                a."plainlink" #"homelink" href={(data.links.http_root)"/"} {
+                    img src={(data.links.resource_root)"/favicon.ico"} alt="Website Logo";
+                }
+                (main_nav_link(data,"Activity","/activity",Some("mainactivitylink")))
+                (main_nav_link(data,"Browse","/search",Some("mainbrowselink")))
+                (main_nav_link(data,"Forums","/forum",Some("mainforumlink")))
+                (main_nav_link(data,"Documentation","/documentation",Some("maindocumentationlink")))
+                @if let Some(user) = &data.user {
+                    @if user.admin {
+                        //We were already using 'admin', so keep using it! 
+                        (main_nav_link(data,"Admin","/admin",None))
                     }
                 }
             }
