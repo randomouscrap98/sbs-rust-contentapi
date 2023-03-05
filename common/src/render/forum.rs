@@ -208,9 +208,12 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup
                 }
                 div."foruminfo smallseparate aside" {
                     (threadicon(&data.links, &thread))
-                    span {
-                        @if let Some(user) = config.users.get(&thread.thread.createUserId.unwrap_or(0)) {
-                            a."flatlink" target="_top" href=(data.links.user(user)){ (user.username) }
+                    //Snail doesn't want the create user displayed on documentation
+                    @if thread_type != Some(SBSPageType::DOCUMENTATION) {
+                        span {
+                            @if let Some(user) = config.users.get(&thread.thread.createUserId.unwrap_or(0)) {
+                                a."flatlink" target="_top" href=(data.links.user(user)){ (user.username) }
+                            }
                         }
                     }
                     span {

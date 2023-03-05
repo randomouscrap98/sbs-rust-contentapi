@@ -61,6 +61,7 @@ pub const POPSCORE1SORT: &str = "popScore1_desc";
 pub const ANYSYSTEM: &str = "any";
 pub const PTCSYSTEM: &str = "ptc";
 pub const MARKUPBBCODE: &str = "bbcode";
+pub const DOCSGROUPUSERNAME: &str = "docsgroup";
 //pub const MARKUP12y: &str = "12y";
 //pub const MARKUP12y2: &str = "12y2";
 

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use common::constants::DOCSGROUPUSERNAME;
 use common::constants::MARKUPBBCODE;
 use common::constants::PTCSYSTEM;
 use common::constants::SBSMARKUPS;
@@ -368,6 +369,16 @@ pub async fn construct_post_content_full(context: &mut ApiContext, form: &PageFo
     }
     else {
         return Err(Error::Other(String::from("INTERNAL ERROR: Somehow while constructing content, there wasn't a values dictionary!")))
+    }
+
+    //So, regardless of new/edit/etc, if we're documentation, we NEED to set the docgroup perms!
+    if form.subtype == SBSPageType::DOCUMENTATION {
+        if let Some(ref mut perms) = fullpage.main.permissions {
+            match context.get_user_by_username(DOCSGROUPUSERNAME, "id,username").await {
+                Ok(docsuser) => { perms.insert(docsuser.id.to_string(), "CRUD".to_string()); },
+                Err(error) => { println!("Couldn't find docsgroup user!! This is bad: {}", error.to_verbose_string()); }
+            }
+        }
     }
 
     Ok(fullpage)

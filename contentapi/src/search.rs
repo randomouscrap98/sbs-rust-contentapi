@@ -50,4 +50,9 @@ impl ApiContext
     {
         get_something_by_field!(self, RequestType::message, Message, "id", id, fields)
     }
+
+    pub async fn get_user_by_username(&self, username: &str, fields: &str) -> Result<User, ApiError>
+    {
+        get_something_by_field!(self, RequestType::user, User, "username", username, fields)
+    }
 }
