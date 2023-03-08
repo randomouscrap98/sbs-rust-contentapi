@@ -360,13 +360,13 @@ input[readonly], textarea[readonly] {
 }
 
 /* Syntax highlighting for code! */
-.content .code .keyword { color: var(--code_keyword); }
-.content .code .number { color: var(--code_number); }
-.content .code .comment { color: var(--code_comment); }
-.content .code .string { color: var(--code_string); }
-.content .code .label { color: var(--code_label); }
-.content .code .function { color: var(--code_function); } 
-.content .code { color: var(--code_fg); background-color: var(--code_bg); }
+.content .code .keyword, .Markup pre .keyword { color: var(--code_keyword); }
+.content .code .number, .Markup pre .number { color: var(--code_number); }
+.content .code .comment, .Markup pre .comment { color: var(--code_comment); }
+.content .code .string, .Markup pre .string { color: var(--code_string); }
+.content .code .label, .Markup pre .label { color: var(--code_label); }
+.content .code .function, .Markup pre .function { color: var(--code_function); } 
+.content .code, .Markup pre { color: var(--code_fg); background-color: var(--code_bg); }
 
 .postpreview {
     overflow: hidden;

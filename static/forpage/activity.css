@@ -25,7 +25,7 @@
 .activity .avatar {
     width: 2.5em;
     border-radius: 0.4em;
-    margin-right: var(--space_small); /*calc(0.05em + var(--space_small));*/
+    margin-right: calc(0.25em + 0.5 * var(--space_small));
 }
 
 .activity .main > :not(:last-child) {
@@ -38,7 +38,7 @@
 
 .activity .extra {
     font-style: italic;
-    margin-top: 0.6em;
+    margin-top: calc(0.35em + 0.5 * var(--space_small)); /*0.6em;*/
     margin-left: 0.1em;
 }
 

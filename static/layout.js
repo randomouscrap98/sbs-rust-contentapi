@@ -4,9 +4,9 @@
 //This all happens on "defer" so it's fine to do it out in the open like this
 upgrade_forms();
 upgrade_times();
+upgrade_markup();
 upgrade_code();
 upgrade_deleteconfirm();
-upgrade_markup();
 
 function upgrade_forms()
 {
@@ -29,6 +29,13 @@ function upgrade_markup()
 function upgrade_code()
 {
     var codes = document.querySelectorAll(".content .code");
+    upgrade_code_general(codes);
+    codes = document.querySelectorAll(".Markup pre"); //This is what 12y considers code (ugh don't use just pre!!)
+    upgrade_code_general(codes);
+}
+
+function upgrade_code_general(codes)
+{
     for(var i = 0; i < codes.length; i++)
     {
         try

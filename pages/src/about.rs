@@ -15,7 +15,7 @@ pub fn render(data: MainLayoutData) -> String {
                 "version of BASIC called " b { "SmileBASIC"} ", and it lets you do a lot of fun stuff! "
             }
             p { 
-                "We were most active during the 3DS era, so most of what you'll see here is for SmileBASIC"
+                "We were most active during the 3DS era, so most of what you'll see here is for SmileBASIC "
                 "on the Nintendo 3DS. " 
             }
             h3 { "Privacy" }
@@ -64,8 +64,7 @@ pub fn render(data: MainLayoutData) -> String {
                 tr { td { a href="https://imagemagick.org/index.php"{"Image Magick:"}} td {"Image manipulation (thumbnails etc)"} }
                 tr { td { a href="https://github.com/DapperLib/Dapper"{"Dapper:"}} td {"Basic ORM for Contentapi"} }
                 tr { td { a href="https://www.rust-lang.org"{"Rust:"}} td {"Basis for this frontend"} }
-                //Don't forget to change this to wrap
-                tr { td { a href="https://github.com/SergioBenitez/Rocket"{"Rocket:"}} td {"Server-side web framework for this frontend"} }
+                tr { td { a href="https://github.com/seanmonstar/warp"{"Warp:"}} td {"Server-side web routing for this frontend"} }
                 tr { td { a href="https://aws.amazon.com"{"Amazon AWS:"}} td { "Hosting (EC2) and image/backup storage (S3)"} }
                 tr { td { a href="https://domains.google"{"Google:"}} td { "Our DNS and email provider"} }
             }
