@@ -19,6 +19,14 @@ necessary to run an instance of the SBS backend locally. Simply extract, run `ru
 same machine as the frontend, you can run the frontend. All default settings are fine for the frontend, so a simple `cargo run` 
 will suffice. You do not need dotnet to run this special backend. 
 
+So to summarize:
+* Download `contentapi.tar.gz` (link provided upon request)
+* Extract to wherever
+* Run `run_local.sh` (keep it running)
+* On the same machine, go to the sbs frontend and do `cargo run`
+* Visit `http://localhost:5011` to get to the sbs frontend
+* You can continue to iterate on the sbs frontend while the backend is running in the background
+
 ## Publishing
 This is mostly in case I forget; I don't think anyone will be running the sbs frontend themselves!
 
