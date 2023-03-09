@@ -13,7 +13,13 @@ in a maintainable format; keep that in mind when viewing the final product.
 
 I hope it works well for your needs!
 
-## Running/Publishing
+## Running locally
+This frontend connects to a contentapi backend. Upon request, I can provide a `contentapi.tar.gz` file which contains everything 
+necessary to run an instance of the SBS backend locally. Simply extract, run `run_local.sh`, and as long as it's running on the 
+same machine as the frontend, you can run the frontend. All default settings are fine for the frontend, so a simple `cargo run` 
+will suffice. You do not need dotnet to run this special backend. 
+
+## Publishing
 This is mostly in case I forget; I don't think anyone will be running the sbs frontend themselves!
 
 There is a basic `publish.sh` file which by itself can't immediately publish the frontend, but which can be sourced
