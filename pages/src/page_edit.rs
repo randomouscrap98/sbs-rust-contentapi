@@ -159,6 +159,10 @@ pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_ca
                     }
                     label for="pageedit_keywords" { "Keywords:" }
                     input #"pageedit_keywords" type="text" name="keywords" value=(form.keywords) placeholder="Space separated";
+                    @if form.id != 0 { //This is an edit
+                        label for="pageedit_message"{"Edit message:"}
+                        input #"pageedit_message" type="text" name="edit_message" value=(opt_s!(form.edit_message)) placeholder="Message for activity (optional)";
+                    }
                     input type="submit" value=(submit_value);
                 }
             }
@@ -401,12 +405,12 @@ pub async fn post_render(mut context: PageContext, form: PageForm) ->
             {
                 //Store the main content. This is most of the time all that is required, however there are some
                 //page types that have more data, which we'll check for within
-                match context.api_context.post_content(&fullpage.main).await { 
+                match context.api_context.post_content(&fullpage.main, form.edit_message.clone()).await { 
                     Ok(posted_page) => {
                         //Still have to write the subpages if they exist
                         if let Some(ref mut ptc_page) = fullpage.ptc {
                             ptc_page.parentId = posted_page.id; //Make sure it's pointing to the right place
-                            match context.api_context.post_content(&ptc_page).await { 
+                            match context.api_context.post_content(&ptc_page, None).await { 
                                 Ok(p) => { println!("Wrote PTC page: {}", i(&p.id)); }, //might do something more later idk
                                 Err(e) => { errors.push(e.to_user_string()); }
                             }

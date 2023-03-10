@@ -194,7 +194,7 @@ pub async fn post_userbio(data: &MainLayoutData, context: &ApiContext, form: &Ba
                 content.values = Some(make_values! {
                     "markup": "bbcode"
                 });
-                context.post_content(&content).await.map_err(|e| e.into())
+                context.post_content(&content, None).await.map_err(|e| e.into())
             }
             None => {
                 Err(Error::Other(String::from("Couldn't find the userpage parent! This is a programming error!")))

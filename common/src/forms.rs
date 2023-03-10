@@ -47,7 +47,10 @@ pub struct ThreadForm
     pub parent_id: i64,
     pub title: String,
     pub keywords: String,
-    pub post: Option<String> //Not present on thread edits
+    pub post: Option<String>, //Not present on thread edits
+
+    //An edit field
+    pub edit_message: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -86,7 +89,10 @@ pub struct PageForm
     //Documentation fields
     pub docpath: Option<String>,
     pub markup: Option<String>, //May eventually be more than just documentation;
-    pub hash: Option<String>
+    pub hash: Option<String>,
+
+    //Edit fields
+    pub edit_message: Option<String>
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]

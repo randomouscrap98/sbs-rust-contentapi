@@ -42,6 +42,10 @@ pub fn render(data: MainLayoutData, form: ThreadForm, category_info: Option<Cont
                         label for="threadedit_post" {"Post:"}
                         (post_textbox(Some("threadedit_post"), Some("post"), None))
                     }
+                    @else {
+                        label for="threadedit_message"{"Edit message:"}
+                        input #"threadedit_message" type="text" name="edit_message" value=(opt_s!(form.edit_message)) placeholder="Message for activity (optional)";
+                    }
                     label for="threadedit_keywords"{"Keywords:"}
                     input #"threadedit_keywords" type="text" name="keywords" value=(form.keywords) placeholder="Space separated";
                     input type="submit" value=({if edit { "Update thread" } else { "Post thread"}});
@@ -132,7 +136,7 @@ pub async fn post_render(context: PageContext, form: ThreadForm) ->
 
         match construct_thread_content(&context.api_context, &form).await {
             Ok(content) => {
-                match context.api_context.post_content(&content).await { 
+                match context.api_context.post_content(&content, form.edit_message.clone()).await { 
                     Ok(post_thread) =>
                     {
                         let thread_id = post_thread.id;

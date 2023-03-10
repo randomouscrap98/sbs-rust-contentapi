@@ -93,16 +93,14 @@ pub struct ActivityQuery {
     pub start: Option<DateTime<Utc>>,
     /// Used when moving backward through activity: the "previous" button
     pub end: Option<DateTime<Utc>>
-    //pub start: Option<String>, //Option<DateTime<Utc>>,
-    //pub end: Option<String> //Option<DateTime<Utc>>
 }
 
 pub struct SbsActivity<'a> {
     pub date: DateTime<Utc>,
     pub user: &'a User,
-    pub action_text: String, //This is RAW, WITH whatever links you need!
+    pub action_text: String,
     pub activity_href: Option<(Option<String>,String)>,
-    pub extra_text: Option<String>,
+    pub extra_text: Option<String>, //This is RAW, output as 'PreEscaped'
 }
 
 
@@ -274,24 +272,17 @@ pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page
             }
         );
 
-        //let link_text = if activity.action == Some(UserAction::DELETE) {
-        //    println!("A DELETE WAS FOUND: {:?}", activity);
-        //    &this_content.hash
-        //} else {
-        //    &this_content.name
-        //    //String::from(opt_s!(this_content.name))
-        //};
-
         result.push(SbsActivity { 
             date: activity.date.unwrap_or_default(), 
             user: this_user,
-            action_text, //: String::from("posted on"), 
+            action_text,
             activity_href: if activity.action == Some(UserAction::DELETE) {
                 Some((None, format!("{} ({})", opt_s!(this_content.hash), i(&this_content.id))))
             } else {
                 Some((Some(context.layout_data.links.forum_thread(&this_content)), String::from(opt_s!(this_content.name))))
             },
-            extra_text: activity.message.clone()
+            //All this is html! macro stuff is to reuse maud as an html escaper
+            extra_text: activity.message.as_ref().and_then(|m| Some(html!((m)).into_string()))
         })
     }
 

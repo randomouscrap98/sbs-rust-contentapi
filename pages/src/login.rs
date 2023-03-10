@@ -31,7 +31,7 @@ pub fn render(data: MainLayoutData, login_errors: Option<Vec<String>>, recover_e
             form method="POST" action={(data.links.http_root)"/login?recover=1"} {
                 (errorlist(recover_errors))
                 label for="recover_email" {"Email"}
-                input #"recover_email" type="text" name="email" required="" value=[email];
+                input #"recover_email" type="email" name="email" required="" value=[email];
                 input type="submit" value="Send recovery email";
             }
             p."aside"{

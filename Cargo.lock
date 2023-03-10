@@ -179,6 +179,7 @@ dependencies = [
  "serde",
  "serde-aux",
  "serde_json",
+ "serde_urlencoded",
 ]
 
 [[package]]

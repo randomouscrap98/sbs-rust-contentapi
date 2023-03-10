@@ -241,6 +241,29 @@ macro_rules! make_post_endpoint {
     };
 }
 
+//Url encoded whatever
+#[derive(Serialize, Default)]
+struct EditMessageParam
+{
+    //Note: there are two identical fields because contentapi currently has a bit of a dumb
+    //inconsistency that I want to mask from users. Eventually the fields will be consistent and 
+    //this duplication won't be necessary
+    #[serde(skip_serializing_if = "Option::is_none")]
+    message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    activityMessage: Option<String>
+}
+
+impl EditMessageParam
+{
+    fn new(message: Option<String>) -> Self {
+        EditMessageParam { 
+            message: message.clone(),
+            activityMessage: message    
+        }
+    }
+}
+
 //This is the rest of the implementation, which are all the actual functions you want to call!
 impl ApiContext 
 {
@@ -257,12 +280,24 @@ impl ApiContext
     make_post_endpoint!{post_usersensitive<forms::UserSensitive,String>("/user/privatedata")} //Returns token now
     make_post_endpoint!{post_request<FullRequest,RequestResult>("/request")}
     make_post_endpoint!{post_userupdate<User,User>("/write/user")}
-    make_post_endpoint!{post_content<Content,Content>("/write/content")}
+    //make_post_endpoint!{post_content<Content,Content>("/write/content")}
     make_post_endpoint!{post_message<Message,Message>("/write/message")}
     make_post_endpoint!{post_ban<UserBan,UserBan>("/write/ban")}
     make_post_endpoint!{post_registrationconfig<forms::RegistrationConfig,forms::RegistrationConfig>("/user/registrationconfig")}
 
     //These endpoints don't really fit into the normal "make_post_endpoint" macro
+
+    pub async fn post_content(&self, content: &Content, message: Option<String>) -> Result<Content, ApiError>
+    {
+        let msgParam = EditMessageParam::new(message);
+        let msgQuery = serde_urlencoded::to_string(&msgParam).map_err(|e| ApiError::Other(e.to_string()))?;
+
+        self.basic_post_request(AboutRequest{ 
+            endpoint: format!("/write/content?{}", msgQuery),
+            verb: String::from("POST"),
+            post_data: Some(format!("")), 
+        }, content).await
+    }
 
     pub async fn post_delete_content(&self, content_id: i64) -> Result<Content, ApiError> 
     {

@@ -139,7 +139,7 @@ pub async fn post_frontpage(context: PageContext, form: BasicPage) -> Result<Res
 
     let content = to_system_content(form, String::from("frontpage"), SBSPageType::FRONTPAGE.to_string()).await?;
 
-    match context.api_context.post_content(&content).await {
+    match context.api_context.post_content(&content, None).await {
         Ok(_) => {} 
         Err(error) => { errors.push(error.to_user_string()) }
     };
@@ -152,7 +152,7 @@ pub async fn post_alert(mut context: PageContext, form: BasicPage) -> Result<Res
 
     let content = to_system_content(form, String::from("alert"), SBSPageType::ALERT.to_string()).await?;
 
-    match context.api_context.post_content(&content).await {
+    match context.api_context.post_content(&content, None).await {
         Ok(new_alert) => { context.layout_data.raw_alert = new_alert.text; } 
         Err(error) => { errors.push(error.to_user_string()) }
     };
@@ -165,7 +165,7 @@ pub async fn post_docscustom(context: PageContext, form: BasicPage) -> Result<Re
 
     let content = to_system_content(form, String::from("docscustom"), SBSPageType::DOCSCUSTOM.to_string()).await?;
 
-    match context.api_context.post_content(&content).await {
+    match context.api_context.post_content(&content, None).await {
         Ok(_new_docspage) => { },
         Err(error) => { errors.push(error.to_user_string()) }
     };
