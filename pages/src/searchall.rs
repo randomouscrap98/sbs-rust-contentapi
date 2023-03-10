@@ -31,6 +31,9 @@ pub fn render(data: MainLayoutData, search_results: Option<Vec<SearchAllResult>>
                 div #"searchline" {
                     input #"searchinput" type="text" name="search" value=(opt_s!(search_form.search)) placeholder="Search";
                     input type="submit" value="🔎";
+                    @if let Some(ref results) = search_results {
+                        div."aside" #"resultcount" { (results.len()) " result(s)" }
+                    }
                 }
             }
             @if let Some(results) = search_results {

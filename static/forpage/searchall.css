@@ -13,9 +13,19 @@
     max-width: 20em;
 }
 
+#resultcount {
+    margin-left: var(--space_medium);
+    align-self: center;
+}
+
+.searchitem:nth-child(odd) {
+    background: var(--bg_card);
+}
+
 .searchitem { 
     /*margin: calc(0.4 * var(--space_small));*/
-    margin: var(--space_small);
+    padding: calc(0.5 * var(--space_small));
+    border-radius: calc(0.5 * var(--space_small));
     display: flex;
     align-items: center;
 }
@@ -27,4 +37,11 @@
 
 .searchitem .searchicon img {
     width: 1.2em;
+}
+
+ @media screen and (max-width: 30em)
+ {
+    #resultcount {
+        display: none;
+    }
 }
