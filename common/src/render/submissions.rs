@@ -33,8 +33,17 @@ pub fn pageicon_limited(links: &LinkConfig, page: &Content, max: i32) -> Markup
             }
         }
         @else {
-            //This must be a resource!
-            img title="Resource" src={(links.resource_root)"/sb-page.png"};
+            @if page.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION) {
+                //This icon may change later
+                img title="Documentation" src={(links.resource_root)"/sb-docs.png"};
+            }
+            @else if page.literalType.as_deref() == Some(SBSPageType::RESOURCE) {
+                img title="Resource" src={(links.resource_root)"/sb-info.png"};
+            }
+            @else {
+                //Anything else
+                img title="Thread" src={(links.resource_root)"/sb-page.png"};
+            }
         }
     }
 }
