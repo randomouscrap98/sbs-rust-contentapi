@@ -19,8 +19,8 @@ pub fn render(data: MainLayoutData, login_errors: Option<Vec<String>>, recover_e
                 input #"login_username" type="text" required="" name="username";
                 label for="login_password"{"Password:"}
                 input #"login_password" type="password" required="" name="password";
-                label."inline" for="login_extended"{
-                    span{"Very long session:"} 
+                div."inline smallseparate" {
+                    label for="login_extended" {"Very long session:"} 
                     input #"login_extended" type="checkbox" name="long_session" value="true";
                 }
                 input type="submit" value="Login";

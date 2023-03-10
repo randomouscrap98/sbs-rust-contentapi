@@ -42,6 +42,7 @@ pub struct LinkConfig {
 pub struct UserConfig {
     pub language: String,
     pub compact: bool,
+    pub toppagination_posts: bool,
     pub theme: String,
     //pub shadows: bool
 }
@@ -51,6 +52,7 @@ impl Default for UserConfig {
         Self {
             language: String::from("en"),
             compact: false,
+            toppagination_posts: false,
             theme: String::from("sbs"),
             //shadows: false
         }

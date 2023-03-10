@@ -14,31 +14,25 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>) -> String
             h1 { "Local session settings" }
             form method="POST" action={(data.links.http_root)"/sessionsettings"} {
                 (errorlist(errors))
-                label."inline" for="settings-theme" 
-                {
-                    span{"Theme:"}
+                div."inline smallseparate" {
+                    label for="settings-theme" {"Theme:"}
                     select #"settings-theme" name="theme" {
                         @for (key,value) in constants::USERTHEMES {
                             option value=(key) selected[&data.user_config.theme == key] { (value) }
                         }
                     }
                 }
-                label."inline" for="settings-compact" {
-                    span { "Compact mode: " }
+                div."inline smallseparate" {
+                    label for="settings-compact" { "Compact mode: " }
                     input."" #"settings-compact" type="checkbox" name="compact" checked[settings.compact] value="true";
                 }
-                //label."inline" for="settings-shadows" {
-                //    span { "Shadows: " }
-                //    input."" #"settings-shadows" type="checkbox" name="shadows" checked[settings.shadows] value="true";
-                //}
+                div."inline smallseparate" {
+                    label for="settings-toppaginationposts" { "Top Pagination (posts): " }
+                    input."" #"settings-toppaginationposts" type="checkbox" name="toppagination_posts" checked[settings.toppagination_posts] value="true";
+                }
                 input type="submit" value="Save";
             }
             p."aside" { "These settings are persisted in a cookie and only available on this device" }
         }
     }).into_string()
 }
-
-//pub fn render(data: MainLayoutData, form: UserConfig) -> Result<String>
-//{
-//
-//}

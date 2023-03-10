@@ -200,6 +200,12 @@ form {
     display: contents;
 }
 
+.inline {
+    display: flex;
+    align-items: center;
+    max-width: 100%;
+}
+
 a.coolbutton, input.coolbutton {
     padding: 0.2em;
     background: var(--bg_activeselect);
@@ -235,17 +241,6 @@ input.flatlink {
     padding: 0;
     cursor: pointer;
     display: inline;
-}
-
-label.inline {
-    display: flex;
-    align-items: center;
-    max-width: 100%;
-}
-
-label.inline > input, label.inline > select {
-    /* Give space between input and label... assuming that's how it's set up */
-    margin: 0 0.75em;
 }
 
 /* Make checkboxes consistent on all pages */

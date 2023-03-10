@@ -117,23 +117,23 @@ nav .headertab.current {
 
 label {
     display: block;
-    margin-bottom: 0.2em;
+    margin-bottom: calc(0.4 * var(--space_small)); /*0.2em;*/
 }
 
-label.inline {
-    margin-bottom: 0.5em;
-}
-
-form:not(.nospacing) input, form:not(.nospacing) textarea, form:not(.nospacing) select {
+form:not(.nospacing) *:not(.inline) input, 
+form:not(.nospacing) > input, 
+form:not(.nospacing) *:not(.inline) textarea, 
+form:not(.nospacing) > textarea, 
+form:not(.nospacing) *:not(.inline) select,
+form:not(.nospacing) > select {
     display: block;
-    margin-bottom: 0.5em;
+    /* Not currently looking at compact mode; makes inputs too close? */
+    margin-bottom: var(--space_small);
 }
 
-/*form textarea {
-    width: 100%;
-    max-width: 50em;
-    height: 10em;
-}*/
+form:not(.nospacing) .inline {
+    margin-bottom: var(--space_small);
+}
 
 form.editor {
     max-width: 50em; /* Eh? Not sure... */
