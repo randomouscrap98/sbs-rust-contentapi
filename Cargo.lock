@@ -156,7 +156,7 @@ checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
 
 [[package]]
 name = "common"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "bbscope",
  "chrono",
@@ -172,7 +172,7 @@ dependencies = [
 
 [[package]]
 name = "contentapi"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "chrono",
  "hyper",
@@ -749,7 +749,7 @@ checksum = "4d9de1d4cfbf95bd9bec0f6b84d8fb72384d54d82b805cfaa2c047d39426f42d"
 
 [[package]]
 name = "pages"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "base64 0.21.0",
  "bbscope",

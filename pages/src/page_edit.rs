@@ -60,20 +60,11 @@ pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_ca
                     input #"pageedit_title" type="text" name="title" value=(form.title) required placeholder="Careful: first title is used for permanent link text!";
                     label for="pageedit_tagline" { "Tagline:" }
                     input #"pageedit_tagline" type="text" name="description" value=(form.description) required[real_mode != SBSPageType::DOCUMENTATION] placeholder="Short and sweet!";
-                    //label for="pageedit_text" { "Main Page:" }
                     (post_textbox(
                         PostTextboxConfig::basic_with_markup(Some("Main Page:"), "text", &form.text, "markup", form.markup.as_deref())
                             .tid("pageedit_text")
                     )) 
-                        //Some("pageedit_text"), Some("text"), Some(&form.text)))
                     @if real_mode == SBSPageType::DOCUMENTATION {
-                        ////Show the markup selector for documentation (may change in the future)
-                        //label for="pageedit_markup"  { "Markup:" }
-                        //select #"pageedit_markup" name ="markup" required {
-                        //    @for (key, value) in SBSMARKUPS {
-                        //        option value=(key) selected[Some(*key) == form.markup.as_deref()] { (value) }
-                        //    }
-                        //}
                         label for="pageedit_docpath" { "Documentation Path:" }
                         input #"pageedit_docpath" type="text" name="docpath" value=(opt_s!(form.docpath)) required 
                             list="all_docpaths" placeholder="Select existing or enter new";

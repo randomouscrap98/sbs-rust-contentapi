@@ -120,11 +120,11 @@ label {
     margin-bottom: calc(0.4 * var(--space_small)); /*0.2em;*/
 }
 
-form:not(.nospacing) *:not(.inline) input, 
+form:not(.nospacing) *:not(.inline) > input, 
 form:not(.nospacing) > input, 
-form:not(.nospacing) *:not(.inline) textarea, 
+form:not(.nospacing) *:not(.inline) > textarea, 
 form:not(.nospacing) > textarea, 
-form:not(.nospacing) *:not(.inline) select,
+form:not(.nospacing) *:not(.inline) > select,
 form:not(.nospacing) > select {
     display: block;
     /* Not currently looking at compact mode; makes inputs too close? */

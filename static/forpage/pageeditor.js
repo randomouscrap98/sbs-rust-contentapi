@@ -92,6 +92,7 @@ function make_checklist(data, original, id)
         checkContainer.className = "checkitem";
         var label = document.createElement("label");
         var input = document.createElement("input");
+        label.className = "inline"; 
         input.setAttribute("type", "checkbox");
         input.setAttribute("value", data[i][0]);
         input.checked = values.includes(data[i][0]);
