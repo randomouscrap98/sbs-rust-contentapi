@@ -40,8 +40,8 @@ function upgrade_markupeditors()
             e.preventDefault();
 
             var formData = new FormData();
-            formData.append("text", rawtext.textContent);
-            if(markup) formData.append("markup", markup);
+            formData.append("text", rawtext.value);
+            if(markup) formData.append("markup", markup.value);
 
             fetch(SBSBASEURL + "/widget/contentpreview", {
                 method: "POST",

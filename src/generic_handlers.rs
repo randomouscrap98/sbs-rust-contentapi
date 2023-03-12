@@ -111,3 +111,50 @@ pub fn handle_response_with_anycookie(response: common::Response, link_config: &
         }
     }
 }
+
+#[macro_export]
+macro_rules! std_resp {
+    ($render:expr,$context:expr) => {
+        async move {
+            handle_response_with_error($render.await, &$context.global_state.link_config)
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! cf {
+    ($ctx:ident.$setting:ident) => {
+        $ctx.global_state.config.$setting
+    };
+}
+
+#[macro_export]
+macro_rules! gs {
+    ($ctx:ident.$setting:ident) => {
+        $ctx.global_state.$setting
+    };
+}
+
+#[macro_export]
+macro_rules! pc {
+    ($ctx:ident) => {
+        $ctx.page_context
+    };
+    ($ctx:ident.$setting:ident) => {
+        $ctx.page_context.$setting
+    };
+}
+
+/// Silly thing to limit a route by a single flag present (must be i8)
+#[macro_export]
+macro_rules! qflag {
+    ($flag:ident) => {
+        {
+            #[allow(dead_code)]
+            #[derive(Deserialize)]
+            struct QueryFlag { $flag: i8 }
+
+            warp::query::<QueryFlag>()
+        } 
+    };
+}
