@@ -269,6 +269,16 @@ async fn main()
         })
         .boxed();
 
+    let post_contentpreview_route = warp::post()
+        .and(warp::path!("widget" / "contentpreview"))
+        .and(form_filter.clone())
+        .and(warp::body::form::<pages::widget_contentpreview::ContentPreviewForm>())
+        .and(state_filter.clone())
+        .map(|form: pages::widget_contentpreview::ContentPreviewForm, context: RequestContext| {
+            warp::reply::html(pages::widget_contentpreview::render(context.page_context, form))
+        })
+        .boxed();
+
     let get_search_route = warp_get_async!(
         warp::path!("search").and(warp::query::<common::forms::PageSearch>()),
         |search, context:RequestContext| 
@@ -472,6 +482,7 @@ async fn main()
         .or(get_votewidget_route)
         .or(post_votewidget_route)
         .or(get_bbcodepreview_route)
+        .or(post_contentpreview_route)
         .or(get_qrwidget_route)
         .or(get_recentactivity_route)
         .or(post_bbcodepreview_route)

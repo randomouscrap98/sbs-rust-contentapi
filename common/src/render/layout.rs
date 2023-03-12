@@ -98,6 +98,9 @@ pub fn basic_skeleton(data: &MainLayoutData, head_inner: Markup, body_inner: Mar
                 (data.links.style("/base.css"))
                 (data.links.style("/themes.css"))
                 (data.links.script("/base.js"))
+                script {
+                    (PreEscaped("var SBSBASEURL = \"")) (data.links.http_root) (PreEscaped("\";"))
+                }
                 (head_inner)
             }
             body data-compact[data.user_config.compact]

@@ -199,17 +199,22 @@ pub fn post_textbox(config: PostTextboxConfig) -> Markup //id: Option<&str>, nam
                 label for=[&config.textbox_id] { (tlabel) }
             }
             textarea id=[&config.textbox_id] type="text" name=(opt_s!(config.textbox_name)) required 
-                placeholder=r##"[b]bold[/b], [i]italic[/i], 
+                data-text placeholder=r##"[b]bold[/b], [i]italic[/i], 
 [u]underline[/u], [s]strikethrough[/s], 
 [spoiler=text]hidden[/spoiler], [quote=user]text[/quote]
     "##         { (opt_s!(config.textbox_value)) }
+            div."inline mediumseparate" {
+                a."aside flatlink" data-showpreview href="#" style="display: none" { "Preview" }
+                a."aside flatlink" data-clearpreview href="#" style="display: none" { "Clear Preview" }
+            }
+            section data-preview style="display: none" { }
             //So we display the markup ONLY IF we get something for the markup options
             @if let Some(ref markups) = config.markup_options {
                 //div."inline" {
                     @if let Some(ref mlabel) = config.markup_label {
                         label for=[&config.markup_id] { (mlabel) }
                     }
-                    select id=[&config.markup_id] name=(opt_s!(config.markup_name)) required {
+                    select data-markup id=[&config.markup_id] name=(opt_s!(config.markup_name)) required {
                         @for (key, value) in markups {
                             option value=(key) selected[Some(key) == config.markup_value.as_ref()] { (value) }
                         }

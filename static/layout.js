@@ -3,6 +3,7 @@
 
 //This all happens on "defer" so it's fine to do it out in the open like this
 upgrade_forms();
+upgrade_markupeditors();
 upgrade_times();
 upgrade_markup();
 upgrade_code();
@@ -17,20 +18,75 @@ function upgrade_forms()
     }
 }
 
-function upgrade_markup()
+function upgrade_markupeditors()
 {
-    var markups = document.querySelectorAll(".content[data-markup]:not([data-prerendered]");
+    var editors = document.querySelectorAll('.markupeditor');
+    for(var i = 0; i < editors.length; i++)
+    {
+        let editor = editors[i];
+        let showpreview = editor.querySelector("[data-showpreview]");
+        let clearpreview = editor.querySelector("[data-clearpreview]");
+        let preview = editor.querySelector("[data-preview]");
+        let rawtext = editor.querySelector("[data-text]");
+        let markup = editor.querySelector("[data-markup]");
+
+        if(!(showpreview && clearpreview && preview && rawtext)) {
+            console.error("Found markupeditor without required preview skeleton!");
+            continue;
+        }
+
+        showpreview.onclick = (e) =>
+        {
+            e.preventDefault();
+
+            var formData = new FormData();
+            formData.append("text", rawtext.textContent);
+            if(markup) formData.append("markup", markup);
+
+            fetch(SBSBASEURL + "/widget/contentpreview", {
+                method: "POST",
+                body: formData
+            })
+                .then((response) => response.text())
+                .then((text) => {
+                    var parser = new DOMParser();
+                    var doc = parser.parseFromString(text, 'text/html');
+                    var result = doc.body.firstElementChild;
+                    preview.appendChild(result);
+                });
+
+            preview.style = "";
+            clearpreview.style = "";
+        };
+
+        clearpreview.onclick = (e) =>
+        {
+            e.preventDefault();
+            preview.style.display = "none";
+            clearpreview.style.display = "none";
+        };
+
+        //Now that we're setup, unhide the showpreview button
+        showpreview.style = "";
+    }
+}
+
+function upgrade_markup(element)
+{
+    element = element || document;
+    var markups = element.querySelectorAll(".content[data-markup]:not([data-prerendered]");
     for(var i = 0; i < markups.length; i++)
     {
         Markup.convert_lang(markups[i].textContent, markups[i].getAttribute("data-markup") || "plaintext", markups[i]);
     }
 }
 
-function upgrade_code()
+function upgrade_code(element)
 {
-    var codes = document.querySelectorAll(".content .code");
+    element = element || document;
+    var codes = element.querySelectorAll(".content .code");
     upgrade_code_general(codes);
-    codes = document.querySelectorAll(".Markup pre"); //This is what 12y considers code (ugh don't use just pre!!)
+    codes = element.querySelectorAll(".Markup pre"); //This is what 12y considers code (ugh don't use just pre!!)
     upgrade_code_general(codes);
 }
 

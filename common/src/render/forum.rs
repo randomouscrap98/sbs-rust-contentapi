@@ -5,6 +5,7 @@ use contentapi::forms::*;
 use contentapi::permissions::can_user_delete_message;
 use contentapi::permissions::can_user_edit_message;
 use maud::*;
+use serde_json::Value;
 
 use crate::*;
 use crate::view::*;
@@ -483,6 +484,18 @@ pub fn render_content(content: &Content, bbcode: &mut BBCode) -> Markup {
     else {
         html!(div."error" { "No content found? That's not supposed to happen!" })
     }
+}
+
+/// Render content WITHOUT a full content. This is more expensive than just rendering with content (sorry?)
+pub fn render_content_nocontent(text: String, markup: Option<String>, bbcode: &mut BBCode) -> Markup {
+    let mut content = Content::default();
+    content.text = Some(text);
+    if let Some(markup) = markup {
+        let mut values : HashMap<String, Value> = HashMap::new();
+        values.insert(SBSValue::MARKUP.to_string(), markup.into());
+        content.values = Some(values); 
+    }
+    render_content(&content, bbcode)
 }
 
 //WAS consuming bbcode, now i'm not sure. leaving for now
