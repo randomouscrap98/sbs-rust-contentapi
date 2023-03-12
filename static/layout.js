@@ -39,12 +39,15 @@ function upgrade_markupeditors()
         {
             e.preventDefault();
 
-            var formData = new FormData();
+            var formData = new URLSearchParams(); //FormData();
             formData.append("text", rawtext.value);
             if(markup) formData.append("markup", markup.value);
 
             fetch(SBSBASEURL + "/widget/contentpreview", {
                 method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
                 body: formData
             })
                 .then((response) => response.text())
@@ -52,7 +55,9 @@ function upgrade_markupeditors()
                     var parser = new DOMParser();
                     var doc = parser.parseFromString(text, 'text/html');
                     var result = doc.body.firstElementChild;
-                    preview.appendChild(result);
+                    preview.innerHTML = result.outerHTML;
+                    upgrade_markup(preview);
+                    upgrade_code(preview);
                 });
 
             preview.style = "";

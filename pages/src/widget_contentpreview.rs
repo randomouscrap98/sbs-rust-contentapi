@@ -6,8 +6,8 @@ use common::render::layout::*;
 use maud::*;
 use serde::Deserialize;
 
-#[derive(Default, Deserialize)]
-#[serde(default)]
+#[derive(Default, Deserialize, Debug)]
+//#[serde(default)]
 pub struct ContentPreviewForm {
     pub text: String,
     pub markup: Option<String>
