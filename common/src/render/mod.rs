@@ -4,6 +4,8 @@ pub mod submissions;
 
 use chrono::*;
 
+use crate::constants::SBSMARKUPS;
+
 use super::*;
 
 // ----------------------------
@@ -145,3 +147,75 @@ pub fn errorlist(errors: Option<Vec<String>>) -> Markup {
     }
 }
 
+
+#[derive(Default)]
+pub struct PostTextboxConfig {
+    pub textbox_id: Option<String>,
+    pub textbox_name: Option<String>,
+    pub textbox_value: Option<String>,
+    pub textbox_label: Option<String>,
+    pub markup_options: Option<Vec<(String,String)>>,
+    pub markup_id: Option<String>,
+    pub markup_name: Option<String>,
+    pub markup_value: Option<String>,
+    pub markup_label: Option<String>,
+    //pub labels: bool
+}
+
+impl PostTextboxConfig {
+    /// Create a config for a basic textbox with auto-generated ids and NO markup selector
+    pub fn basic(label: Option<&str>, name: &str, value: &str) -> Self {
+        let mut result = Self::default();
+        result.textbox_label = label.and_then(|l| Some(l.to_string()));
+        //Auto generate an id since it probably doesn't matter (we just need it to make the label nice)
+        result.textbox_id = Some(random_id("textedit"));
+        result.textbox_name = Some(name.to_string());
+        result.textbox_value = Some(value.to_string());
+        result
+    }
+    /// Create a config for a basic textbox with auto-generated ids WITH a markup selector (using all available markup)
+    pub fn basic_with_markup(label: Option<&str>, name: &str, value: &str, mname: &str, mvalue: Option<&str>) -> Self {
+        let mut result = Self::basic(label, name, value);
+        result.markup_options = Some(SBSMARKUPS.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect());
+        result.markup_id = Some(random_id("markupselect"));
+        result.markup_name = Some(mname.to_string());
+        result.markup_value = mvalue.and_then(|v| Some(v.to_string())); //Some(mvalue.to_string());
+        result.markup_label = Some("Markup:".to_string());
+        result
+    }
+    pub fn tid(mut self, id: &str) -> Self {
+        self.textbox_id = Some(id.to_string());
+        self
+    }
+}
+
+//Eventually may expand this
+pub fn post_textbox(config: PostTextboxConfig) -> Markup //id: Option<&str>, name: Option<&str>, value: Option<&str>) -> Markup
+{
+    html! {
+        //Put it all under a common parent so we know exactly how to get to all the parts
+        div."markupeditor" {
+            @if let Some(ref tlabel) = config.textbox_label {
+                label for=[&config.textbox_id] { (tlabel) }
+            }
+            textarea id=[&config.textbox_id] type="text" name=(opt_s!(config.textbox_name)) required 
+                placeholder=r##"[b]bold[/b], [i]italic[/i], 
+[u]underline[/u], [s]strikethrough[/s], 
+[spoiler=text]hidden[/spoiler], [quote=user]text[/quote]
+    "##         { (opt_s!(config.textbox_value)) }
+            //So we display the markup ONLY IF we get something for the markup options
+            @if let Some(ref markups) = config.markup_options {
+                //div."inline" {
+                    @if let Some(ref mlabel) = config.markup_label {
+                        label for=[&config.markup_id] { (mlabel) }
+                    }
+                    select id=[&config.markup_id] name=(opt_s!(config.markup_name)) required {
+                        @for (key, value) in markups {
+                            option value=(key) selected[Some(key) == config.markup_value.as_ref()] { (value) }
+                        }
+                    }
+                //}
+            }
+        }
+    }
+}

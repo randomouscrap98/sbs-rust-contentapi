@@ -16,6 +16,7 @@ use serde_urlencoded;
 
 use bbscope::BBCode;
 use contentapi::*;
+use fastrand;
 
 #[macro_export]
 macro_rules! opt_s {
@@ -191,4 +192,8 @@ pub fn parse_compound_value(original: &str) -> Vec<String>
     }
 
     result
+}
+
+pub fn random_id(postfix: &str) -> String {
+    format!("{}_{}", fastrand::u32(..), postfix)
 }

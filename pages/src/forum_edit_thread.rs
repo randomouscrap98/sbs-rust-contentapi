@@ -5,7 +5,7 @@ use contentapi::endpoints::*;
 use common::*;
 use common::forms::*;
 use common::render::*;
-use common::render::forum::*;
+//use common::render::forum::*;
 use common::render::layout::*;
 use maud::*;
 
@@ -39,8 +39,8 @@ pub fn render(data: MainLayoutData, form: ThreadForm, category_info: Option<Cont
                     input #"threadedit_title" type="text" name="title" value=(form.title) required;
                     input #"threadedit_id" type="hidden" name="id" value=(form.id);
                     @if !edit {
-                        label for="threadedit_post" {"Post:"}
-                        (post_textbox(Some("threadedit_post"), Some("post"), None))
+                        //label for="threadedit_post" {"Post:"}
+                        (post_textbox(PostTextboxConfig::basic(Some("Post:"), "post", ""))) // Some("threadedit_post"), Some("post"), None))
                     }
                     @else {
                         label for="threadedit_message"{"Edit message:"}

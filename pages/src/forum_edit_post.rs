@@ -5,7 +5,7 @@ use contentapi::*;
 use common::*;
 use common::forms::*;
 use common::render::*;
-use common::render::forum::*;
+//use common::render::forum::*;
 use common::render::layout::*;
 use contentapi::endpoints::ApiContext;
 use maud::*;
@@ -42,10 +42,7 @@ pub fn render(data: MainLayoutData, form: PostForm, thread_info: Option<Content>
             @if let Some(reply_id) = form.reply_id {
                 input #"postedit_reply_id" type="hidden" name="reply_id" value=(reply_id);
             }
-            @if !widget {
-                label for="postedit_post" {"Post:"}
-            }
-            (post_textbox(Some("postedit_post"), Some("post"), Some(&form.post)))
+            (post_textbox(PostTextboxConfig::basic(if widget { None } else { Some("Post:") }, "post", &form.post))) //Some("postedit_post"), Some("post"), Some(&form.post)))
             input type="submit" value=(submit_value);
         }
     };
