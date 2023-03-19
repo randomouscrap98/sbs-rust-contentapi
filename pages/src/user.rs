@@ -182,7 +182,7 @@ pub async fn get_render_internal(context: PageContext, username: String, ban_err
             badges: badges_raw,
             ban: bans_raw.pop(),
             submissions: conversion::cast_result_safe::<Content>(&result, "content")?,
-            users: conversion::map_users(conversion::cast_result_safe::<User>(&result, "user")?)
+            users: common::view::map_users(conversion::cast_result_safe::<User>(&result, "user")?)
         };
 
         Ok(Response::Render(render(

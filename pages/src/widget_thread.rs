@@ -4,6 +4,7 @@ use contentapi::*;
 use contentapi::conversion::*;
 use common::forms::*;
 use common::forum::*;
+use common::view::*;
 use common::render::layout::*;
 use common::render::forum::*;
 use maud::*;

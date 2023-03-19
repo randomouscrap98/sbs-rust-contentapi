@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use contentapi::{*, conversion::map_users};
+use contentapi::*;
 
 use common::*;
 use common::view::*;

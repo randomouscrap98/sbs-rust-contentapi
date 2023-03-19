@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use common::*;
 use common::constants::SBSPageType;
 use common::forms::AdminSearchParams;
@@ -5,14 +7,12 @@ use common::forms::BasicPage;
 use common::render::*;
 use common::prefab::*;
 use common::render::layout::*;
+use common::view::map_users;
 use contentapi::conversion::cast_result_required;
 use contentapi::forms::*;
 use contentapi::*;
 
-//use contentapi::*;
-//use contentapi::conversion::*;
 use maud::*;
-//use serde::{Serialize, Deserialize};
 
 pub struct AdminRenderData 
 {
@@ -26,7 +26,8 @@ pub struct AdminRenderData
     pub banner_errors: Option<Vec<String>>,
     pub docpage_errors: Option<Vec<String>>,
     pub bans: Vec<UserBan>,
-    pub logs: Vec<AdminLog>
+    pub logs: Vec<AdminLog>,
+    pub list_users: HashMap<i64, User>
 }
 
 impl AdminRenderData
@@ -43,12 +44,14 @@ impl AdminRenderData
             banner_errors: None,
             docpage_errors: None,
             bans: Vec::new(),
-            logs: Vec::new()
+            logs: Vec::new(),
+            list_users: HashMap::new()
         }
     }
 
     pub fn new(data: MainLayoutData, registration_config: RegistrationConfig, frontpage: Option<Content>,
-        banner: Option<Content>, docpage: Option<Content>, bans: Vec<UserBan>, logs: Vec<AdminLog>) -> Self 
+        banner: Option<Content>, docpage: Option<Content>, bans: Vec<UserBan>, logs: Vec<AdminLog>, 
+        users: HashMap<i64, User>) -> Self 
     {
         let mut base = Self::new_empty(data, registration_config);
         base.frontpage = frontpage;
@@ -56,6 +59,7 @@ impl AdminRenderData
         base.docpage = docpage;
         base.bans = bans;
         base.logs = logs;
+        base.list_users = users;
         base
     }
 }
@@ -200,6 +204,7 @@ async fn get_render_data(mut context: PageContext, search: &AdminSearchParams) -
     let result = context.api_context.post_request_profiled_opt(&request, "all_admin_logs").await?;
     let bans = cast_result_required::<UserBan>(&result, "ban")?;
     let logs = cast_result_required::<AdminLog>(&result, "adminlog")?;
+    let users = cast_result_required::<User>(&result, "user")?;
 
     //TODO: link users to bans and then actually find a way to display them!
 
@@ -209,7 +214,7 @@ async fn get_render_data(mut context: PageContext, search: &AdminSearchParams) -
         get_system_frontpage(&mut context.api_context).await?,
         get_system_alert(&mut context.api_context).await?,
         get_system_docscustom(&mut context.api_context).await?,
-        bans, logs
+        bans, logs, map_users(users)
     ))
 }
 

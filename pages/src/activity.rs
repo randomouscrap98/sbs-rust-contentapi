@@ -4,6 +4,7 @@ use common::*;
 use common::constants::*;
 use common::render::*;
 use common::render::layout::*;
+use common::view::*;
 use contentapi::*;
 use contentapi::forms::*;
 use contentapi::conversion::*;
