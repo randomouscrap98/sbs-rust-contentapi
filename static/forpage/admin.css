@@ -1,0 +1,13 @@
+.banabout {
+    flex: 1;
+}
+
+.banlogs .resultitem {
+    flex-wrap: wrap;
+}
+
+.banlogs .logmessage {
+    flex-basis: 100%;
+    padding-left: var(--space_small);
+    padding-top: 0.25em;
+}

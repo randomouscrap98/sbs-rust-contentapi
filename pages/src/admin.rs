@@ -86,6 +86,7 @@ pub fn render(render_data: AdminRenderData, search_params: AdminSearchParams) ->
     }
     let data = render_data.data;
     layout(&data, html!{
+        (data.links.style("/forpage/admin.css"))
         section {
             @if let Some(user) = &data.user {
                 @if user.admin {
@@ -105,20 +106,6 @@ pub fn render(render_data: AdminRenderData, search_params: AdminSearchParams) ->
                         }
                         input type="submit" value="Set (NO WARNING, BE CAREFUL!)";
                     }
-                    hr;
-                    h3 #"adminlogs" { "Admin log:" }
-                    div."adminlogs" {
-                        @for log in render_data.logs {
-                            div."resultitem smallseparate" {
-                                time."aside" { (d(&log.createDate)) } //Let the javascript take care of the format maybe...
-                                span."logid" { "[" (i(&log.id)) "]" } 
-                                span."logmessage" { (opt_s!(log.text)) }
-                            }
-                        }
-                    }
-                    hr;
-                    h3 #"activebans" { "Active bans:" }
-                    p { "Eventually!" }
                     hr;
                     h3 #"update-frontpage" {"Set frontpage (HTML!):"}
                     form."editor" method="POST" action={(data.links.http_root)"/admin?frontpage=1#update-frontpage"} {
@@ -141,6 +128,57 @@ pub fn render(render_data: AdminRenderData, search_params: AdminSearchParams) ->
                         textarea type="text" name="text"{(docpage_text)}
                         input type="submit" value="Update";
                     }
+                    hr;
+                    h3 #"adminlogs" { "Admin log:" }
+                    form."smallseparate compactform" action={(data.current())"#adminlogs"} {
+                        div."inline smallseparate" {
+                            label for="adminlogs_logpage" {"Page:"}
+                            input."smallinput" #"adminlogs_logpage" name="logpage" value=(search_params.logpage);
+                        }
+                        div."inline" {
+                            label for="adminlogs_bans_only" {"Bans only:"}
+                            input #"adminlogs_bans_only" name="bans_only" type="checkbox" value="true" checked[search_params.bans_only];
+                        }
+                        input type="submit" value="Update log search";
+                    }
+                    div."adminlogs" {
+                        @for log in render_data.logs {
+                            div."resultitem smallseparate" {
+                                time."aside" { (d(&log.createDate)) } //Let the javascript take care of the format maybe...
+                                span."logid" { "[" (i(&log.id)) "]" } 
+                                span."logmessage" { (opt_s!(log.text)) }
+                                @if let Some(initiator) = log.initiator {
+                                    @if let Some(user) = render_data.list_users.get(&initiator) {
+                                        a href=(data.links.user(user)) { "(" (user.username) ")" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    hr;
+                    h3 #"activebans" { "Active bans:" }
+                    form."smallseparate compactform" action={(data.current())"#activebans"} {
+                        div."inline smallseparate" {
+                            label for="activebans_banpage" {"Page:"}
+                            input."smallinput" #"activebans_banpage" name="banpage" value=(search_params.banpage);
+                        }
+                        input type="submit" value="Update ban search";
+                    }
+                    div."banlogs" {
+                        @for ban in render_data.bans {
+                            div."resultitem smallseparate" {
+                                time."aside" { (dd(&ban.createDate)) } //Let the javascript take care of the format maybe...
+                                span."banid" title={"Id: " (ban.id) ", Type: " (ban.r#type)} { "[" (ban.id) "-" (ban.r#type) "]" } 
+                                span."banabout" {
+                                    (get_result_user(&data, &render_data.list_users, ban.createUserId))
+                                    span { " banned " }
+                                    (get_result_user(&data, &render_data.list_users, ban.bannedUserId))
+                                    span { " until " (dd(&ban.expireDate)) }
+                                }
+                                span."aside logmessage" { (opt_s!(ban.message)) }
+                            }
+                        }
+                    }
                 }
                 @else {
                     p."error" { "You must be an admin to use this page!" }
@@ -155,6 +193,18 @@ pub fn render(render_data: AdminRenderData, search_params: AdminSearchParams) ->
 
 //So, usually we pass this value in from the config, but I'm rushing and this is just the admin page so it doesn't matter too much
 const PERPAGE: i64 = 100;
+
+fn get_result_user(data: &MainLayoutData, all_users: &HashMap<i64, User>, user_id: i64) -> Markup
+{
+    html!{
+        @if let Some(user) = all_users.get(&user_id) {
+            a href=(data.links.user(user)) { (user.username) }
+        }
+        @else {
+            span { "???(" (user_id) ")"}
+        }
+    }
+}
 
 /// Generate a basic admin render data, since there's so much required to render the admin page now. 
 /// Note that this is the absolute baseline, no errors etc

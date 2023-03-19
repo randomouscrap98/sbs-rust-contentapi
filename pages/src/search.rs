@@ -21,9 +21,9 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
         (data.links.script("/forpage/search.js"))
         section {
             //Don't include an action so it just posts to the same url but with the form as params...?
-            form."smallseparate" method="GET" id="searchform" {
-                label."inline" for="search-type" {
-                    span{"Type: "}
+            form."smallseparate compactform" method="GET" id="searchform" {
+                div."smallseparate inline" {
+                    label for="search-type" {"Type: "}
                     select #"search-type" name="subtype" {
                         @for (value,text) in SEARCHPAGETYPES {
                             option value=(value) selected[Some(*value) == search.subtype.as_deref()] { (text) }
@@ -32,9 +32,9 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                 }
                 //THIS needs to come from parameters! Don't know the categories available unless
                 //we look at the database!
-                label."inline" for="search-category" 
+                div."smallseparate inline" for="search-category" 
                 {
-                    span{"Category:"}
+                    label for="search-category" {"Category:"}
                     select #"search-category" name="category" {
                         option value="0" { "Any" }
                         @for category in &categories {
@@ -47,8 +47,8 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                     }
                 }
                 @if search.subtype.as_deref() == Some(SBSPageType::PROGRAM) {
-                    label."inline" for="search-system" {
-                        span{"System: "}
+                    div."smallseparate inline" {
+                        label for="search-system" {"System: "}
                         select #"search-system" name="system" {
                             @for (value,text) in SBSSYSTEMS {
                                 option value=(value) selected[*value == search.system] { (text) }
@@ -56,26 +56,26 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
                         }
                     }
                 }
-                label."inline" for="search-order" {
-                    span{"Order: "}
+                dv."smallseparate inline" {
+                    label for="search-order" {"Order: "}
                     select #"search-order" name="order" {
                         @for (value,text) in SEARCHPAGEORDERS {
                             option value=(value) selected[*value == search.order] { (text) }
                         }
                     }
                 }
-                label."inline" for="search-text" {
-                    span { "Search: " }
+                div."smallseparate inline" {
+                    label for="search-text" { "Search: " }
                     input."" #"search-text" type="text" name="search" value=[&search.search];
                 }
                 @if search.subtype.as_deref() == Some(SBSPageType::PROGRAM) {
-                    label."inline" for="search-removed" {
-                        span { "Show removed: " }
+                    div."smallseparate inline" {
+                        label for="search-removed" { "Show removed: " }
                         input."" #"search-text" type="checkbox" name="removed" checked[search.removed] value="true";
                     }
                 }
-                label."inline" for="search-page" {
-                    span {"Page: "}
+                div."smallseparate inline" {
+                    label for="search-page" {"Page: "}
                     input."smallinput" #"search-page" type="text" name="page" value=(search.page); 
                 }
 

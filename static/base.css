@@ -272,6 +272,12 @@ input[readonly], textarea[readonly] {
     align-items: center;
 }
 
+form.compactform {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+
 /*  ---------------------------------------
     Generalized navigation (pagination/etc) 
     ---------------------------------------  */
