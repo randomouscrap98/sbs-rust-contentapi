@@ -145,5 +145,6 @@ pub struct ThreadQuery {
 #[serde(default)]
 pub struct AdminSearchParams {
     pub banpage: u32,
-    pub logpage: u32
+    pub logpage: u32,
+    pub bans_only: bool
 }

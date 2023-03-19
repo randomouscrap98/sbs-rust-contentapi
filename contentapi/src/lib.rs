@@ -351,6 +351,24 @@ pub struct Activity
     pub action: Option<i8>
 }
 
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+#[serde(default)]
+pub struct AdminLog
+{
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub r#type: Option<i8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub createDate: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub initiator: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target: Option<i64>
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct UserPrivate
 {

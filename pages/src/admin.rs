@@ -5,6 +5,7 @@ use common::forms::BasicPage;
 use common::render::*;
 use common::prefab::*;
 use common::render::layout::*;
+use contentapi::conversion::cast_result_required;
 use contentapi::forms::*;
 use contentapi::*;
 
@@ -24,6 +25,8 @@ pub struct AdminRenderData
     pub frontpage_errors: Option<Vec<String>>,
     pub banner_errors: Option<Vec<String>>,
     pub docpage_errors: Option<Vec<String>>,
+    pub bans: Vec<UserBan>,
+    pub logs: Vec<AdminLog>
 }
 
 impl AdminRenderData
@@ -38,17 +41,21 @@ impl AdminRenderData
             registrationconfig_errors: None,
             frontpage_errors: None,
             banner_errors: None,
-            docpage_errors: None
+            docpage_errors: None,
+            bans: Vec::new(),
+            logs: Vec::new()
         }
     }
 
     pub fn new(data: MainLayoutData, registration_config: RegistrationConfig, frontpage: Option<Content>,
-        banner: Option<Content>, docpage: Option<Content>) -> Self 
+        banner: Option<Content>, docpage: Option<Content>, bans: Vec<UserBan>, logs: Vec<AdminLog>) -> Self 
     {
         let mut base = Self::new_empty(data, registration_config);
         base.frontpage = frontpage;
         base.banner = banner;
         base.docpage = docpage;
+        base.bans = bans;
+        base.logs = logs;
         base
     }
 }
@@ -95,10 +102,18 @@ pub fn render(render_data: AdminRenderData, search_params: AdminSearchParams) ->
                         input type="submit" value="Set (NO WARNING, BE CAREFUL!)";
                     }
                     hr;
-                    h3 { "Admin log:" }
-                    p { "Eventually!" }
+                    h3 #"adminlogs" { "Admin log:" }
+                    div."adminlogs" {
+                        @for log in render_data.logs {
+                            div."resultitem smallseparate" {
+                                time."aside" { (d(&log.createDate)) } //Let the javascript take care of the format maybe...
+                                span."logid" { "[" (i(&log.id)) "]" } 
+                                span."logmessage" { (opt_s!(log.text)) }
+                            }
+                        }
+                    }
                     hr;
-                    h3 { "Active bans:" }
+                    h3 #"activebans" { "Active bans:" }
                     p { "Eventually!" }
                     hr;
                     h3 #"update-frontpage" {"Set frontpage (HTML!):"}
@@ -134,26 +149,74 @@ pub fn render(render_data: AdminRenderData, search_params: AdminSearchParams) ->
     }).into_string()
 }
 
+//So, usually we pass this value in from the config, but I'm rushing and this is just the admin page so it doesn't matter too much
+const PERPAGE: i64 = 100;
+
 /// Generate a basic admin render data, since there's so much required to render the admin page now. 
 /// Note that this is the absolute baseline, no errors etc
-async fn get_base_render_data(mut context: PageContext) -> Result<AdminRenderData, Error>
+async fn get_render_data(mut context: PageContext, search: &AdminSearchParams) -> Result<AdminRenderData, Error>
 {
+    //Need to go lookup some data, use the page to skip. We ask for "all" all the time, because we want
+    //them to be LOGS, and admins can get to the user page to see if they're banned maybe...
+    let mut request = FullRequest::new();
+    //TODO: add all the admin log types to the contentapi crate
+    add_value!(request, "bantypes", vec![12, 13]); //12 = ban_create, 13 = ban_edit
+
+    let query = if search.bans_only {
+        format!("type in @bantypes")
+    }
+    else {
+        String::from("")
+    };
+
+    let logs_request = build_request!(
+        RequestType::adminlog,
+        String::from("*"),
+        query,
+        String::from("id_desc"),
+        PERPAGE,
+        (PERPAGE * search.logpage as i64)
+    );
+    request.requests.push(logs_request);
+
+    //Only want ACTIVE bans!!
+    let bans_request = build_request!(
+        RequestType::ban,
+        String::from("*"),
+        String::from("!activebans()"),
+        String::from("id_desc"),
+        PERPAGE,
+        (PERPAGE * search.banpage as i64)
+    );
+    request.requests.push(bans_request);
+
+    let users_request = build_request!(
+        RequestType::user,
+        String::from("*"),
+        format!("id in @ban.createUserId or id in @ban.bannedUserId or id in @adminlog.initiator")
+    );
+    request.requests.push(users_request);
+
+    let result = context.api_context.post_request_profiled_opt(&request, "all_admin_logs").await?;
+    let bans = cast_result_required::<UserBan>(&result, "ban")?;
+    let logs = cast_result_required::<AdminLog>(&result, "adminlog")?;
+
+    //TODO: link users to bans and then actually find a way to display them!
+
     Ok(AdminRenderData::new(
         context.layout_data,
         context.api_context.get_registrationconfig().await?,
         get_system_frontpage(&mut context.api_context).await?,
         get_system_alert(&mut context.api_context).await?,
-        get_system_docscustom(&mut context.api_context).await?
+        get_system_docscustom(&mut context.api_context).await?,
+        bans, logs
     ))
 }
 
-//async fn get_render_internal(mut context: PageContext, registrationconfig_errors: Option<Vec<String>>,
-//    frontpage_errors: Option<Vec<String>>, banner_errors: Option<Vec<String>>, docscustom_errors: Option<Vec<String>>) -> Result<Response, Error>
-//{
-//
-//    Ok(Response::Render(render(context.layout_data, frontpage, banner, docscustom, reg_config, 
-//        registrationconfig_errors, frontpage_errors, banner_errors, docscustom_errors)))
-//}
+async fn get_base_render_data(context: PageContext) -> Result<AdminRenderData, Error>
+{
+    get_render_data(context, &AdminSearchParams::default()).await
+}
 
 pub fn render_nosearch(render_data: AdminRenderData) -> Response
 {
@@ -162,7 +225,7 @@ pub fn render_nosearch(render_data: AdminRenderData) -> Response
 
 pub async fn get_render(context: PageContext, search_params: AdminSearchParams) -> Result<Response, Error> 
 {
-    Ok(Response::Render(render(get_base_render_data(context).await?, search_params)))
+    Ok(Response::Render(render(get_render_data(context, &search_params).await?, search_params)))
 }
 
 pub async fn post_registrationconfig(context: PageContext, form: RegistrationConfig) -> Result<Response, Error>

@@ -40,7 +40,7 @@ pub fn render(data: MainLayoutData, search_results: Option<Vec<SearchAllResult>>
                 div #"searchresults" {
                     @if results.len() > 0 {
                         @for ref result in results {
-                            div."smallseparate searchitem" {
+                            div."smallseparate resultitem" {
                                 @match result {
                                     SearchAllResult::Content(content) => {
                                         span."threadicon searchicon"  { (pageicon_limited(&data.links, content, 1)) }

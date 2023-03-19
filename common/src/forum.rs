@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use super::*;
 use crate::constants::*;
+use crate::view::*;
 
 use contentapi::conversion::*;
 use contentapi::*;

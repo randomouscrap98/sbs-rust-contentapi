@@ -258,6 +258,19 @@ input[readonly], textarea[readonly] {
     filter: opacity(0.5) brightness(0.9);
 }
 
+/*  ---------------------------------------
+        Result lists (like search/etc)
+    ---------------------------------------  */
+.resultitem:nth-child(odd) {
+    background: var(--bg_card);
+}
+
+.resultitem { 
+    padding: calc(0.5 * var(--space_small));
+    border-radius: calc(0.5 * var(--space_small));
+    display: flex;
+    align-items: center;
+}
 
 /*  ---------------------------------------
     Generalized navigation (pagination/etc) 

@@ -192,3 +192,18 @@ pub fn get_doctree<'a>(documentation: &'a Vec<Content>) -> DocTreeNode<'a>
 
     root_node
 }
+
+/// Convert a vector of users into a hashmap (id is key)
+pub fn map_users(users: Vec<User>) -> HashMap<i64, User> {
+    users.into_iter().map(|u| (u.id, u)).collect::<HashMap<i64, User>>()
+}
+
+/// Convert a vector of content into a hashmap (id is key)
+pub fn map_content(content: Vec<Content>) -> HashMap<i64, Content> {
+    content.into_iter().map(|u| (u.id.unwrap_or_else(|| 0), u)).collect::<HashMap<i64, Content>>()
+}
+
+/// Convert a vector of messages into a hashmap (id is key)
+pub fn map_messages(messages: Vec<Message>) -> HashMap<i64, Message> {
+    messages.into_iter().map(|u| (u.id.unwrap_or_else(|| 0), u)).collect::<HashMap<i64, Message>>()
+}
