@@ -1,5 +1,6 @@
 use common::*;
 use common::constants::SBSPageType;
+use common::forms::AdminSearchParams;
 use common::forms::BasicPage;
 use common::render::*;
 use common::prefab::*;
@@ -12,28 +13,67 @@ use contentapi::*;
 use maud::*;
 //use serde::{Serialize, Deserialize};
 
-pub fn render(data: MainLayoutData, frontpage: Option<Content>, banner: Option<Content>, docpage: Option<Content>, registration_config: RegistrationConfig, 
-    registrationconfig_errors: Option<Vec<String>>, frontpage_errors: Option<Vec<String>>, banner_errors: Option<Vec<String>>,
-    docpage_errors: Option<Vec<String>>) -> String
+pub struct AdminRenderData 
+{
+    pub data: MainLayoutData,
+    pub frontpage: Option<Content>,
+    pub banner: Option<Content>,
+    pub docpage: Option<Content>,
+    pub registration_config: RegistrationConfig,
+    pub registrationconfig_errors: Option<Vec<String>>,
+    pub frontpage_errors: Option<Vec<String>>,
+    pub banner_errors: Option<Vec<String>>,
+    pub docpage_errors: Option<Vec<String>>,
+}
+
+impl AdminRenderData
+{
+    pub fn new_empty(data: MainLayoutData, registration_config: RegistrationConfig) -> Self {
+        Self {
+            data,
+            frontpage: None,
+            banner: None,
+            docpage: None,
+            registration_config,
+            registrationconfig_errors: None,
+            frontpage_errors: None,
+            banner_errors: None,
+            docpage_errors: None
+        }
+    }
+
+    pub fn new(data: MainLayoutData, registration_config: RegistrationConfig, frontpage: Option<Content>,
+        banner: Option<Content>, docpage: Option<Content>) -> Self 
+    {
+        let mut base = Self::new_empty(data, registration_config);
+        base.frontpage = frontpage;
+        base.banner = banner;
+        base.docpage = docpage;
+        base
+    }
+}
+
+pub fn render(render_data: AdminRenderData, search_params: AdminSearchParams) -> String
 {
     let mut frontpage_id: i64 = 0;
     let mut frontpage_text: String = String::from("");
-    if let Some(frontpage) = frontpage {
+    if let Some(frontpage) = render_data.frontpage {
         if let Some(id) = frontpage.id { frontpage_id = id }
         if let Some(text) = frontpage.text { frontpage_text = text.clone() }
     }
     let mut banner_id: i64 = 0;
     let mut banner_text: String = String::from("");
-    if let Some(banner) = banner {
+    if let Some(banner) = render_data.banner {
         if let Some(id) = banner.id { banner_id = id }
         if let Some(text) = banner.text { banner_text = text.clone() }
     }
     let mut docpage_id: i64 = 0;
     let mut docpage_text: String = String::from("");
-    if let Some(docpage) = docpage{
+    if let Some(docpage) = render_data.docpage{
         if let Some(id) = docpage.id { docpage_id = id }
         if let Some(text) = docpage.text { docpage_text = text.clone() }
     }
+    let data = render_data.data;
     layout(&data, html!{
         section {
             @if let Some(user) = &data.user {
@@ -43,10 +83,10 @@ pub fn render(data: MainLayoutData, frontpage: Option<Content>, banner: Option<C
                     hr;
                     h3 { "Registration config:" }
                     form method="POST" action={(data.links.http_root)"/admin?registrationconfig=1"} {
-                        (errorlist(registrationconfig_errors))
+                        (errorlist(render_data.registrationconfig_errors))
                         label."inline" for="registrationconfig_enabled"{
                             span{"Allow registration:"} 
-                            input #"registrationconfig_enabled" type="checkbox" name="enabled" value="true" checked[registration_config.enabled];
+                            input #"registrationconfig_enabled" type="checkbox" name="enabled" value="true" checked[render_data.registration_config.enabled];
                         }
                         p."error aside" { 
                             "WARN: these settings are temporary and are reset when the server is reset! To make permanent "
@@ -63,21 +103,21 @@ pub fn render(data: MainLayoutData, frontpage: Option<Content>, banner: Option<C
                     hr;
                     h3 #"update-frontpage" {"Set frontpage (HTML!):"}
                     form."editor" method="POST" action={(data.links.http_root)"/admin?frontpage=1#update-frontpage"} {
-                        (errorlist(frontpage_errors))
+                        (errorlist(render_data.frontpage_errors))
                         input type="hidden" name="id" value=(frontpage_id);
                         textarea type="text" name="text"{(frontpage_text)}
                         input type="submit" value="Update";
                     }
                     h3 #"update-alert" {"Set alert banner (HTML!):"}
                     form."editor" method="POST" action={(data.links.http_root)"/admin?alert=1#update-alert"} {
-                        (errorlist(banner_errors))
+                        (errorlist(render_data.banner_errors))
                         input type="hidden" name="id" value=(banner_id);
                         textarea type="text" name="text"{(banner_text)}
                         input type="submit" value="Update";
                     }
                     h3 #"update-docpage" {"Set Documentation preamble (HTML!):"}
                     form."editor" method="POST" action={(data.links.http_root)"/admin?docscustom=1#update-docpage"} {
-                        (errorlist(docpage_errors))
+                        (errorlist(render_data.docpage_errors))
                         input type="hidden" name="id" value=(docpage_id);
                         textarea type="text" name="text"{(docpage_text)}
                         input type="submit" value="Update";
@@ -94,20 +134,35 @@ pub fn render(data: MainLayoutData, frontpage: Option<Content>, banner: Option<C
     }).into_string()
 }
 
-async fn get_render_internal(mut context: PageContext, registrationconfig_errors: Option<Vec<String>>,
-    frontpage_errors: Option<Vec<String>>, banner_errors: Option<Vec<String>>, docscustom_errors: Option<Vec<String>>) -> Result<Response, Error>
+/// Generate a basic admin render data, since there's so much required to render the admin page now. 
+/// Note that this is the absolute baseline, no errors etc
+async fn get_base_render_data(mut context: PageContext) -> Result<AdminRenderData, Error>
 {
-    let reg_config = context.api_context.get_registrationconfig().await?;
-    let frontpage = get_system_frontpage(&mut context.api_context).await?;
-    let banner = get_system_alert(&mut context.api_context).await?;
-    let docscustom = get_system_docscustom(&mut context.api_context).await?;
-    Ok(Response::Render(render(context.layout_data, frontpage, banner, docscustom, reg_config, 
-        registrationconfig_errors, frontpage_errors, banner_errors, docscustom_errors)))
+    Ok(AdminRenderData::new(
+        context.layout_data,
+        context.api_context.get_registrationconfig().await?,
+        get_system_frontpage(&mut context.api_context).await?,
+        get_system_alert(&mut context.api_context).await?,
+        get_system_docscustom(&mut context.api_context).await?
+    ))
 }
 
-pub async fn get_render(context: PageContext) -> Result<Response, Error> 
+//async fn get_render_internal(mut context: PageContext, registrationconfig_errors: Option<Vec<String>>,
+//    frontpage_errors: Option<Vec<String>>, banner_errors: Option<Vec<String>>, docscustom_errors: Option<Vec<String>>) -> Result<Response, Error>
+//{
+//
+//    Ok(Response::Render(render(context.layout_data, frontpage, banner, docscustom, reg_config, 
+//        registrationconfig_errors, frontpage_errors, banner_errors, docscustom_errors)))
+//}
+
+pub fn render_nosearch(render_data: AdminRenderData) -> Response
 {
-    get_render_internal(context, None, None, None, None).await
+    Response::Render(render(render_data, AdminSearchParams::default()))
+}
+
+pub async fn get_render(context: PageContext, search_params: AdminSearchParams) -> Result<Response, Error> 
+{
+    Ok(Response::Render(render(get_base_render_data(context).await?, search_params)))
 }
 
 pub async fn post_registrationconfig(context: PageContext, form: RegistrationConfig) -> Result<Response, Error>
@@ -117,7 +172,9 @@ pub async fn post_registrationconfig(context: PageContext, form: RegistrationCon
         Ok(_token) => {} //Don't need the token
         Err(error) => { errors.push(error.to_user_string()) }
     };
-    get_render_internal(context, Some(errors), None, None, None).await
+    let mut render_data = get_base_render_data(context).await?;
+    render_data.registrationconfig_errors = Some(errors);
+    Ok(render_nosearch(render_data))
 }
 
 async fn to_system_content(form: BasicPage, name: String, literal_type: String) -> Result<Content, Error> {
@@ -143,7 +200,9 @@ pub async fn post_frontpage(context: PageContext, form: BasicPage) -> Result<Res
         Ok(_) => {} 
         Err(error) => { errors.push(error.to_user_string()) }
     };
-    get_render_internal(context, None, Some(errors), None, None).await
+    let mut render_data = get_base_render_data(context).await?;
+    render_data.frontpage_errors = Some(errors);
+    Ok(render_nosearch(render_data))
 }
 
 pub async fn post_alert(mut context: PageContext, form: BasicPage) -> Result<Response, Error>
@@ -156,7 +215,9 @@ pub async fn post_alert(mut context: PageContext, form: BasicPage) -> Result<Res
         Ok(new_alert) => { context.layout_data.raw_alert = new_alert.text; } 
         Err(error) => { errors.push(error.to_user_string()) }
     };
-    get_render_internal(context, None, None, Some(errors), None).await
+    let mut render_data = get_base_render_data(context).await?;
+    render_data.banner_errors = Some(errors);
+    Ok(render_nosearch(render_data))
 }
 
 pub async fn post_docscustom(context: PageContext, form: BasicPage) -> Result<Response, Error>
@@ -169,5 +230,7 @@ pub async fn post_docscustom(context: PageContext, form: BasicPage) -> Result<Re
         Ok(_new_docspage) => { },
         Err(error) => { errors.push(error.to_user_string()) }
     };
-    get_render_internal(context, None, None, None, Some(errors)).await
+    let mut render_data = get_base_render_data(context).await?;
+    render_data.docpage_errors = Some(errors);
+    Ok(render_nosearch(render_data))
 }

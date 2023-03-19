@@ -153,8 +153,8 @@ async fn main()
         |context:RequestContext| warp::reply::html(pages::integrationtest::render(pc!(context.layout_data))));
 
     let get_admin_route = warp_get_async!(
-        warp::path!("admin"),
-        |context:RequestContext| std_resp!(pages::admin::get_render(pc!(context)), context)
+        warp::path!("admin").and(warp::query::<common::forms::AdminSearchParams>()),
+        |search, context:RequestContext| std_resp!(pages::admin::get_render(pc!(context), search), context)
     );
 
     let get_documentation_route = warp_get_async!(

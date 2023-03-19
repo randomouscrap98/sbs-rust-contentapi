@@ -140,3 +140,10 @@ pub struct ThreadQuery {
     pub reply: Option<i64>,
     pub selected: Option<i64>
 }
+
+#[derive(Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct AdminSearchParams {
+    pub banpage: u32,
+    pub logpage: u32
+}
