@@ -23,6 +23,10 @@ pub struct UserPackage {
     pub ban: Option<UserBan>
 }
 
+const FULLBAN: i8 = BanType::PRIVATE | BanType::PUBLIC | BanType::USER;
+const NORMALBAN: i8 = BanType::PUBLIC;
+const PERMABANHOURS: f64 = 24.0 * 365.0 * 100.0;
+
 pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackage, 
     ban_errors: Option<Vec<String>>, unban_errors: Option<Vec<String>>) -> String 
 {
@@ -86,7 +90,10 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackag
                         form #"unbanform" method="POST" action={(data.links.http_root)"/user/"(user.username)"?unban=1#admincontrols"} {
                             (errorlist(unban_errors))
                             p."error" { 
-                                "ALREADY BANNED for: "  
+                                "ALREADY" 
+                                @if (ban.r#type & FULLBAN) == FULLBAN { b { " FULL " } }
+                                @else { " " }
+                                "BANNED for: "  
                                 time datetime=(dd(&ban.expireDate)) { (timeago_future(&ban.expireDate)) }
                                 " - " (opt_s!(ban.message))
                             }
@@ -100,9 +107,13 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackag
                         form #"banform" method="POST" action={(data.links.http_root)"/user/"(user.username)"?ban=1#admincontrols"} {
                             (errorlist(ban_errors))
                             label for="ban_hours"{"Ban hours:"}
-                            input #"ban_hours" type="text" required="" name="hours";
+                            input #"ban_hours" type="text" required="" name="hours" placeholder="0 = 100 years";
                             label for="ban_reason"{"Ban Reason (shown to user):"}
                             input."largeinput" #"ban_reason" type="text" required="" name="reason";
+                            div."smallseparate inline" {
+                                label for="ban_full" { "FULL ban (blocks from user modifications and dms): " }
+                                input #"ban_full" type="checkbox" name="full" value="true"; 
+                            }
                             input type="hidden" name="user_id" value=(user.id);
                             input type="submit" value="Ban";
                         }
@@ -204,9 +215,11 @@ pub async fn get_render(context: PageContext, username: String) -> Result<Respon
     get_render_internal(context, username, None, None).await
 }
 
-pub async fn post_ban(context: PageContext, username: String, ban: BanForm) -> Result<Response, Error>
+pub async fn post_ban(context: PageContext, username: String, mut ban: BanForm) -> Result<Response, Error>
 {
     let mut errors = Vec::new();
+
+    if ban.hours <= 0.0 { ban.hours = PERMABANHOURS; }
 
     if let Some(user) = &context.layout_data.user 
     {
@@ -220,7 +233,7 @@ pub async fn post_ban(context: PageContext, username: String, ban: BanForm) -> R
             // converting it to whole-number milliseconds (Duration only takes i64)
             expireDate: chrono::Utc::now() + chrono::Duration::milliseconds((ban.hours * 60f64 * 60f64 * 1000f64) as i64),
             message: Some(ban.reason),
-            r#type: BanType::PUBLIC //THIS WILL EVENTUALLY BE CONFIGURABLE!
+            r#type: if ban.full { FULLBAN } else { NORMALBAN } 
         };
 
         match context.api_context.post_ban(&real_ban).await {

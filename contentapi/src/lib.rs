@@ -110,7 +110,8 @@ byte_enum!{ UserType => {
 byte_enum!{ BanType => {
     (NONE:0i8),
     (PUBLIC:1i8),
-    (PRIVATE:2i8)
+    (PRIVATE:2i8),
+    (USER:4i8)
 }}
 
 byte_enum!{ UserRelationType => {

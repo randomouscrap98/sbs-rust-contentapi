@@ -24,6 +24,8 @@ pub struct BanForm
     pub user_id: i64,
     pub reason: String,
     pub hours: f64,
+    #[serde(default)]
+    pub full: bool
 }
 
 #[derive(Serialize, Deserialize, Debug)]
