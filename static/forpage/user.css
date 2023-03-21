@@ -12,6 +12,14 @@
 }
 #userinfo {
     display: flex;
+    align-items: flex-end;
+}
+#docwritericon {
+    /*font-size: 1.2em;*/
+    /*line-height: 1.4; /* what is this?? it just isn't aligned right... */
+}
+#adminicon {
+    /*font-size: 1.2em;*/
 }
 #pageuser > img {
     margin-right: 1.2em;

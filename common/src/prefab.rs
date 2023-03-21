@@ -199,3 +199,14 @@ pub async fn get_all_documentation(context: &mut ApiContext) -> Result<Vec<Conte
     Ok(result)
 }
 
+pub const DOCPARENTMINIMALFIELDS: &str = "id,hash,permissions";
+
+pub async fn get_documentation_parent(context: &mut ApiContext, fields: &str) -> Result<Content, ApiError>
+{
+    context.get_content_by_hash(DOCSPARENTHASH, fields).await
+}
+
+pub async fn get_documentation_group(context: &mut ApiContext) -> Result<User, ApiError>
+{
+    context.get_user_by_username(DOCSGROUPUSERNAME, "*").await //User has lots of required fields, just do *
+}

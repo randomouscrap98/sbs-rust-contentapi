@@ -524,13 +524,19 @@ pub fn can_edit_thread(user: &User, thread: &Content) -> bool
     can_user_action(user, "U", thread)
 }
 
-pub fn can_delete_thread(user: &User, _thread: &Content) -> bool
+pub fn can_delete_thread(user: &User, thread: &Content) -> bool
 {
     //NOTE: we WERE going to have groups and all that for "moderators" but no more: apparently contentapi
     //doesn't let you modify comments/posts unless you're super, which means moderators would HAVE to 
-    //be super users anyway. As such, since we're only allowing "mods" to delete threads, this check
-    //is sufficient
-    user.admin
+    //be super users anyway.  As such, since we're only allowing "mods" to delete threads, this check
+    //is sufficient. Or at least, it WOULD BE if there weren't documentation maintainers, so we do a normal
+    //delete check for documentation only
+    if thread.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION) {
+        can_user_action(user, "D", thread)
+    }
+    else {
+        user.admin
+    }
 }
 
 pub fn can_create_post(user: &User, thread: &Content) -> bool

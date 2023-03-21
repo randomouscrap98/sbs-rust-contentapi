@@ -1,7 +1,7 @@
 
 use common::*;
 use common::constants::SBSPageType;
-use common::prefab::{get_all_documentation, get_system_docscustom};
+use common::prefab::{get_all_documentation, get_system_docscustom, DOCPARENTMINIMALFIELDS, get_documentation_parent};
 use common::render::forum::display_doctree;
 use common::render::layout::*;
 use contentapi::*;
@@ -32,7 +32,7 @@ pub fn render(data: MainLayoutData, documentation: &Vec<Content>, docparent: Con
 
 pub async fn get_render(mut context: PageContext) -> Result<Response, Error> {
     let documentation = get_all_documentation(&mut context.api_context).await?;
-    let docparent = context.api_context.get_content_by_hash("system-docparent", "id,hash,permissions").await?;
+    let docparent = get_documentation_parent(&mut context.api_context, DOCPARENTMINIMALFIELDS).await?;
     let docscustom = get_system_docscustom(&mut context.api_context).await?;
     Ok(Response::Render(render(context.layout_data, &documentation, docparent, docscustom)))
 }
