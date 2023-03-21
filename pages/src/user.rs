@@ -28,7 +28,7 @@ const NORMALBAN: i8 = BanType::PUBLIC;
 const PERMABANHOURS: f64 = 24.0 * 365.0 * 100.0;
 
 pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackage, 
-    ban_errors: Option<Vec<String>>, unban_errors: Option<Vec<String>>) -> String 
+    ban_errors: Option<Vec<String>>, unban_errors: Option<Vec<String>>, userset_errors: Option<Vec<String>>) -> String 
 {
     let user = user_package.user;
 
@@ -85,9 +85,9 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackag
         @if let Some(current_user) = &data.user {
             @if current_user.admin {
                 section #"admincontrols" {
-                    h2 { "Admin controls:" }
+                    h3 { "Ban controls:" }
                     @if let Some(ban) = &user_package.ban {
-                        form #"unbanform" method="POST" action={(data.links.http_root)"/user/"(user.username)"?unban=1#admincontrols"} {
+                        form #"unbanform" method="POST" action={(data.links.user(&user))"?unban=1#admincontrols"} {
                             (errorlist(unban_errors))
                             p."error" { 
                                 "ALREADY" 
@@ -104,7 +104,7 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackag
                         }
                     }
                     @else {
-                        form #"banform" method="POST" action={(data.links.http_root)"/user/"(user.username)"?ban=1#admincontrols"} {
+                        form #"banform" method="POST" action={(data.links.user(&user))"?ban=1#admincontrols"} {
                             (errorlist(ban_errors))
                             label for="ban_hours"{"Ban hours:"}
                             input #"ban_hours" type="text" required="" name="hours" placeholder="0 = 100 years";
@@ -118,6 +118,20 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackag
                             input type="submit" value="Ban";
                         }
                     }
+                    hr;
+                    h3 #"update-user" {"Update user info:"}
+                    form method="POST" action={(data.links.user(&user))"?userinfo=1#update-user"} { 
+                        p."aside" { 
+                            "You can override a user's username and avatar here. Note that they'll be able to change it back "
+                            "by default unless you 'full ban' them. So, this form is only useful when full banning a user."
+                        }
+                        (errorlist(userset_errors))
+                        label for="update_username"{"Username:"}
+                        input #"update_username" type="text" name="username" value=(user.username);
+                        label for="update_avatar"{"Avatar:"}
+                        input #"update_avatar" type="text" name="avatar" value=(user.avatar);
+                        input type="submit" value="Update";
+                    }
                 }
             }
         }
@@ -126,7 +140,7 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackag
 
 
 pub async fn get_render_internal(context: PageContext, username: String, ban_errors: Option<Vec<String>>,
-    unban_errors: Option<Vec<String>>) -> Result<Response, Error>
+    unban_errors: Option<Vec<String>>, userset_errors: Option<Vec<String>>) -> Result<Response, Error>
 {
     //Go get the user and their userpage
     let mut request = FullRequest::new();
@@ -201,7 +215,8 @@ pub async fn get_render_internal(context: PageContext, username: String, ban_err
             context.bbcode, 
             package,
             ban_errors,
-            unban_errors
+            unban_errors,
+            userset_errors
         )))
     }
     else {
@@ -212,7 +227,7 @@ pub async fn get_render_internal(context: PageContext, username: String, ban_err
 
 pub async fn get_render(context: PageContext, username: String) -> Result<Response, Error>
 {
-    get_render_internal(context, username, None, None).await
+    get_render_internal(context, username, None, None, None).await
 }
 
 pub async fn post_ban(context: PageContext, username: String, mut ban: BanForm) -> Result<Response, Error>
@@ -245,7 +260,7 @@ pub async fn post_ban(context: PageContext, username: String, mut ban: BanForm) 
         errors.push("Must be logged in to ban users!".to_string());
     }
 
-    get_render_internal(context, username, Some(errors), None).await
+    get_render_internal(context, username, Some(errors), None, None).await
 }
 
 
@@ -278,5 +293,32 @@ pub async fn post_unban(context: PageContext, username: String, unban: UnbanForm
         errors.push(format!("Couldn't find ban with id {}", unban.id));
     }
 
-    get_render_internal(context, username, None, Some(errors)).await
+    get_render_internal(context, username, None, Some(errors), None).await
+}
+
+/// Endpoint for admins to post user info updates for users. Note that if normal users attempt to use this endpoint,
+/// contentapi should reject them since you're not allowed to change other user's junk
+pub async fn post_userinfo(context: PageContext, username: String, update: UserUpdate) -> Result<Response, Error>
+{
+    let mut errors = Vec::new();
+
+    //Go find the user. Remember you have to use SPECIFICALLY the username from the route, NOT from the form!
+    match context.api_context.get_user_by_username(&username, "*").await {
+        Ok(mut user) => {
+            user.username = update.username.clone(); 
+            user.avatar = update.avatar.clone();
+            match context.api_context.post_userupdate(&user).await { 
+                Ok(new_user) => { 
+                    return Ok(Response::Redirect(context.layout_data.links.user(&new_user)))
+                }, //Return a redirect to the NEW user
+                Err(error) => errors.push(error.to_user_string())
+            }
+        },
+        Err(error) => {
+            errors.push(error.to_user_string());
+        }
+    }
+
+    //If you get here, it's almost certainly an error
+    get_render_internal(context, username, None, None, Some(errors)).await
 }

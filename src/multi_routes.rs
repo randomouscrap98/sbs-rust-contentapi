@@ -315,7 +315,7 @@ pub fn post_userhome_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, 
 {
     // Primary endpoint: update regular user data
     let userhome_post = warp::any()
-        .and(warp::body::form::<pages::userhome::UserUpdate>())
+        .and(warp::body::form::<common::forms::UserUpdate>())
         .and(state_filter.clone())
         .and_then(|form, context: RequestContext| 
             std_resp!(pages::userhome::post_info_render(pc!(context), form), context)
@@ -412,5 +412,13 @@ pub fn post_user_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form
             std_resp!(pages::user::post_unban(pc!(context), username, form), context)
         ).boxed();
 
-    user_ban_route.or(user_unban_route).boxed()
+    let user_updateinfo_route = base_route.clone()
+        .and(qflag!(userinfo)) 
+        .and(warp::body::form::<common::forms::UserUpdate>())
+        .and(state_filter.clone())
+        .and_then(|username, _query, form, context: RequestContext| 
+            std_resp!(pages::user::post_userinfo(pc!(context), username, form), context)
+        ).boxed();
+
+    user_ban_route.or(user_unban_route).or(user_updateinfo_route).boxed()
 }

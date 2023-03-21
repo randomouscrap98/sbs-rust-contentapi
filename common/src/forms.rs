@@ -150,3 +150,10 @@ pub struct AdminSearchParams {
     pub logpage: u32,
     pub bans_only: bool
 }
+
+#[derive(Deserialize, Debug)]
+pub struct UserUpdate
+{
+    pub username: String,
+    pub avatar: String
+}

@@ -1,12 +1,12 @@
 use common::*;
 use common::forms::BasicPage;
+use common::forms::UserUpdate;
 use common::render::*;
 use common::render::layout::*;
 use contentapi::*;
 use contentapi::endpoints::*;
 use contentapi::forms::*;
 use maud::*;
-use serde::Deserialize;
 
 
 pub fn render(data: MainLayoutData, private: Option<contentapi::UserPrivate>, userbio: Option<Content>,
@@ -129,13 +129,6 @@ pub async fn get_render(context: PageContext) -> Result<Response, Error> {
     get_render_internal(context, None, None, None).await
 }
 
-
-#[derive(Deserialize, Debug)]
-pub struct UserUpdate
-{
-    pub username: String,
-    pub avatar: String
-}
 
 /// Post to update normal info like username, avatar, etc. Note that although this may return an "Error", this is not from
 /// having a POST error, it's from a render error for userhome
