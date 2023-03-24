@@ -1,6 +1,26 @@
 //The website is designed to have maximum usability without javascript. As such, most of what
 //you'll find here are quality of life improvements
 
+//change Markup link handler for sbs: scheme
+//mainly convenient for docs links after import
+Markup.renderer.url_scheme['sbs:'] = (url, thing) => {
+    var slashidx = url.pathname.indexOf("/")
+    var front = url.pathname.slice(0,slashidx);
+    var back = url.pathname.slice(slashidx+1);
+    var lunk;
+    
+    switch(front) {
+        case "page":
+            lunk = "/forum/thread/"+back;
+            break;
+        default:
+            lunk = "/"+url.pathname;
+            break;
+    }
+    
+    return SBSBASEURL+lunk;
+};
+
 //This all happens on "defer" so it's fine to do it out in the open like this
 upgrade_forms();
 upgrade_markupeditors();
