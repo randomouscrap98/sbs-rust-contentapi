@@ -46,9 +46,9 @@ checksum = "a4a4ddaa51a5bc52a6948f74c06d20aaaddb71924eab79b8c97a8c556e942d6a"
 
 [[package]]
 name = "bbscope"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa10b11e925a12740707b6c0b7814d132f816fd4683336ca4483665c71351adb"
+checksum = "661d858aa81986678c5ae03edbef2f19f099819f7264a8174939e7a37c21c5c4"
 dependencies = [
  "html-escape",
  "onestop",
@@ -743,9 +743,13 @@ checksum = "86f0b0d4bf799edbc74508c1e8bf170ff5f41238e5f8225603ca7caaae2b7860"
 
 [[package]]
 name = "onestop"
-version = "0.0.1"
+version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d9de1d4cfbf95bd9bec0f6b84d8fb72384d54d82b805cfaa2c047d39426f42d"
+checksum = "5c1fd5cba3245fd06032623642e02d20cfc9fa82be7cd07d9e5a49bd19f77514"
+dependencies = [
+ "serde",
+ "toml",
+]
 
 [[package]]
 name = "pages"
@@ -759,7 +763,6 @@ dependencies = [
  "flate2",
  "maud",
  "md5",
- "onestop",
  "qrcode",
  "serde",
  "serde_json",

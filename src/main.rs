@@ -5,10 +5,8 @@ use chrono::SecondsFormat;
 use common::LinkConfig;
 
 use serde::Deserialize;
-//use warp::filters::BoxedFilter;
-use warp::{Filter, Rejection}; //, Reply};
+use warp::{Filter, Rejection};
 
-mod config;
 mod errors;
 mod generic_handlers;
 mod state;
@@ -23,10 +21,9 @@ static CONFIGNAME : &str = "settings";
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
 
-
 //The standard config we want here in this application. This macro is ugly but 
 //it produces a config object that can load from a chain of json files
-config::create_config!{
+onestop::create_config!{
     Config, OptConfig => {
         api_endpoint: String,
         http_root: String,
