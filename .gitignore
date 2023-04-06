@@ -4,4 +4,6 @@ plan.txt
 settings.*.toml
 /contentapi_copy
 run*.sh
+/junk
+/publish
 
