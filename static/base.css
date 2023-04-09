@@ -380,7 +380,11 @@ form.compactform {
 .content .code .string, .Markup pre .string { color: var(--code_string); }
 .content .code .label, .Markup pre .label { color: var(--code_label); }
 .content .code .function, .Markup pre .function { color: var(--code_function); } 
-.content .code, .Markup pre { color: var(--code_fg); background-color: var(--code_bg); }
+.content .code, .Markup pre { 
+   color: var(--code_fg); 
+   background-color: var(--code_bg); 
+   max-height: 80vh;
+}
 
 .postpreview {
     overflow: hidden;
