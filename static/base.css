@@ -1,3 +1,5 @@
+/* import css overrides for 12y pages */
+@import url("custom_12y.css");
 
 /* all the css variables to control common document constants */
 :root {
