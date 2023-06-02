@@ -2,7 +2,6 @@
 //you'll find here are quality of life improvements
 
 //change Markup link handler for sbs: scheme
-//mainly convenient for docs links after import
 Markup.renderer.url_scheme['sbs:'] = (url, thing) => {
     var slashidx = url.pathname.indexOf("/")
     var front = url.pathname.slice(0,slashidx);
@@ -12,6 +11,9 @@ Markup.renderer.url_scheme['sbs:'] = (url, thing) => {
     switch(front) {
         case "page":
             lunk = "/forum/thread/"+back;
+            break;
+        case "docs":
+            lunk = "/forum/thread/docs-"+back;
             break;
         default:
             lunk = "/"+url.pathname;

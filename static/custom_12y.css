@@ -1,0 +1,33 @@
+/* site CSS rules for 12y pages */
+/* these changes are primarily for consistency with the rest of the site */
+
+
+/* why such an aggressive rule??? */
+.Markup, .Markup * {
+	word-break: unset !important;
+}
+
+.Markup code {
+	/* match look on the rest of the site */
+	background: transparent !important;
+	font-family: monospace !important;
+	padding: initial !important;
+	color: var(--tc_error) !important;
+	/* should icode be bold? */
+	font-weight: bold;
+	font-size: unset !important;
+}
+
+.Markup code, .Markup pre {
+	/* fix flow issues with code
+	 * (i dont even know why it was set how it was)
+	 * ideally this will force layout to take break opportunities elsewhere */
+	line-break: normal !important;
+	word-break: keep-all !important;
+	hyphens: none;
+	overflow-wrap: break-word;
+}
+
+.Markup pre {
+	overflow-x: auto;
+}
