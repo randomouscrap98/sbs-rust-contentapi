@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bbscope::BBCode;
-use contentapi::endpoints::{ApiContext};
+use contentapi::endpoints::ApiContext;
 use common::{LinkConfig, MainLayoutData, UserConfig, PageContext};
 // use warp::path::FullPath;
 
@@ -29,7 +29,7 @@ pub struct RequestContext {
 
 impl RequestContext {
     pub async fn generate(state: Arc<GlobalState>, path: &str, token: Option<String>, config_raw: Option<String>) -> 
-        Result<Self, common::Error> 
+        Result<Self, common::response::Error> 
     {
         #[cfg(feature = "profiling")]
         let profiler = onestop::OneList::<onestop::OneDuration>::new(); //One profiler per request

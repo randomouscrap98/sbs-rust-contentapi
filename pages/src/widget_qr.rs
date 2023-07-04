@@ -1,8 +1,9 @@
 use std::io::Write;
 
 use common::*;
-use common::prefab::{get_fullpage_by_hash};
+use common::prefab::get_fullpage_by_hash;
 use common::render::layout::*;
+use common::response::*;
 use flate2::write::ZlibEncoder;
 use maud::*;
 use qrcode::QrCode;

@@ -5,6 +5,7 @@ use common::render::layout::*;
 use common::forum::*;
 use common::pagination::*;
 use common::render::forum::*;
+use common::response::*;
 use common::view::*;
 use common::prefab::*;
 

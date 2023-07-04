@@ -7,6 +7,7 @@ use common::forum::*;
 use common::view::*;
 use common::render::layout::*;
 use common::render::forum::*;
+use common::response::*;
 use maud::*;
 
 
