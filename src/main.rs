@@ -11,6 +11,7 @@ use serde::Deserialize;
 //mod generic_handlers;
 //mod multi_routes;
 mod state;
+mod routing;
 
 //use crate::errors::*;
 //use crate::generic_handlers::*;
@@ -42,15 +43,6 @@ onestop::create_config!{
         host_address: String,
     }
 }
-
-//macro_rules! std_resp_legacy {
-//    ($render:expr,$context:expr) => {
-//        async move {
-//            handle_response(errwrap!($render.await)?, &$context.global_state.link_config)
-//        }
-//    };
-//}
-
 
 #[tokio::main]
 async fn main() 
@@ -94,6 +86,14 @@ async fn main()
     });
 
     let address = global_state.config.host_address.parse::<SocketAddr>().unwrap();
+    let app = routing::get_all_routes();
+
+    //let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    //tracing::debug!("listening on {}", addr);
+    axum::Server::bind(&address)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
 
     //let fs_static_route = warp::path("static").and(warp::fs::dir("static")).boxed();
     //let fs_favicon_route = warp::path("favicon.ico").and(warp::fs::file("static/resources/favicon.ico")).boxed();
