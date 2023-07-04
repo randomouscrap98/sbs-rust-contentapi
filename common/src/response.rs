@@ -52,7 +52,8 @@ impl Error {
 
 
 /// Response is powerful enough to represent both errors and responses, so this function flattens
-/// a result of either response or error into just a response
+/// a result of either response or error into just a response. Why have both? I don't know... sometimes something
+/// is an error and you want to know!!
 pub fn flatten(result: Result<Response, Error>) -> Response
 {
     match result
@@ -91,5 +92,12 @@ impl axum::response::IntoResponse for Response {
                 ).into_response(),
             Response::Redirect(uri) => axum::response::Redirect::temporary(&uri).into_response()
         }
+    }
+}
+
+#[cfg(feature = "axum")]
+impl axum::response::IntoResponse for Error {
+    fn into_response(self) -> axum::response::Response {
+        flatten(Err(self)).into_response()
     }
 }

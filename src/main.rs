@@ -86,7 +86,7 @@ async fn main()
     });
 
     let address = global_state.config.host_address.parse::<SocketAddr>().unwrap();
-    let app = routing::get_all_routes();
+    let app = routing::get_all_routes(global_state.clone());
 
     //let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     //tracing::debug!("listening on {}", addr);

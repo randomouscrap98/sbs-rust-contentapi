@@ -2,17 +2,14 @@ use std::sync::Arc;
 
 use axum::{
     routing::{get, post},
-    http::StatusCode,
-    response::{IntoResponse, Html},
-    Json, Router, extract::State,
+    Router, extract::{State, DefaultBodyLimit, Path},
 };
 
-use common::Response;
-use tower_http::services::{ServeDir, ServeFile};
+use tower_http::{services::{ServeDir, ServeFile}, limit::RequestBodyLimitLayer};
 
-use crate::state::RequestContext;
+use crate::state::{RequestContext, GlobalState};
 
-pub fn get_all_routes() -> Router 
+pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router 
 {
     // build our application with a route
     let app = Router::new()
@@ -20,16 +17,16 @@ pub fn get_all_routes() -> Router
         .nest_service("/static", ServeDir::new("static"))
         .nest_service("/favicon.ico", ServeFile::new("static/resources/favicon.ico"))
         .nest_service("/robots.txt", ServeFile::new("static/robots.txt"))
+        .with_state(gstate.clone())
+        .layer(DefaultBodyLimit::disable())
+        .layer(RequestBodyLimitLayer::new(
+            gstate.config.body_maxsize as usize
+        ))
     ;
     //let get_index_route = warp_get_async!(
     //    warp::path::end(), 
     //    |context:RequestContext| std_resp!(pages::index::get_render(pc!(context)), context)
     //);
-
-        // `GET /` goes to `root`
-        //.route("/", get(root))
-        // `POST /users` goes to `create_user`
-        //.route("/users", post(create_user));
 
     app
 }
@@ -43,7 +40,8 @@ pub fn get_all_routes() -> Router
     * 
  */
 
-pub async fn get_index(State(context) : State<Arc<RequestContext>>) -> Response //Result<Html<String>, ResponseError>
+pub async fn get_index(State(gstate) : State<Arc<GlobalState>>, path : axum::http::Uri) -> Result<common::response::Response, common::response::Error> //Result<Html<String>, ResponseError>
 {
-    Ok(Html(pages::index::get_render(context)))
+    let context = RequestContext::generate(gstate, &path.to_string(), None, None).await?;
+    Ok(pages::index::get_render(context.page_context).await?)
 }
