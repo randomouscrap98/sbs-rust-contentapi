@@ -86,8 +86,6 @@ async fn main()
     let address = global_state.config.host_address.parse::<SocketAddr>().unwrap();
     let app = routing::get_all_routes(global_state.clone());
 
-    //let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    //tracing::debug!("listening on {}", addr);
     axum::Server::bind(&address)
         .serve(app.into_make_service())
         .await
@@ -152,10 +150,6 @@ async fn main()
     //let get_sessionsettings_route = warp_get!(warp::path!("sessionsettings"),
     //    |context:RequestContext| warp::reply::html(pages::sessionsettings::render(pc!(context.layout_data), None)));
 
-    //let get_bbcodepreview_route = warp_get!(warp::path!("widget" / "bbcodepreview"),
-    //    |context:RequestContext| warp::reply::html(pages::widget_bbcodepreview::render(pc!(context.layout_data), &gs!(context.bbcode), None)));
-
-
 
     //let get_logout_route = warp_get_async!(warp::path!("logout"),
     //    |context:RequestContext| async move {
@@ -194,15 +188,6 @@ async fn main()
     //    })
     //    .boxed();
 
-    //let post_bbcodepreview_route = warp::post()
-    //    .and(warp::path!("widget" / "bbcodepreview"))
-    //    .and(form_filter.clone())
-    //    .and(warp::body::form::<common::forms::BasicText>())
-    //    .and(state_filter.clone())
-    //    .map(|form: common::forms::BasicText, context: RequestContext| {
-    //        warp::reply::html(pages::widget_bbcodepreview::render(context.page_context.layout_data, &context.global_state.bbcode, Some(form.text)))
-    //    })
-    //    .boxed();
 
     //let post_contentpreview_route = warp::post()
     //    .and(warp::path!("widget" / "contentpreview"))

@@ -2,6 +2,7 @@ use bbscope::BBCode;
 
 use common::*;
 use common::render::layout::*;
+use common::response::*;
 use maud::*;
 
 pub fn render(data: MainLayoutData, bbcode: &BBCode, text: Option<String>) -> String 
@@ -21,4 +22,13 @@ pub fn render(data: MainLayoutData, bbcode: &BBCode, text: Option<String>) -> St
             }
         }
     }).into_string()
+}
+
+pub async fn get_render(context: PageContext) -> Result<Response, Error> {
+    Ok(Response::Render(render(context.layout_data, &context.bbcode, None)))
+}
+
+
+pub async fn post_render(context: PageContext, text: String) -> Result<Response, Error> {
+    Ok(Response::Render(render(context.layout_data, &context.bbcode, Some(text))))
 }
