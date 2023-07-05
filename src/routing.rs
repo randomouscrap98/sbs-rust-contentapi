@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     routing::{get, post},
-    Router, extract::{State, DefaultBodyLimit, Path, Query},
+    Router, extract::{State, DefaultBodyLimit, Path, Query, FromRequestParts}, async_trait, Extension, middleware::from_extractor_with_state,
 };
 
 use tower_cookies::{CookieManagerLayer, Cookies};
@@ -13,14 +13,20 @@ use crate::state::{RequestContext, GlobalState};
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
 
+type StdResponse = Result<common::response::Response, common::response::Error>;
+
 pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router 
 {
     // build our application with a route
     let app = Router::new()
-        .route("/", get(get_index))
-        .route("/about", get(get_about))
-        .route("/integrationtest", get(get_integrationtest))
-        .route("/documentation", get(get_documentation))
+        .route("/", 
+            get(|context: RequestContext| async { StdResponse::Ok(pages::index::get_render(context.page_context).await?) }))
+        .route("/about", 
+            get(|context: RequestContext| async { StdResponse::Ok(pages::about::get_render(context.page_context).await?)}))
+        .route("/integrationtest", 
+            get(|context: RequestContext| async { StdResponse::Ok(pages::integrationtest::get_render(context.page_context).await?) }))
+        .route("/documentation", 
+            get(|context: RequestContext| async { StdResponse::Ok(pages::documentation::get_render(context.page_context).await?) }))
         .route("/allsearch", get(get_allsearch))
         .nest_service("/static", ServeDir::new("static"))
         .nest_service("/favicon.ico", ServeFile::new("static/resources/favicon.ico"))
@@ -49,21 +55,35 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
  */
 
 
-// #[async_trait]
-// impl<S> FromRequestParts<S> for RequestContext
-// where
-//     S: Send + Sync,
-//{
-//    type Rejection = (StatusCode, &'static str);
-//
-//    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-//        if let Some(user_agent) = parts.headers.get(USER_AGENT) {
-//            Ok(ExtractUserAgent(user_agent.clone()))
-//        } else {
-//            Err((StatusCode::BAD_REQUEST, "`User-Agent` header is missing"))
-//        }
-//    }
-//}
+#[async_trait]
+impl FromRequestParts<Arc<GlobalState>> for RequestContext
+where
+    //S: AsRef<Arc<GlobalState>>,
+{
+    type Rejection = common::response::Error;
+
+    async fn from_request_parts(parts: &mut axum::http::request::Parts, state: &Arc<GlobalState>) -> Result<Self, Self::Rejection>
+    {
+        use axum::RequestPartsExt;
+        let cookies = parts.extract::<Cookies>()
+            .await
+            .map_err(|err| Self::Rejection::Other(err.1.to_string()))?;
+        let path = parts.extract::<axum::http::Uri>()
+            .await.unwrap(); //Infallible?
+
+        let token = cookies.get(SESSIONCOOKIE).and_then(|t| Some(t.value().to_string()));
+        let config_raw = cookies.get(SETTINGSCOOKIE).and_then(|c| Some(c.value().to_string()));
+        RequestContext::generate(state.clone(), &path.to_string(), token, config_raw).await
+
+        //let whatever = State::<Arc<GlobalState>>::from_request_parts(parts, state); //from_request_parts(parts).await; //from_extractor_with_state(state).await;
+        //let whatever = State::<Arc<GlobalState>>::from_request_parts(parts, state)//from_request_parts(parts).await; //from_extractor_with_state(state).await;
+        //TypedHeader::<Authorization<Bearer>>::
+        //use axum::RequestPartsExt;
+        //let State(state) = parts.extract_with_state::<Arc<GlobalState>, _>(state)
+        //    .await
+        //    .map_err(|err| err.into_response())?;
+    }
+}
 
 async fn get_request_context(gstate: Arc<GlobalState>, path: axum::http::Uri, cookies: Cookies) -> Result<RequestContext, common::response::Error>
 {
@@ -83,29 +103,24 @@ async fn get_request_context(gstate: Arc<GlobalState>, path: axum::http::Uri, co
 //}
 //pub(crate) use std_get;
 
-type StdResponse = Result<common::response::Response, common::response::Error>;
 
-async fn get_index(State(gstate) : State<Arc<GlobalState>>, path : axum::http::Uri, cookies: Cookies) -> StdResponse
+async fn get_index(context: RequestContext) -> StdResponse
 {
-    let context = get_request_context(gstate, path, cookies).await?;
     Ok(pages::index::get_render(context.page_context).await?)
 }
 
-async fn get_about(State(gstate) : State<Arc<GlobalState>>, path : axum::http::Uri, cookies: Cookies) -> StdResponse
+async fn get_about(context: RequestContext) -> StdResponse
 {
-    let context = get_request_context(gstate, path, cookies).await?;
     Ok(pages::about::get_render(context.page_context).await?)
 }
 
-async fn get_integrationtest(State(gstate) : State<Arc<GlobalState>>, path : axum::http::Uri, cookies: Cookies) -> StdResponse
+async fn get_integrationtest(context: RequestContext) -> StdResponse
 {
-    let context = get_request_context(gstate, path, cookies).await?;
     Ok(pages::integrationtest::get_render(context.page_context).await?)
 }
 
-async fn get_documentation(State(gstate) : State<Arc<GlobalState>>, path : axum::http::Uri, cookies: Cookies) -> StdResponse
+async fn get_documentation(context: RequestContext) -> StdResponse
 {
-    let context = get_request_context(gstate, path, cookies).await?;
     Ok(pages::documentation::get_render(context.page_context).await?)
 }
 
