@@ -9,6 +9,7 @@ use tower_cookies::{CookieManagerLayer, Cookies};
 use tower_http::{services::{ServeDir, ServeFile}, limit::RequestBodyLimitLayer};
 
 use crate::state::{RequestContext, GlobalState};
+use crate::srender;
 
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
@@ -20,25 +21,20 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
     // build our application with a route
     let app = Router::new()
         .route("/", 
-            get(|context: RequestContext| 
-                async { StdResponse::Ok(pages::index::get_render(context.page_context).await?) }))
+            get(|context: RequestContext| srender!(pages::index::get_render(context.page_context))))
         .route("/about", 
-            get(|context: RequestContext| 
-                async { StdResponse::Ok(pages::about::get_render(context.page_context).await?)}))
+            get(|context: RequestContext| srender!(pages::about::get_render(context.page_context))))
         .route("/integrationtest", 
-            get(|context: RequestContext| 
-                async { StdResponse::Ok(pages::integrationtest::get_render(context.page_context).await?) }))
+            get(|context: RequestContext| srender!(pages::integrationtest::get_render(context.page_context))))
         .route("/documentation", 
-            get(|context: RequestContext| 
-                async { StdResponse::Ok(pages::documentation::get_render(context.page_context).await?) }))
+            get(|context: RequestContext| srender!(pages::documentation::get_render(context.page_context))))
         .route("/allsearch", 
             get(|context: RequestContext, Query(search): Query<pages::searchall::SearchAllForm>| 
-                async { StdResponse::Ok(pages::searchall::get_render(context.page_context, search).await?) }))
+                srender!(pages::searchall::get_render(context.page_context, search))))
         .route("/widget/bbcodepreview", 
-            get(|context: RequestContext| 
-                async { StdResponse::Ok(pages::widget_bbcodepreview::get_render(context.page_context).await?) })
-            .post(|context: RequestContext, Form(form) : Form<common::forms::BasicText>|
-                async { StdResponse::Ok(pages::widget_bbcodepreview::post_render(context.page_context, form.text).await?)}))
+            get(|context: RequestContext| srender!(pages::widget_bbcodepreview::get_render(context.page_context)))
+            .post(|context: RequestContext, Form(form) : Form<common::forms::BasicText>| 
+                srender!(pages::widget_bbcodepreview::post_render(context.page_context, form.text))))
         .nest_service("/static", ServeDir::new("static"))
         .nest_service("/favicon.ico", ServeFile::new("static/resources/favicon.ico"))
         .nest_service("/robots.txt", ServeFile::new("static/robots.txt"))
@@ -50,21 +46,16 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
         .layer(CookieManagerLayer::new())
     ;
 
-    //let get_bbcodepreview_route = warp_get!(warp::path!("widget" / "bbcodepreview"),
-    //    |context:RequestContext| warp::reply::html(pages::widget_bbcodepreview::render(pc!(context.layout_data), &gs!(context.bbcode), None)));
-
-
-    //let post_bbcodepreview_route = warp::post()
-    //    .and(warp::path!("widget" / "bbcodepreview"))
-    //    .and(form_filter.clone())
-    //    .and(warp::body::form::<common::forms::BasicText>())
-    //    .and(state_filter.clone())
-    //    .map(|form: common::forms::BasicText, context: RequestContext| {
-    //        warp::reply::html(pages::widget_bbcodepreview::render(context.page_context.layout_data, &context.global_state.bbcode, Some(form.text)))
-    //    })
-    //    .boxed();
-
     app
+}
+
+#[macro_export]
+macro_rules! srender {
+    ($render:expr) => {
+        async {
+            StdResponse::Ok($render.await?)
+        }
+    };
 }
 
 /*
