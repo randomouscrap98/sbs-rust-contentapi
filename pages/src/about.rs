@@ -1,5 +1,6 @@
 use common::*;
 use common::render::layout::*;
+use common::response::*;
 use maud::html;
 
 pub fn render(data: MainLayoutData) -> String {
@@ -73,4 +74,8 @@ pub fn render(data: MainLayoutData) -> String {
                 you can contact me over email at smilebasicsource@gmail.com."# }
         }
     }).into_string()
+}
+
+pub async fn get_render(context: PageContext) -> Result<Response, Error> {
+    Ok(Response::Render(render(context.layout_data)))
 }

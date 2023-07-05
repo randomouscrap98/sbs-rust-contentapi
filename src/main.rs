@@ -19,8 +19,6 @@ mod routing;
 use crate::state::*;
 
 static CONFIGNAME : &str = "settings";
-static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
-static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
 
 //The standard config we want here in this application. This macro is ugly but 
 //it produces a config object that can load from a chain of json files
@@ -134,25 +132,9 @@ async fn main()
     //    };
     //}
 
-    //let get_index_route = warp_get_async!(
-    //    warp::path::end(), 
-    //    |context:RequestContext| std_resp!(pages::index::get_render(pc!(context)), context)
-    //);
-
-    //let get_about_route = warp_get!(warp::path!("about"),
-    //    |context:RequestContext| warp::reply::html(pages::about::render(pc!(context.layout_data))));
-
-    //let get_integrationtest_route = warp_get!(warp::path!("integrationtest"),
-    //    |context:RequestContext| warp::reply::html(pages::integrationtest::render(pc!(context.layout_data))));
-
     //let get_admin_route = warp_get_async!(
     //    warp::path!("admin").and(warp::query::<common::forms::AdminSearchParams>()),
     //    |search, context:RequestContext| std_resp!(pages::admin::get_render(pc!(context), search), context)
-    //);
-
-    //let get_documentation_route = warp_get_async!(
-    //    warp::path!("documentation"), 
-    //    |context:RequestContext| std_resp!(pages::documentation::get_render(pc!(context)), context)
     //);
 
     //let get_login_route = warp_get!(warp::path!("login"),
