@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use axum::{
-    routing::{get, post},
-    Router, extract::{DefaultBodyLimit, Query, FromRequestParts}, async_trait, Form, 
+    routing::get,
+    Router, extract::{DefaultBodyLimit, Query, FromRequestParts, Path}, async_trait, Form, http::StatusCode, response::IntoResponse, 
 };
 
 use tower_cookies::{CookieManagerLayer, Cookies, Cookie, cookie::{time::Duration, SameSite}};
@@ -14,6 +14,7 @@ use crate::srender;
 pub mod login;
 pub mod userhome;
 pub mod admin;
+pub mod user;
 
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
@@ -32,6 +33,9 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
             get(|context: RequestContext| srender!(pages::integrationtest::get_render(context.page_context))))
         .route("/documentation", 
             get(|context: RequestContext| srender!(pages::documentation::get_render(context.page_context))))
+        .route("/activity",
+            get(|context: RequestContext, Query(search): Query<pages::activity::ActivityQuery>|
+                srender!(pages::activity::get_render(context.page_context, search, context.global_state.config.default_activity_count))))
         .route("/search",
             get(|context: RequestContext, Query(search): Query<common::forms::PageSearch>|
                 srender!(pages::search::get_render(context.page_context, search, context.global_state.config.default_display_pages))))
@@ -49,6 +53,10 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
                 cookies.remove(Cookie::new(SESSIONCOOKIE, ""));
                 common::response::Response::Redirect(String::from("/"))
             }))
+        .route("/user/:username",
+            get(|context: RequestContext, Path(username): Path<String>| 
+                srender!(pages::user::get_render(context.page_context, username)))
+            .post(user::user_post))
         .route("/admin", 
             get(|context: RequestContext, Query(search): Query<common::forms::AdminSearchParams>| 
                 srender!(pages::admin::get_render(context.page_context, search)))
@@ -68,18 +76,6 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
         .layer(CookieManagerLayer::new())
     ;
 
-    //let get_search_route = warp_get_async!(
-    //    warp::path!("search").and(warp::query::<common::forms::PageSearch>()),
-    //    |search, context:RequestContext| 
-    //        std_resp!(pages::search::get_render(pc!(context), search, cf!(context.default_display_pages)), context)
-    //);
-
-    //let get_activity_route = warp_get_async!(
-    //    warp::path!("activity").and(warp::query::<pages::activity::ActivityQuery>()),
-    //    |query, context:RequestContext| 
-    //        std_resp!(pages::activity::get_render(pc!(context), query, cf!(context.default_activity_count)), context)
-    //);
-
     app
 }
 
@@ -90,6 +86,12 @@ fn get_new_login_cookie(token: String, expire_seconds : i64) -> Cookie<'static> 
         .same_site(SameSite::Strict)
         .path("/")
         .finish()
+}
+
+//Produce an error response if a "typed" form does not include the type (those POST endpoints that
+//accept multiple forms, and the type is the query parameter)
+fn missing_type_response() -> axum::response::Response {
+    (StatusCode::BAD_REQUEST, "Missing requisite submission type indicator (query parameter)").into_response()
 }
 
 #[macro_export]
@@ -111,9 +113,7 @@ macro_rules! qflag {
             struct LocalQueryParam { $flag: i8 }
 
             let mut result = false;
-            let uri = $req.uri();
-            let query = uri.query();
-            if let Some(query) = query {
+            if let Some(query) = $req.uri().query() {
                 let r = serde_urlencoded::from_str::<LocalQueryParam>(query);
                 if r.is_ok() {
                     result = true;

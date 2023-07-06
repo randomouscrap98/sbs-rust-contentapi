@@ -177,19 +177,6 @@ async fn main()
     //    })
     //    .boxed();
 
-    //let get_search_route = warp_get_async!(
-    //    warp::path!("search").and(warp::query::<common::forms::PageSearch>()),
-    //    |search, context:RequestContext| 
-    //        std_resp!(pages::search::get_render(pc!(context), search, cf!(context.default_display_pages)), context)
-    //);
-
-    //let get_activity_route = warp_get_async!(
-    //    warp::path!("activity").and(warp::query::<pages::activity::ActivityQuery>()),
-    //    |query, context:RequestContext| 
-    //        std_resp!(pages::activity::get_render(pc!(context), query, cf!(context.default_activity_count)), context)
-    //);
-
-
     //#[derive(Deserialize, Debug)]
     //struct SimplePage { page: Option<i32> }
 

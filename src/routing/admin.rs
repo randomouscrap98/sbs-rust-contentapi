@@ -1,35 +1,10 @@
-use axum::{async_trait, extract::FromRequest, Form, response::IntoResponse, http::StatusCode};
+use axum::{async_trait, extract::FromRequest, Form, response::IntoResponse};
 
 use crate::{state::RequestContext, qflag, parseform};
 
-use super::StdResponse;
+use super::{StdResponse, missing_type_response};
 
-    //let admin_registrationconfig_post = warp::any()
-    //    .and(qflag!(registrationconfig)) 
-    //    //For now, we use the direct form
-    //    .and(warp::body::form::<contentapi::forms::RegistrationConfig>())
-    //    .and_then(|_query, form, context: RequestContext| 
-    //        std_resp!(pages::admin::post_registrationconfig(pc!(context), form), context)
-
-    //let admin_frontpage_post = warp::any()
-    //    .and(qflag!(frontpage)) 
-    //    .and(warp::body::form::<common::forms::BasicPage>())
-    //    .and_then(|_query, form, context: RequestContext| 
-    //        std_resp!(pages::admin::post_frontpage(pc!(context), form), context)
-
-    //let admin_docscustom_post = warp::any()
-    //    .and(qflag!(docscustom)) 
-    //    .and(warp::body::form::<common::forms::BasicPage>())
-    //    .and_then(|_query, form, context: RequestContext| 
-    //        std_resp!(pages::admin::post_docscustom(pc!(context), form), context)
-
-    //let admin_alert_post = warp::any()
-    //    .and(qflag!(alert)) 
-    //    .and(warp::body::form::<common::forms::BasicPage>())
-    //    .and_then(|_query, form, context: RequestContext| 
-    //        std_resp!(pages::admin::post_alert(pc!(context), form), context)
-
-//Userhome is a multi-route, meaning multiple things can be posted to it.
+//Admin is a multi-route, meaning multiple things can be posted to it.
 pub enum AdminPost {
     RegistrationConfig(contentapi::forms::RegistrationConfig),
     Frontpage(common::forms::BasicPage),
@@ -62,7 +37,7 @@ where
             parseform!(AdminPost::Alert, common::forms::BasicPage, req)
         }
         else {
-            Err((StatusCode::BAD_REQUEST, "Missing requisite submission type indicator (query parameter)").into_response())//axum::response::Redirect::to("/admin").into_response())
+            Err(missing_type_response())
         }
     }
 }
