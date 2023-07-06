@@ -13,6 +13,7 @@ use crate::state::{RequestContext, GlobalState};
 use crate::srender;
 
 pub mod login;
+pub mod userhome;
 
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
@@ -36,8 +37,10 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
                 srender!(pages::searchall::get_render(context.page_context, search))))
         .route("/login",
             get(|context: RequestContext| srender!(pages::login::get_render(context.page_context)))
-            .post(login::login_post)
-        )
+            .post(login::login_post))
+        .route("/userhome", 
+            get(|context: RequestContext| srender!(pages::userhome::get_render(context.page_context)))
+            .post(userhome::userhome_post))
         .route("/logout",
             get(|cookies: Cookies| async move {
                 cookies.remove(Cookie::new(SESSIONCOOKIE, ""));
@@ -99,14 +102,22 @@ macro_rules! qflag {
             }
 
             result
-            ////Hopefully this doesn't fully consume the request?
-            ////let parts = req.extract_parts();
-            //Query::<LocalQueryParam>::from_request($req, $state)
-            //    .await.is_ok()
         }
     };
 }
 
+// Another silly thing for multi-route endpoints, parsing the form is always the same and we have to
+// do it a million times.
+#[macro_export]
+macro_rules! parseform {
+    ($wrapper:expr, $wrapped:ty, $req:expr) => {
+        match Form::<$wrapped>::from_request($req, &()).await
+        {
+            Ok(Form(form)) => Ok($wrapper(form)),
+            Err(e) => Err(e.into_response())
+        }
+    };
+}
 
 /*
     Issues:

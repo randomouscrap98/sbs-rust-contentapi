@@ -1,9 +1,7 @@
-use std::sync::Arc;
-
-use axum::{async_trait, extract::{FromRequest, Query}, Form, RequestExt, body::{HttpBody, Body}, response::IntoResponse};
+use axum::{async_trait, extract::FromRequest, Form, response::IntoResponse};
 use tower_cookies::Cookies;
 
-use crate::{state::{RequestContext, GlobalState}, qflag};
+use crate::{state::RequestContext, qflag, parseform};
 
 use super::{StdResponse, get_new_login_cookie};
 
@@ -16,35 +14,23 @@ pub enum LoginPost {
 }
 
 #[async_trait]
-impl<B> FromRequest<Arc<GlobalState>, B> for LoginPost
+impl<B, S> FromRequest<S, B> for LoginPost
 where 
     B: Send + 'static,
+    S: Send + Sync,
     Form<pages::login::Login>: FromRequest<(), B>,
     Form<common::forms::EmailGeneric>: FromRequest<(), B>,
 {
-    type Rejection = common::response::Error;
+    type Rejection = axum::response::Response;
 
-    async fn from_request(req: axum::http::Request<B>, _state: &Arc<GlobalState>) -> Result<Self, Self::Rejection> 
+    async fn from_request(req: axum::http::Request<B>, _state: &S) -> Result<Self, Self::Rejection> 
     {
-        //This is recovery
-        //let parts = req.extract_parts();
+        //Post is either recover or regular login
         if qflag!(recover, req) {
-            match Form::<common::forms::EmailGeneric>::from_request(req, &()).await
-            {
-                Ok(Form(form)) => Ok(LoginPost::Recover(form)),
-                Err(_) => Err(Self::Rejection::User(String::from("Can't parse form")))
-            }
+            parseform!(LoginPost::Recover, common::forms::EmailGeneric, req)
         }
         else {
-            match Form::<pages::login::Login>::from_request(req, &()).await
-            {
-                Ok(Form(form)) => Ok(LoginPost::Login(form)),
-                Err(_) => Err(Self::Rejection::User(String::from("Can't parse form")))
-            }
-            //let Form(form) = Form::<pages::login::Login>::from_request(req, &())
-            //    .await
-            //    .map_err(|err| Self::Rejection::User(err.to_string()))?;
-            //Ok(LoginPost::Login(form))
+            parseform!(LoginPost::Login, pages::login::Login, req)
         }
     }
 }
@@ -66,12 +52,3 @@ pub async fn login_post(context: RequestContext, cookies: Cookies, post: LoginPo
         }
     }
 }
-
-//qstruct!(LoginRecoverQuery, recover);
-//async fn login_recover_email_post(context: RequestContext, _query: Query<LoginRecoverQuery>, Form(form) : Form<common::forms::EmailGeneric>) -> StdResponse
-//{
-//}
-//
-//async fn login_post(context: RequestContext, cookies: Cookies, Form(form): Form<pages::login::Login>) -> StdResponse
-//{
-//}

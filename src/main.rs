@@ -132,9 +132,6 @@ async fn main()
     //    |search, context:RequestContext| std_resp!(pages::admin::get_render(pc!(context), search), context)
     //);
 
-    //let get_login_route = warp_get!(warp::path!("login"),
-    //    |context:RequestContext| warp::reply::html(pages::login::render(pc!(context.layout_data), None, None, None)));
-
     //let get_register_route = warp_get!(warp::path!("register"),
     //    |context:RequestContext| warp::reply::html(pages::register::render(pc!(context.layout_data), None, None, None)));
 
@@ -243,12 +240,6 @@ async fn main()
     //    warp::path!("user" / String),
     //    |username: String, context:RequestContext| 
     //        std_resp!(pages::user::get_render(pc!(context), username), context)
-    //); 
-
-    //let get_userhome_route = warp_get_async!(
-    //    warp::path!("userhome"),
-    //    |context:RequestContext| 
-    //        std_resp!(pages::userhome::get_render(pc!(context)), context)
     //); 
 
     //let get_imagebrowser_route = warp_get_async!(

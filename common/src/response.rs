@@ -93,7 +93,7 @@ impl axum::response::IntoResponse for Response {
                     axum::http::StatusCode::from_u16(status).unwrap(),
                     msg,
                 ).into_response(),
-            Response::Redirect(uri) => axum::response::Redirect::temporary(&uri).into_response()
+            Response::Redirect(uri) => axum::response::Redirect::to(&uri).into_response()
         }
     }
 }
