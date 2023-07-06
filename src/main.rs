@@ -4,7 +4,6 @@ use bbscope::{BBCode, BBCodeTagConfig, BBCodeLinkTarget};
 use chrono::SecondsFormat;
 use common::LinkConfig;
 
-use serde::Deserialize;
 // use warp::{Filter, Rejection};
 
 //mod errors;
@@ -201,12 +200,6 @@ async fn main()
     //    warp::path!("search").and(warp::query::<common::forms::PageSearch>()),
     //    |search, context:RequestContext| 
     //        std_resp!(pages::search::get_render(pc!(context), search, cf!(context.default_display_pages)), context)
-    //);
-
-    //let get_searchall_route = warp_get_async!(
-    //    warp::path!("allsearch").and(warp::query::<pages::searchall::SearchAllForm>()),
-    //    |search, context:RequestContext| 
-    //        std_resp!(pages::searchall::get_render(pc!(context), search), context)
     //);
 
     //let get_activity_route = warp_get_async!(

@@ -2,14 +2,15 @@ use std::sync::Arc;
 
 use axum::{
     routing::{get, post},
-    Router, extract::{State, DefaultBodyLimit, Path, Query, FromRequestParts}, async_trait, Form, 
+    Router, extract::{DefaultBodyLimit, Query, FromRequestParts}, async_trait, Form, 
 };
 
-use tower_cookies::{CookieManagerLayer, Cookies};
+use serde::Deserialize;
+use tower_cookies::{CookieManagerLayer, Cookies, Cookie, cookie::{time::Duration, SameSite}};
 use tower_http::{services::{ServeDir, ServeFile}, limit::RequestBodyLimitLayer};
 
 use crate::state::{RequestContext, GlobalState};
-use crate::srender;
+use crate::{srender, qstruct};
 
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
@@ -31,6 +32,16 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
         .route("/allsearch", 
             get(|context: RequestContext, Query(search): Query<pages::searchall::SearchAllForm>| 
                 srender!(pages::searchall::get_render(context.page_context, search))))
+        .route("/login",
+            get(|context: RequestContext| srender!(pages::login::get_render(context.page_context)))
+            .post(login_recover_email_post)
+            .post(login_post)
+        )
+        .route("/logout",
+            get(|cookies: Cookies| async move {
+                cookies.remove(Cookie::new(SESSIONCOOKIE, ""));
+                common::response::Response::Redirect(String::from("/"))
+            }))
         .route("/widget/bbcodepreview", 
             get(|context: RequestContext| srender!(pages::widget_bbcodepreview::get_render(context.page_context)))
             .post(|context: RequestContext, Form(form) : Form<common::forms::BasicText>| 
@@ -49,6 +60,32 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
     app
 }
 
+//Generate a new login cookie with all the bits and bobs set appropriately
+fn get_new_login_cookie(token: String, expire_seconds : i64) -> Cookie<'static> {
+    Cookie::build(SESSIONCOOKIE, token)
+        .max_age(Duration::seconds(expire_seconds))
+        .same_site(SameSite::Strict)
+        .path("/")
+        .finish()
+}
+
+qstruct!(LoginRecoverQuery, recover);
+async fn login_recover_email_post(context: RequestContext, _query: Query<LoginRecoverQuery>, Form(form) : Form<common::forms::EmailGeneric>) -> StdResponse
+{
+    let response = pages::login::post_login_recover(context.page_context, &form).await;
+    StdResponse::Ok(response)
+}
+
+async fn login_post(context: RequestContext, cookies: Cookies, Form(form): Form<pages::login::Login>) -> StdResponse
+{
+    let login = form.to_api_login(
+        context.global_state.config.default_cookie_expire, 
+        context.global_state.config.long_cookie_expire);
+    let (response,token) = pages::login::post_login_render(context.page_context, &login).await;
+    if let Some(token) = token { cookies.add(get_new_login_cookie(token, login.expireSeconds)); }
+    StdResponse::Ok(response)
+}
+
 #[macro_export]
 macro_rules! srender {
     ($render:expr) => {
@@ -57,6 +94,17 @@ macro_rules! srender {
         }
     };
 }
+
+/// Silly thing to limit a route by a single flag present (must be i8)
+#[macro_export]
+macro_rules! qstruct {
+    ($name:ident, $flag:ident) => {
+        #[allow(dead_code)]
+        #[derive(Deserialize)]
+        struct $name { $flag: i8 }
+    };
+}
+
 
 /*
     Issues:
@@ -70,8 +118,6 @@ macro_rules! srender {
 
 #[async_trait]
 impl FromRequestParts<Arc<GlobalState>> for RequestContext
-//where
-    //S: AsRef<Arc<GlobalState>>,
 {
     type Rejection = common::response::Error;
 

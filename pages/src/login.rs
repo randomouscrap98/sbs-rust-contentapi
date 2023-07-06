@@ -54,6 +54,10 @@ pub fn render(data: MainLayoutData, login_errors: Option<Vec<String>>, recover_e
     }).into_string()
 }
 
+pub async fn get_render(context: PageContext) -> Result<Response, Error> {
+    Ok(Response::Render(render(context.layout_data, None, None, None)))
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Login
 {
