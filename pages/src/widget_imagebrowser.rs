@@ -32,8 +32,8 @@ pub fn render(data: MainLayoutData, search: Search, images: Vec<Image>, previews
                 }
                 input #"fileinput" type="file" name="file" class="largeinput" accept="image/*";
                 input type="hidden" name="token" value=[&data.user_token];
-                input type="hidden" name="errorUrl" value={(data.current())"?error={{error}}"};
-                input type="hidden" name="successUrl" value={(data.current())"?preview={{hash}}"};
+                input type="hidden" name="errorUrl" value={(data.links.imagebrowser())"?error={{error}}"};
+                input type="hidden" name="successUrl" value={(data.links.imagebrowser())"?preview={{hash}}"};
                 input type="submit" value="Upload";
             }
             hr;

@@ -150,33 +150,6 @@ async fn main()
     //        std_resp!(pages::widget_votes::post_render(pc!(context), content_id, form), context)
     //    ).boxed();
 
-    //let post_thread_delete_route = warp::post()
-    //    .and(warp::path!("forum" / "delete" / "thread" / i64))
-    //    .and(state_filter.clone())
-    //    .and_then(|thread_id, context: RequestContext|
-    //        std_resp!(pages::forum_edit_thread::delete_render(pc!(context), thread_id), context)
-    //    ).boxed();
-
-    //let post_post_delete_route = warp::post()
-    //    .and(warp::path!("forum" / "delete" / "post" / i64))
-    //    .and(state_filter.clone())
-    //    .and_then(|post_id, context: RequestContext|
-    //        std_resp!(pages::forum_edit_post::delete_render(pc!(context), post_id), context)
-    //    ).boxed();
-
-    //let post_page_delete_route = warp::post()
-    //    .and(warp::path!("page" / "delete" / i64))
-    //    .and(state_filter.clone())
-    //    .and_then(|page_id, context: RequestContext|
-    //        std_resp!(pages::page_edit::delete_render(pc!(context), page_id), context)
-    //    ).boxed();
-    
-    //let legacy_page_pid = warp_get_async!(
-    //    warp::path!("page").and(warp::query::<pages::page::PageQuery>()),
-    //    |query, context:RequestContext| 
-    //        std_resp!(pages::page::get_pid_redirect(pc!(context), query), context)
-    //);
-    //    
     //warp::serve(
     //        fs_static_route
     //    .or(fs_favicon_route)
