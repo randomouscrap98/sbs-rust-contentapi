@@ -127,11 +127,6 @@ async fn main()
     //    };
     //}
 
-    //let get_admin_route = warp_get_async!(
-    //    warp::path!("admin").and(warp::query::<common::forms::AdminSearchParams>()),
-    //    |search, context:RequestContext| std_resp!(pages::admin::get_render(pc!(context), search), context)
-    //);
-
     //let get_register_route = warp_get!(warp::path!("register"),
     //    |context:RequestContext| warp::reply::html(pages::register::render(pc!(context.layout_data), None, None, None)));
 
@@ -144,17 +139,6 @@ async fn main()
     //let get_sessionsettings_route = warp_get!(warp::path!("sessionsettings"),
     //    |context:RequestContext| warp::reply::html(pages::sessionsettings::render(pc!(context.layout_data), None)));
 
-
-    //let get_logout_route = warp_get_async!(warp::path!("logout"),
-    //    |context:RequestContext| async move {
-    //        //Logout is a Set-Cookie to empty string with Max-Age set to 0, then redirect to root
-    //        handle_response_with_token(
-    //            common::Response::Redirect(String::from("/")),
-    //            &context.global_state.link_config, 
-    //            Some(String::from("")), 
-    //            0
-    //        )
-    //    });
 
     //let post_sessionsettings_route = warp::post()
     //    .and(warp::path!("sessionsettings"))

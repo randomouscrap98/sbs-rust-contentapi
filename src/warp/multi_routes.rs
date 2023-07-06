@@ -232,46 +232,6 @@ pub fn get_page_edit_route(state_filter: &BoxedFilter<(RequestContext,)>, form_f
         .boxed()
 }
 
-/// 'POST:/login' is a multiplexed route, where multiple forms can be posted to it. We determine
-/// which route to take based on the query parameter
-pub fn post_login_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> 
-    BoxedFilter<(impl Reply,)> 
-{
-    // The standard login post, main endpoint
-    let login_post = warp::any()
-        .and(warp::body::form::<pages::login::Login>())
-        .and(state_filter.clone())
-        .and_then(|form: pages::login::Login, context: RequestContext| {
-            let gc = context.global_state.clone();
-            let login = form.to_api_login(
-                gc.config.default_cookie_expire, 
-                gc.config.long_cookie_expire);
-            async move {
-                let (response,token) = pages::login::post_login_render(pc!(context), &login).await;
-                handle_response_with_token(response, &gc.link_config, token, login.expireSeconds)
-            }
-        }).boxed();
-    
-    // The secondary endpoint, to send account recovery emails
-    let recover_email_post = warp::any()
-        .and(qflag!(recover)) 
-        .and(warp::body::form::<common::forms::EmailGeneric>())
-        .and(state_filter.clone())
-        .and_then(|_query, form: common::forms::EmailGeneric, context: RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                let response = pages::login::post_login_recover(pc!(context), &form).await;
-                handle_response(response, &gc.link_config)
-            }
-        }).boxed();
-
-    //ALL post routes!
-    warp::post()
-        .and(warp::path!("login"))
-        .and(form_filter.clone())
-        .and(recover_email_post.or(login_post))
-        .boxed()
-}
 
 /// 'POST':/register/confirm is a multiplexed route, where multiple forms can be submitted to the same endpoint.
 /// These are the regular registration confirmation form (primary), and the confirmation email resend (secondary)
@@ -308,88 +268,6 @@ pub fn post_registerconfirm_multi_route(state_filter: &BoxedFilter<(RequestConte
 
 }
 
-/// 'POST':/userhome is a 3 way multiplexed route, where you can post user updates (primary), user bio updates
-/// (secondary), and finally sensitive updates
-pub fn post_userhome_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> 
-    BoxedFilter<(impl Reply,)> 
-{
-    // Primary endpoint: update regular user data
-    let userhome_post = warp::any()
-        .and(warp::body::form::<common::forms::UserUpdate>())
-        .and(state_filter.clone())
-        .and_then(|form, context: RequestContext| 
-            std_resp!(pages::userhome::post_info_render(pc!(context), form), context)
-        ).boxed();
-
-    // Secondary endpoint: user bio updates
-    let userhome_bio_post = warp::any()
-        .and(qflag!(bio)) 
-        .and(warp::body::form::<common::forms::BasicPage>())
-        .and(state_filter.clone())
-        .and_then(|_query, form, context: RequestContext| 
-            std_resp!(pages::userhome::post_bio_render(pc!(context), form), context)
-        ).boxed();
-
-    // Tertiary endpoint: user sensitive updates
-    let userhome_sensitive_post = warp::any()
-        .and(qflag!(sensitive)) 
-        .and(warp::body::form::<contentapi::forms::UserSensitive>())
-        .and(state_filter.clone())
-        .and_then(|_query, form, context: RequestContext| 
-            std_resp!(pages::userhome::post_sensitive_render(pc!(context), form), context) 
-        ).boxed();
-
-    warp::post()
-        .and(warp::path!("userhome"))
-        .and(form_filter.clone())
-        .and(userhome_bio_post.or(userhome_sensitive_post).or(userhome_post))
-        .boxed()
-
-}
-
-pub fn post_admin_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> 
-    BoxedFilter<(impl Reply,)> 
-{
-    let admin_registrationconfig_post = warp::any()
-        .and(qflag!(registrationconfig)) 
-        //For now, we use the direct form
-        .and(warp::body::form::<contentapi::forms::RegistrationConfig>())
-        .and(state_filter.clone())
-        .and_then(|_query, form, context: RequestContext| 
-            std_resp!(pages::admin::post_registrationconfig(pc!(context), form), context)
-        ).boxed();
-
-    let admin_frontpage_post = warp::any()
-        .and(qflag!(frontpage)) 
-        .and(warp::body::form::<common::forms::BasicPage>())
-        .and(state_filter.clone())
-        .and_then(|_query, form, context: RequestContext| 
-            std_resp!(pages::admin::post_frontpage(pc!(context), form), context)
-        ).boxed();
-
-    let admin_docscustom_post = warp::any()
-        .and(qflag!(docscustom)) 
-        .and(warp::body::form::<common::forms::BasicPage>())
-        .and(state_filter.clone())
-        .and_then(|_query, form, context: RequestContext| 
-            std_resp!(pages::admin::post_docscustom(pc!(context), form), context)
-        ).boxed();
-
-    let admin_alert_post = warp::any()
-        .and(qflag!(alert)) 
-        .and(warp::body::form::<common::forms::BasicPage>())
-        .and(state_filter.clone())
-        .and_then(|_query, form, context: RequestContext| 
-            std_resp!(pages::admin::post_alert(pc!(context), form), context)
-        ).boxed();
-
-    warp::post()
-        .and(warp::path!("admin"))
-        .and(form_filter.clone())
-        .and(admin_registrationconfig_post.or(admin_frontpage_post).or(admin_alert_post).or(admin_docscustom_post))
-        .boxed()
-
-}
 
 pub fn post_user_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> 
     BoxedFilter<(impl Reply,)> 

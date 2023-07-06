@@ -5,7 +5,6 @@ use axum::{
     Router, extract::{DefaultBodyLimit, Query, FromRequestParts}, async_trait, Form, 
 };
 
-//use serde::Deserialize;
 use tower_cookies::{CookieManagerLayer, Cookies, Cookie, cookie::{time::Duration, SameSite}};
 use tower_http::{services::{ServeDir, ServeFile}, limit::RequestBodyLimitLayer};
 
@@ -14,6 +13,7 @@ use crate::srender;
 
 pub mod login;
 pub mod userhome;
+pub mod admin;
 
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
@@ -32,6 +32,9 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
             get(|context: RequestContext| srender!(pages::integrationtest::get_render(context.page_context))))
         .route("/documentation", 
             get(|context: RequestContext| srender!(pages::documentation::get_render(context.page_context))))
+        .route("/search",
+            get(|context: RequestContext, Query(search): Query<common::forms::PageSearch>|
+                srender!(pages::search::get_render(context.page_context, search, context.global_state.config.default_display_pages))))
         .route("/allsearch", 
             get(|context: RequestContext, Query(search): Query<pages::searchall::SearchAllForm>| 
                 srender!(pages::searchall::get_render(context.page_context, search))))
@@ -46,6 +49,10 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
                 cookies.remove(Cookie::new(SESSIONCOOKIE, ""));
                 common::response::Response::Redirect(String::from("/"))
             }))
+        .route("/admin", 
+            get(|context: RequestContext, Query(search): Query<common::forms::AdminSearchParams>| 
+                srender!(pages::admin::get_render(context.page_context, search)))
+            .post(admin::admin_post))
         .route("/widget/bbcodepreview", 
             get(|context: RequestContext| srender!(pages::widget_bbcodepreview::get_render(context.page_context)))
             .post(|context: RequestContext, Form(form) : Form<common::forms::BasicText>| 
@@ -60,6 +67,18 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
         ))
         .layer(CookieManagerLayer::new())
     ;
+
+    //let get_search_route = warp_get_async!(
+    //    warp::path!("search").and(warp::query::<common::forms::PageSearch>()),
+    //    |search, context:RequestContext| 
+    //        std_resp!(pages::search::get_render(pc!(context), search, cf!(context.default_display_pages)), context)
+    //);
+
+    //let get_activity_route = warp_get_async!(
+    //    warp::path!("activity").and(warp::query::<pages::activity::ActivityQuery>()),
+    //    |query, context:RequestContext| 
+    //        std_resp!(pages::activity::get_render(pc!(context), query, cf!(context.default_activity_count)), context)
+    //);
 
     app
 }
@@ -76,7 +95,7 @@ fn get_new_login_cookie(token: String, expire_seconds : i64) -> Cookie<'static> 
 #[macro_export]
 macro_rules! srender {
     ($render:expr) => {
-        async {
+        async move {
             StdResponse::Ok($render.await?)
         }
     };
