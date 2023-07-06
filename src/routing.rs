@@ -5,12 +5,14 @@ use axum::{
     Router, extract::{DefaultBodyLimit, Query, FromRequestParts}, async_trait, Form, 
 };
 
-use serde::Deserialize;
+//use serde::Deserialize;
 use tower_cookies::{CookieManagerLayer, Cookies, Cookie, cookie::{time::Duration, SameSite}};
 use tower_http::{services::{ServeDir, ServeFile}, limit::RequestBodyLimitLayer};
 
 use crate::state::{RequestContext, GlobalState};
-use crate::{srender, qstruct};
+use crate::srender;
+
+pub mod login;
 
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
@@ -34,8 +36,7 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
                 srender!(pages::searchall::get_render(context.page_context, search))))
         .route("/login",
             get(|context: RequestContext| srender!(pages::login::get_render(context.page_context)))
-            .post(login_recover_email_post)
-            .post(login_post)
+            .post(login::login_post)
         )
         .route("/logout",
             get(|cookies: Cookies| async move {
@@ -69,23 +70,6 @@ fn get_new_login_cookie(token: String, expire_seconds : i64) -> Cookie<'static> 
         .finish()
 }
 
-qstruct!(LoginRecoverQuery, recover);
-async fn login_recover_email_post(context: RequestContext, _query: Query<LoginRecoverQuery>, Form(form) : Form<common::forms::EmailGeneric>) -> StdResponse
-{
-    let response = pages::login::post_login_recover(context.page_context, &form).await;
-    StdResponse::Ok(response)
-}
-
-async fn login_post(context: RequestContext, cookies: Cookies, Form(form): Form<pages::login::Login>) -> StdResponse
-{
-    let login = form.to_api_login(
-        context.global_state.config.default_cookie_expire, 
-        context.global_state.config.long_cookie_expire);
-    let (response,token) = pages::login::post_login_render(context.page_context, &login).await;
-    if let Some(token) = token { cookies.add(get_new_login_cookie(token, login.expireSeconds)); }
-    StdResponse::Ok(response)
-}
-
 #[macro_export]
 macro_rules! srender {
     ($render:expr) => {
@@ -97,11 +81,29 @@ macro_rules! srender {
 
 /// Silly thing to limit a route by a single flag present (must be i8)
 #[macro_export]
-macro_rules! qstruct {
-    ($name:ident, $flag:ident) => {
-        #[allow(dead_code)]
-        #[derive(Deserialize)]
-        struct $name { $flag: i8 }
+macro_rules! qflag {
+    ($flag:ident, $req:expr) => {
+        {
+            #[allow(dead_code)]
+            #[derive(serde::Deserialize)]
+            struct LocalQueryParam { $flag: i8 }
+
+            let mut result = false;
+            let uri = $req.uri();
+            let query = uri.query();
+            if let Some(query) = query {
+                let r = serde_urlencoded::from_str::<LocalQueryParam>(query);
+                if r.is_ok() {
+                    result = true;
+                }
+            }
+
+            result
+            ////Hopefully this doesn't fully consume the request?
+            ////let parts = req.extract_parts();
+            //Query::<LocalQueryParam>::from_request($req, $state)
+            //    .await.is_ok()
+        }
     };
 }
 
