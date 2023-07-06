@@ -33,6 +33,9 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, email: Option<S
     }).into_string()
 }
 
+pub async fn get_render(context: PageContext) -> Result<Response, Error> {
+    Ok(Response::Render(render(context.layout_data, None, None)))
+}
 
 pub async fn post_render(context: PageContext, sensitive: &UserSensitive) -> (Response, Option<String>)
 {

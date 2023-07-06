@@ -55,6 +55,9 @@ pub fn render(data: MainLayoutData, confirm_errors: Option<Vec<String>>, email_e
 }
 
 
+pub async fn get_render(context: PageContext) -> Result<Response, Error> {
+    Ok(Response::Render(render(context.layout_data, None, None, None, None, false)))
+}
 
 /// Regular confirmation acceptance. On success, we redirect you to your userhome while returning the token (presumably
 /// to log you in on whatever routing you have). On failure, we re-render the confirmation page with the errors.

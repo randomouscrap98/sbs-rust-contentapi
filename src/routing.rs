@@ -15,6 +15,7 @@ pub mod login;
 pub mod userhome;
 pub mod admin;
 pub mod user;
+pub mod registerconfirm;
 
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
@@ -69,6 +70,23 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
                 context.page_context.layout_data.user_config = form; //Is this safe? idk
                 pages::sessionsettings::get_render(context.page_context).await
             }))
+        .route("/register", 
+            get(|context: RequestContext|  
+                srender!(pages::register::get_render(context.page_context)))
+            .post(|context: RequestContext, Form(form): Form<contentapi::forms::Register>|
+                srender!(pages::register::post_render(context.page_context, &form))))
+        .route("/register/confirm", 
+            get(|context: RequestContext|  
+                srender!(pages::registerconfirm::get_render(context.page_context)))
+            .post(registerconfirm::registerconfirm_post))
+        .route("/recover", 
+            get(|context: RequestContext|  
+                srender!(pages::recover::get_render(context.page_context)))
+            .post(|context: RequestContext, cookies: Cookies, Form(form): Form<contentapi::forms::UserSensitive>| async move {
+                let (response,token) = pages::recover::post_render(context.page_context, &form).await;
+                if let Some(token) = token { cookies.add(get_new_login_cookie(token, context.global_state.config.default_cookie_expire as i64)); }
+                StdResponse::Ok(response)
+            }))
         .route("/widget/bbcodepreview", 
             get(|context: RequestContext| srender!(pages::widget_bbcodepreview::get_render(context.page_context)))
             .post(|context: RequestContext, Form(form) : Form<common::forms::BasicText>| 
@@ -83,6 +101,22 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
         ))
         .layer(CookieManagerLayer::new())
     ;
+
+    //let get_recover_route = warp_get!(warp::path!("recover"),
+    //    |context:RequestContext| warp::reply::html(pages::recover::render(pc!(context.layout_data), None, None)));
+
+    //let post_recover_route = warp::post()
+    //    .and(warp::path!("recover"))
+    //    .and(form_filter.clone())
+    //    .and(warp::body::form::<contentapi::forms::UserSensitive>())
+    //    .and(state_filter.clone())
+    //    .and_then(|form: contentapi::forms::UserSensitive, context: RequestContext| {
+    //        async move {
+    //            let gc = context.global_state.clone();
+    //            let (response, token) = pages::recover::post_render(pc!(context), &form).await;
+    //            handle_response_with_token(response, &gc.link_config, token, gc.config.default_cookie_expire as i64)
+    //        }
+    //    }).boxed();
 
     app
 }

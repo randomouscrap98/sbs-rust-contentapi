@@ -119,12 +119,6 @@ async fn main()
     //    };
     //}
 
-    //let get_register_route = warp_get!(warp::path!("register"),
-    //    |context:RequestContext| warp::reply::html(pages::register::render(pc!(context.layout_data), None, None, None)));
-
-    //let get_registerconfirm_route = warp_get!(warp::path!("register"/"confirm"),
-    //    |context:RequestContext| warp::reply::html(pages::registerconfirm::render(pc!(context.layout_data), None, None, None, None, false)));
-
     //let get_recover_route = warp_get!(warp::path!("recover"),
     //    |context:RequestContext| warp::reply::html(pages::recover::render(pc!(context.layout_data), None, None)));
 
@@ -230,15 +224,6 @@ async fn main()
     //        }
     //    }).boxed();
 
-    //let post_register_route = warp::post()
-    //    .and(warp::path!("register"))
-    //    .and(form_filter.clone())
-    //    .and(warp::body::form::<contentapi::forms::Register>())
-    //    .and(state_filter.clone())
-    //    .and_then(|form, context: RequestContext| 
-    //        std_resp!(pages::register::post_render(pc!(context), &form), context) 
-    //    ).boxed();
-    
     //let post_thread_delete_route = warp::post()
     //    .and(warp::path!("forum" / "delete" / "thread" / i64))
     //    .and(state_filter.clone())

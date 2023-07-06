@@ -232,39 +232,3 @@ pub fn get_page_edit_route(state_filter: &BoxedFilter<(RequestContext,)>, form_f
         .boxed()
 }
 
-
-/// 'POST':/register/confirm is a multiplexed route, where multiple forms can be submitted to the same endpoint.
-/// These are the regular registration confirmation form (primary), and the confirmation email resend (secondary)
-pub fn post_registerconfirm_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> 
-    BoxedFilter<(impl Reply,)> 
-{
-    // Primary endpoint: finish up confirmation. Because of that, we might get a token back (on success)
-    let registerconfirm_post = warp::any()
-        .and(warp::body::form::<contentapi::forms::RegisterConfirm>())
-        .and(state_filter.clone())
-        .and_then(|form, context: RequestContext| {
-            async move {
-                let gc = context.global_state.clone();
-                let (response,token) = pages::registerconfirm::post_render(pc!(context), &form).await;
-                handle_response_with_token(response, &gc.link_config, token, gc.config.default_cookie_expire as i64)
-            }
-        })
-        .boxed();
-
-    // Secondary endpoint: resend confirmation email
-    let registerconfirm_email_post = warp::any()
-        .and(qflag!(resend)) 
-        .and(warp::body::form::<common::forms::EmailGeneric>())
-        .and(state_filter.clone())
-        .and_then(|_query, form: common::forms::EmailGeneric, context: RequestContext| 
-            std_resp!(pages::registerconfirm::post_email_render(pc!(context), &form), context)
-        ).boxed();
-
-    warp::post()
-        .and(warp::path!("register"/"confirm"))
-        .and(form_filter.clone())
-        .and(registerconfirm_email_post.or(registerconfirm_post))
-        .boxed()
-
-}
-

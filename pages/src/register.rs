@@ -27,6 +27,9 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>, username: Optio
     }).into_string()
 }
 
+pub async fn get_render(context: PageContext) -> Result<Response, Error> {
+    Ok(Response::Render(render(context.layout_data, None, None, None)))
+}
 
 
 pub async fn post_render(context: PageContext, registration: &contentapi::forms::Register) -> Result<Response, Error>
