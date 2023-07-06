@@ -99,69 +99,8 @@ async fn main()
     //let global_for_form = global_state.clone();
     //let form_filter = warp::body::content_length_limit(global_for_form.config.body_maxsize as u64).boxed();
 
-    //macro_rules! warp_get {
-    //    ($filter:expr, $map:expr) => {
-    //        warp::get()
-    //            .and($filter)
-    //            .and(state_filter.clone())
-    //            .map($map)
-    //            .boxed()
-    //    };
-    //}
-
-    //macro_rules! warp_get_async {
-    //    ($filter:expr, $map:expr) => {
-    //        warp::get()
-    //            .and($filter)
-    //            .and(state_filter.clone())
-    //            .and_then($map)
-    //            .boxed()
-    //    };
-    //}
-
-    //let get_recover_route = warp_get!(warp::path!("recover"),
-    //    |context:RequestContext| warp::reply::html(pages::recover::render(pc!(context.layout_data), None, None)));
-
-
-    //let post_contentpreview_route = warp::post()
-    //    .and(warp::path!("widget" / "contentpreview"))
-    //    .and(form_filter.clone())
-    //    .and(warp::body::form::<pages::widget_contentpreview::ContentPreviewForm>())
-    //    .and(state_filter.clone())
-    //    .map(|form: pages::widget_contentpreview::ContentPreviewForm, context: RequestContext| {
-    //        warp::reply::html(pages::widget_contentpreview::render(context.page_context, form))
-    //    })
-    //    .boxed();
-
     //#[derive(Deserialize, Debug)]
     //struct SimplePage { page: Option<i32> }
-
-    //let get_forum_category_route = warp_get_async!(
-    //    warp::path!("forum" / "category" / String).and(warp::query::<SimplePage>()),
-    //    |hash: String, page_struct: SimplePage, context:RequestContext| 
-    //        std_resp!(
-    //            pages::forum_category::get_hash_render(pc!(context), hash, cf!(context.default_display_threads), page_struct.page), 
-    //            context
-    //        )
-    //); 
-
-    //let get_forum_thread_route = warp_get_async!(
-    //    warp::path!("forum" / "thread" / String).and(warp::query::<SimplePage>()),
-    //    |hash: String, page_struct: SimplePage, context:RequestContext| 
-    //        std_resp!(
-    //            pages::forum_thread::get_hash_render(pc!(context), hash, cf!(context.default_display_posts), page_struct.page),
-    //            context
-    //        )
-    //); 
-
-    //let get_forum_post_route = warp_get_async!(
-    //    warp::path!("forum" / "thread" / String / i64),
-    //    |hash: String, post_id: i64, context:RequestContext| 
-    //        std_resp!(
-    //            pages::forum_thread::get_hash_postid_render(pc!(context), hash, post_id, cf!(context.default_display_posts)),
-    //            context
-    //        )
-    //); 
 
     //let get_imagebrowser_route = warp_get_async!(
     //    warp::path!("widget" / "imagebrowser").and(warp::query::<pages::widget_imagebrowser::Search>()),
@@ -210,19 +149,6 @@ async fn main()
     //    .and_then(|content_id, form, context: RequestContext|
     //        std_resp!(pages::widget_votes::post_render(pc!(context), content_id, form), context)
     //    ).boxed();
-
-    //let post_recover_route = warp::post()
-    //    .and(warp::path!("recover"))
-    //    .and(form_filter.clone())
-    //    .and(warp::body::form::<contentapi::forms::UserSensitive>())
-    //    .and(state_filter.clone())
-    //    .and_then(|form: contentapi::forms::UserSensitive, context: RequestContext| {
-    //        async move {
-    //            let gc = context.global_state.clone();
-    //            let (response, token) = pages::recover::post_render(pc!(context), &form).await;
-    //            handle_response_with_token(response, &gc.link_config, token, gc.config.default_cookie_expire as i64)
-    //        }
-    //    }).boxed();
 
     //let post_thread_delete_route = warp::post()
     //    .and(warp::path!("forum" / "delete" / "thread" / i64))

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::{
-    routing::get,
+    routing::{get, post},
     Router, extract::{DefaultBodyLimit, Query, FromRequestParts, Path}, async_trait, Form, http::StatusCode, response::IntoResponse, 
 };
 
@@ -16,6 +16,7 @@ pub mod userhome;
 pub mod admin;
 pub mod user;
 pub mod registerconfirm;
+pub mod forum;
 
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
@@ -24,6 +25,10 @@ type StdResponse = Result<common::response::Response, common::response::Error>;
 
 pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router 
 {
+    //Only used for these routes!
+    #[derive(serde::Deserialize, Debug)]
+    struct SimplePage { page: Option<i32> }
+
     // build our application with a route
     let app = Router::new()
         .route("/", 
@@ -87,10 +92,24 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
                 if let Some(token) = token { cookies.add(get_new_login_cookie(token, context.global_state.config.default_cookie_expire as i64)); }
                 StdResponse::Ok(response)
             }))
+        .route("/forum", 
+            get(forum::forum_get))
+        .route("/forum/category/:hash", 
+            get(|context: RequestContext, Path(hash): Path<String>, Query(page): Query<SimplePage>|
+                srender!(pages::forum_category::get_hash_render(context.page_context, hash, context.global_state.config.default_display_threads, page.page))))
+        .route("/forum/thread/:hash", 
+            get(|context: RequestContext, Path(hash): Path<String>, Query(page): Query<SimplePage>|
+                srender!(pages::forum_thread::get_hash_render(context.page_context, hash, context.global_state.config.default_display_posts, page.page))))
+        .route("/forum/thread/:hash/:post", 
+            get(|context: RequestContext, Path((hash,post)): Path<(String,i64)>|
+                srender!(pages::forum_thread::get_hash_postid_render(context.page_context, hash, post, context.global_state.config.default_display_posts))))
         .route("/widget/bbcodepreview", 
             get(|context: RequestContext| srender!(pages::widget_bbcodepreview::get_render(context.page_context)))
             .post(|context: RequestContext, Form(form) : Form<common::forms::BasicText>| 
                 srender!(pages::widget_bbcodepreview::post_render(context.page_context, form.text))))
+        .route("/widget/contentpreview", 
+            post(|context: RequestContext, Form(form) : Form<pages::widget_contentpreview::ContentPreviewForm>| 
+                srender!(pages::widget_contentpreview::post_render(context.page_context, form))))
         .nest_service("/static", ServeDir::new("static"))
         .nest_service("/favicon.ico", ServeFile::new("static/resources/favicon.ico"))
         .nest_service("/robots.txt", ServeFile::new("static/robots.txt"))
@@ -101,22 +120,6 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
         ))
         .layer(CookieManagerLayer::new())
     ;
-
-    //let get_recover_route = warp_get!(warp::path!("recover"),
-    //    |context:RequestContext| warp::reply::html(pages::recover::render(pc!(context.layout_data), None, None)));
-
-    //let post_recover_route = warp::post()
-    //    .and(warp::path!("recover"))
-    //    .and(form_filter.clone())
-    //    .and(warp::body::form::<contentapi::forms::UserSensitive>())
-    //    .and(state_filter.clone())
-    //    .and_then(|form: contentapi::forms::UserSensitive, context: RequestContext| {
-    //        async move {
-    //            let gc = context.global_state.clone();
-    //            let (response, token) = pages::recover::post_render(pc!(context), &form).await;
-    //            handle_response_with_token(response, &gc.link_config, token, gc.config.default_cookie_expire as i64)
-    //        }
-    //    }).boxed();
 
     app
 }

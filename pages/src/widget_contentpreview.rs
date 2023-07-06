@@ -3,6 +3,7 @@
 use common::*;
 use common::render::forum::render_content_nocontent;
 use common::render::layout::*;
+use common::response::{Response, Error};
 use maud::*;
 use serde::Deserialize;
 
@@ -22,4 +23,8 @@ pub fn render(mut context: PageContext, form: ContentPreviewForm) -> String
     }, html! {
         (render_content_nocontent(form.text, form.markup, &mut context.bbcode))
     }).into_string()
+}
+
+pub async fn post_render(context: PageContext, form: ContentPreviewForm) -> Result<Response, Error> {
+    Ok(Response::Render(render(context, form)))
 }
