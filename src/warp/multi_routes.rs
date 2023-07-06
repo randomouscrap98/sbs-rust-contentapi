@@ -268,35 +268,3 @@ pub fn post_registerconfirm_multi_route(state_filter: &BoxedFilter<(RequestConte
 
 }
 
-
-pub fn post_user_multi_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> 
-    BoxedFilter<(impl Reply,)> 
-{
-    let base_route = warp::post().and(warp::path!("user" / String)).and(form_filter.clone());
-
-    let user_ban_route = base_route.clone()
-        .and(qflag!(ban)) 
-        .and(warp::body::form::<common::forms::BanForm>())
-        .and(state_filter.clone())
-        .and_then(|username, _query, form, context: RequestContext| 
-            std_resp!(pages::user::post_ban(pc!(context), username, form), context)
-        ).boxed();
-
-    let user_unban_route = base_route.clone()
-        .and(qflag!(unban)) 
-        .and(warp::body::form::<common::forms::UnbanForm>())
-        .and(state_filter.clone())
-        .and_then(|username, _query, form, context: RequestContext| 
-            std_resp!(pages::user::post_unban(pc!(context), username, form), context)
-        ).boxed();
-
-    let user_updateinfo_route = base_route.clone()
-        .and(qflag!(userinfo)) 
-        .and(warp::body::form::<common::forms::UserUpdate>())
-        .and(state_filter.clone())
-        .and_then(|username, _query, form, context: RequestContext| 
-            std_resp!(pages::user::post_userinfo(pc!(context), username, form), context)
-        ).boxed();
-
-    user_ban_route.or(user_unban_route).or(user_updateinfo_route).boxed()
-}

@@ -61,6 +61,14 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
             get(|context: RequestContext, Query(search): Query<common::forms::AdminSearchParams>| 
                 srender!(pages::admin::get_render(context.page_context, search)))
             .post(admin::admin_post))
+        .route("/sessionsettings", 
+            get(|context: RequestContext| 
+                srender!(pages::sessionsettings::get_render(context.page_context)))
+            .post(|mut context: RequestContext, cookies: Cookies, Form(form): Form<common::UserConfig>| async move {
+                cookies.add(get_settings_cookie_convert(&form, &context.global_state.config)?);
+                context.page_context.layout_data.user_config = form; //Is this safe? idk
+                pages::sessionsettings::get_render(context.page_context).await
+            }))
         .route("/widget/bbcodepreview", 
             get(|context: RequestContext| srender!(pages::widget_bbcodepreview::get_render(context.page_context)))
             .post(|context: RequestContext, Form(form) : Form<common::forms::BasicText>| 
@@ -86,6 +94,22 @@ fn get_new_login_cookie(token: String, expire_seconds : i64) -> Cookie<'static> 
         .same_site(SameSite::Strict)
         .path("/")
         .finish()
+}
+
+fn get_new_settings_cookie(raw_settings: String, expire_seconds : i64) -> Cookie<'static> {
+    Cookie::build(SETTINGSCOOKIE, raw_settings)
+        .max_age(Duration::seconds(expire_seconds))
+        .same_site(SameSite::Strict)
+        .path("/")
+        .finish()
+}
+
+fn get_settings_cookie_convert(form: &common::UserConfig, config: &crate::Config) -> Result<Cookie<'static>, common::response::Error>
+{
+    match serde_json::to_string(&form) {
+        Ok(cookie) => Ok(get_new_settings_cookie(String::from(cookie), config.long_cookie_expire as i64)), //cookie_raw = Some(String::from(cookie)),
+        Err(error) => Err(common::response::Error::Other(error.to_string()))
+    }
 }
 
 //Produce an error response if a "typed" form does not include the type (those POST endpoints that
@@ -137,16 +161,6 @@ macro_rules! parseform {
         }
     };
 }
-
-/*
-    Issues:
-    ---------
-    * Pages seem to return both a response and an error, when the response usually indicates the entire error? Could maybe flatten
-      into just "response" and make a way to produce the appropriate output? Are there any routes that might have errors before
-      you get to the rendering? Maybe for the special routes that are either/or... let's assume Response is always enough though.
-    * 
- */
-
 
 #[async_trait]
 impl FromRequestParts<Arc<GlobalState>> for RequestContext

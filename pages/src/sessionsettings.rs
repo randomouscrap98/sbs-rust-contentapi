@@ -2,6 +2,7 @@
 use common::render::*;
 use common::*;
 use common::render::layout::*;
+use common::response::*;
 use maud::*;
 
 pub fn render(data: MainLayoutData, errors: Option<Vec<String>>) -> String 
@@ -35,4 +36,8 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>) -> String
             p."aside" { "These settings are persisted in a cookie and only available on this device" }
         }
     }).into_string()
+}
+
+pub async fn get_render(context: PageContext) -> Result<Response, Error> {
+    Ok(Response::Render(render(context.layout_data, None)))
 }

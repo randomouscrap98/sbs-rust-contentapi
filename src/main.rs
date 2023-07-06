@@ -4,17 +4,9 @@ use bbscope::{BBCode, BBCodeTagConfig, BBCodeLinkTarget};
 use chrono::SecondsFormat;
 use common::LinkConfig;
 
-// use warp::{Filter, Rejection};
-
-//mod errors;
-//mod generic_handlers;
-//mod multi_routes;
 mod state;
 mod routing;
 
-//use crate::errors::*;
-//use crate::generic_handlers::*;
-//use crate::multi_routes::*;
 use crate::state::*;
 
 static CONFIGNAME : &str = "settings";
@@ -136,36 +128,6 @@ async fn main()
     //let get_recover_route = warp_get!(warp::path!("recover"),
     //    |context:RequestContext| warp::reply::html(pages::recover::render(pc!(context.layout_data), None, None)));
 
-    //let get_sessionsettings_route = warp_get!(warp::path!("sessionsettings"),
-    //    |context:RequestContext| warp::reply::html(pages::sessionsettings::render(pc!(context.layout_data), None)));
-
-
-    //let post_sessionsettings_route = warp::post()
-    //    .and(warp::path!("sessionsettings"))
-    //    .and(form_filter.clone())
-    //    .and(warp::body::form::<common::UserConfig>())
-    //    .and(state_filter.clone())
-    //    .and_then(|form: common::UserConfig, mut context: RequestContext| {
-    //        let mut errors: Option<Vec<String>> = None;
-    //        let mut cookie_raw: Option<String> = None;
-    //        match serde_json::to_string(&form) {
-    //            Ok(cookie) => cookie_raw = Some(String::from(cookie)),
-    //            Err(error) => errors = Some(vec![error.to_string()])
-    //        }
-    //        context.page_context.layout_data.user_config = form; //Is this safe? idk
-    //        async move {
-    //            let gc = context.global_state.clone();
-    //            handle_response_with_anycookie(
-    //                common::Response::Render(pages::sessionsettings::render(context.page_context.layout_data, errors)),
-    //                &gc.link_config, 
-    //                SETTINGSCOOKIE,
-    //                cookie_raw,
-    //                gc.config.long_cookie_expire as i64
-    //            )
-    //        }
-    //    })
-    //    .boxed();
-
 
     //let post_contentpreview_route = warp::post()
     //    .and(warp::path!("widget" / "contentpreview"))
@@ -205,12 +167,6 @@ async fn main()
     //            pages::forum_thread::get_hash_postid_render(pc!(context), hash, post_id, cf!(context.default_display_posts)),
     //            context
     //        )
-    //); 
-
-    //let get_user_route = warp_get_async!(
-    //    warp::path!("user" / String),
-    //    |username: String, context:RequestContext| 
-    //        std_resp!(pages::user::get_render(pc!(context), username), context)
     //); 
 
     //let get_imagebrowser_route = warp_get_async!(
