@@ -99,57 +99,6 @@ async fn main()
     //let global_for_form = global_state.clone();
     //let form_filter = warp::body::content_length_limit(global_for_form.config.body_maxsize as u64).boxed();
 
-    //#[derive(Deserialize, Debug)]
-    //struct SimplePage { page: Option<i32> }
-
-    //let get_imagebrowser_route = warp_get_async!(
-    //    warp::path!("widget" / "imagebrowser").and(warp::query::<pages::widget_imagebrowser::Search>()),
-    //    |search, context:RequestContext| 
-    //        std_resp!(
-    //            pages::widget_imagebrowser::query_render(pc!(context), search, cf!(context.default_imagebrowser_count)),
-    //            context
-    //        )
-    //);
-
-    //let get_widgetthread_route = warp_get_async!(
-    //    warp::path!("widget" / "thread").and(warp::query::<common::forms::ThreadQuery>()),
-    //    |search, context:RequestContext| 
-    //        std_resp!(pages::widget_thread::get_render(pc!(context), search), context)
-    //);
-
-    //let get_votewidget_route = warp_get_async!(
-    //    warp::path!("widget" / "votes" / i64),
-    //    |content_id, context:RequestContext| 
-    //        std_resp!(pages::widget_votes::get_render(pc!(context), content_id), context)
-    //);
-
-    //let get_recentactivity_route = warp_get_async!(
-    //    warp::path!("widget" / "recentactivity").and(warp::query::<pages::widget_recentactivity::RecentActivityConfig>()),
-    //    |query, context:RequestContext| 
-    //        std_resp!(pages::widget_recentactivity::get_render(pc!(context), query), context)
-    //);
-
-    //#[derive(Deserialize, Default)]
-    //struct QrParam {
-    //    high_density: Option<bool>
-    //}
-
-    //let get_qrwidget_route = warp_get_async!(
-    //    warp::path!("widget" / "qr" / String).and(warp::query::<QrParam>()),
-    //    |hash: String, qr_param : QrParam, context:RequestContext| 
-    //        std_resp!(pages::widget_qr::get_render(pc!(context), &hash, 
-    //            if let Some(hd) = qr_param.high_density { hd } else { false }), context)
-    //);
-
-    //let post_votewidget_route = warp::post()
-    //    .and(warp::path!("widget" / "votes" / i64))
-    //    .and(form_filter.clone())
-    //    .and(warp::body::form::<common::forms::VoteForm>())
-    //    .and(state_filter.clone())
-    //    .and_then(|content_id, form, context: RequestContext|
-    //        std_resp!(pages::widget_votes::post_render(pc!(context), content_id, form), context)
-    //    ).boxed();
-
     //warp::serve(
     //        fs_static_route
     //    .or(fs_favicon_route)

@@ -29,6 +29,9 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
     #[derive(serde::Deserialize, Debug)]
     struct SimplePage { page: Option<i32> }
 
+    #[derive(serde::Deserialize, Default)]
+    struct QrParam { high_density: Option<bool> }
+
     // build our application with a route
     let app = Router::new()
         .route("/", 
@@ -128,6 +131,18 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
         .route("/widget/thread", 
             get(|context: RequestContext, Query(query): Query<common::forms::ThreadQuery>| 
                 srender!(pages::widget_thread::get_render(context.page_context, query))))
+        .route("/widget/votes/:id", 
+            get(|context: RequestContext, Path(id): Path<i64>| 
+                srender!(pages::widget_votes::get_render(context.page_context, id)))
+            .post(|context: RequestContext, Path(id): Path<i64>, Form(form): Form<common::forms::VoteForm>|
+                srender!(pages::widget_votes::post_render(context.page_context, id, form))))
+        .route("/widget/recentactivity", 
+            get(|context: RequestContext, Query(query): Query<pages::widget_recentactivity::RecentActivityConfig>| 
+                srender!(pages::widget_recentactivity::get_render(context.page_context, query))))
+        .route("/widget/qr/:hash", 
+            get(|context: RequestContext, Path(hash): Path<String>, Query(query): Query<QrParam>| 
+                srender!(pages::widget_qr::get_render(context.page_context, &hash, 
+                    if let Some(hd) = query.high_density { hd } else { false }))))
         .nest_service("/static", ServeDir::new("static"))
         .nest_service("/favicon.ico", ServeFile::new("static/resources/favicon.ico"))
         .nest_service("/robots.txt", ServeFile::new("static/robots.txt"))
