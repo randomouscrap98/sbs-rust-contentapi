@@ -56,12 +56,10 @@ async fn main()
     };
 
     let bbcode = {
-        let mut config = BBCodeTagConfig::default();
+        let mut config = BBCodeTagConfig::extended();
         config.link_target = BBCodeLinkTarget::None;
-        let mut matchers = BBCode::basics_config(config).unwrap(); //this better not fail! It'll fail very early though
-        let mut extras = BBCode::extras().unwrap();
-        matchers.append(&mut extras);
-        BBCode::from_matchers(matchers)
+        config.newline_to_br = false;
+        BBCode::from_config(config, None).unwrap()
     };
 
     //Set up the SINGULAR global state, which will be passed around with a counting reference.
