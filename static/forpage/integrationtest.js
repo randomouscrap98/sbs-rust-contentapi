@@ -418,11 +418,11 @@ function editor_general_test_base(type)
     test("has_tagline", () => assertExists("#pageedit_tagline"));
     test("has_text", () => assertExists("#pageedit_text"));
     test("has_keywords", () => assertExists("#pageedit_keywords"));
+    test("has_markup", () => assertExists(`//select[@name="markup"]`));
 
     //Stuff specific to documentation
     if(type === "documentation") 
     {
-        test("has_markup", () => assertExists("#pageedit_markup"));
         test("has_docpath", () => assertExists("#pageedit_docpath"));
         test("has_hash", () => assertExists("#pageedit_hash"));
         test("no_images", () => assertNotExists("#pageedit_images"));
@@ -430,7 +430,7 @@ function editor_general_test_base(type)
     }
     else 
     {
-        test("no_markup", () => assertNotExists("#pageedit_markup"));
+        //test("no_markup", () => assertNotExists(`//select[@name="markup"]`));
         test("no_docpath", () => assertNotExists("#pageedit_docpath"));
         test("no_hash", () => assertNotExists("#pageedit_hash"));
         test("has_images", () => assertExists("#pageedit_images"));

@@ -92,20 +92,4 @@ impl RequestContext {
         });
     }
 
-    //pub fn into_strip(self) -> (PageContext, Arc<GlobalState>) {
-    //    let gc = self.global_state.clone();
-    //    (self.into(), gc)
-    //}
 }
-
-//impl From<RequestContext> for PageContext {
-//    fn from(context: RequestContext) -> Self {
-//        let mut consumer = context.bbcode.clone();
-//        consumer.to_consumer();
-//        Self {
-//            layout_data: context.layout_data,
-//            api_context: context.api_context,
-//            bbcode: context.bbcode
-//        } 
-//    }
-//}
