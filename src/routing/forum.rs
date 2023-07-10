@@ -32,3 +32,9 @@ pub async fn forum_get(context: RequestContext, Query(query): Query<ForumFullQue
             &context.global_state.config.forum_category_order, context.global_state.config.default_category_threads).await
     }
 }
+
+#[derive(serde::Deserialize, Debug)]
+pub struct ThreadEditParameter { 
+    pub category: Option<String>,
+    pub thread: Option<String>
+}

@@ -112,6 +112,11 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
         .route("/forum/delete/post/:id",
             post(|context: RequestContext, Path(id): Path<i64>|
                 srender!(pages::forum_edit_post::delete_render(context.page_context, id))))
+        .route("/forum/edit/thread", 
+            get(|context: RequestContext, Query(query): Query<forum::ThreadEditParameter>| 
+                srender!(pages::forum_edit_thread::get_render(context.page_context, query.category, query.thread)))
+            .post(|context: RequestContext, Form(form): Form<common::forms::ThreadForm>|
+                srender!(pages::forum_edit_thread::post_render(context.page_context, form))))
         .route("/page/delete/:id",
             post(|context: RequestContext, Path(id): Path<i64>|
                 srender!(pages::page_edit::delete_render(context.page_context, id))))

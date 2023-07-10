@@ -9,55 +9,6 @@ use crate::state::*;
 use crate::generic_handlers::*;
 use crate::*;
 
-pub fn get_forum_edit_thread_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> BoxedFilter<(impl Reply,)> 
-{
-    //struct doesn't need to escape this function!
-    #[allow(dead_code)]
-    #[derive(Deserialize, Debug)]
-    struct CategoryParameter { 
-        category: String
-    }
-
-    let thread_new = warp::any()
-        .and(warp::query::<CategoryParameter>())
-        .and(state_filter.clone())
-        .and_then(|catparam: CategoryParameter, context:RequestContext| 
-            std_resp!(
-                pages::forum_edit_thread::get_render(pc!(context), Some(catparam.category), None),
-                context
-            ) 
-        ).boxed(); 
-    
-    //Don't forget to add the other stuff!
-    #[allow(dead_code)]
-    #[derive(Deserialize, Debug)]
-    struct ThreadParameter { 
-        thread: String
-    }
-
-    let thread_edit = warp::any()
-        .and(warp::query::<ThreadParameter>())
-        .and(state_filter.clone())
-        .and_then(|threadparam: ThreadParameter, context:RequestContext| 
-            std_resp!(
-                pages::forum_edit_thread::get_render(pc!(context), None, Some(threadparam.thread)),
-                context
-            )
-        ).boxed(); 
-
-    let thread_post = warp::any()
-        .and(warp::body::form::<common::forms::ThreadForm>())
-        .and(state_filter.clone())
-        .and_then(|form: common::forms::ThreadForm, context: RequestContext| {
-            std_resp!(pages::forum_edit_thread::post_render(pc!(context), form), context) 
-        }).boxed();
-
-    warp::path!("forum" / "edit" / "thread")
-        .and(warp::get().and(thread_new.or(thread_edit))
-            .or(warp::post().and(form_filter.clone()).and(thread_post)))
-        .boxed()
-}
-
 pub fn get_forum_edit_post_route(state_filter: &BoxedFilter<(RequestContext,)>, form_filter: &BoxedFilter<()>) -> BoxedFilter<(impl Reply,)> 
 {
     //struct doesn't need to escape this function!
