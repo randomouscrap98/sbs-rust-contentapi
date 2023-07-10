@@ -17,6 +17,7 @@ pub mod admin;
 pub mod user;
 pub mod registerconfirm;
 pub mod forum;
+pub mod page;
 
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
@@ -117,12 +118,22 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
                 srender!(pages::forum_edit_thread::get_render(context.page_context, query.category, query.thread)))
             .post(|context: RequestContext, Form(form): Form<common::forms::ThreadForm>|
                 srender!(pages::forum_edit_thread::post_render(context.page_context, form))))
-        .route("/page/delete/:id",
-            post(|context: RequestContext, Path(id): Path<i64>|
-                srender!(pages::page_edit::delete_render(context.page_context, id))))
+        .route("/forum/edit/post", 
+            get(|context: RequestContext, Query(query): Query<forum::PostEditParameters>| 
+                srender!(pages::forum_edit_post::get_render(context.page_context, query.thread, query.post, query.reply, query.widget.unwrap_or(false))))
+            .post(|context: RequestContext, Form(form): Form<common::forms::PostForm>|
+                srender!(pages::forum_edit_post::post_render(context.page_context, form))))
         .route("/page",
             get(|context: RequestContext, Query(query): Query<pages::page::PageQuery>|
                 srender!(pages::page::get_pid_redirect(context.page_context, query))))
+        .route("/page/edit", 
+            get(|context: RequestContext, Query(query): Query<page::PageEditParameter>| 
+                srender!(pages::page_edit::get_render(context.page_context, query.mode, query.page)))
+            .post(|context: RequestContext, Form(form): Form<common::forms::PageForm>|
+                srender!(pages::page_edit::post_render(context.page_context, form))))
+        .route("/page/delete/:id",
+            post(|context: RequestContext, Path(id): Path<i64>|
+                srender!(pages::page_edit::delete_render(context.page_context, id))))
         .route("/widget/bbcodepreview", 
             get(|context: RequestContext| srender!(pages::widget_bbcodepreview::get_render(context.page_context)))
             .post(|context: RequestContext, Form(form) : Form<common::forms::BasicText>| 

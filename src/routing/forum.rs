@@ -33,8 +33,18 @@ pub async fn forum_get(context: RequestContext, Query(query): Query<ForumFullQue
     }
 }
 
+/// Existence of parameters indicates which kind of form to generate
 #[derive(serde::Deserialize, Debug)]
 pub struct ThreadEditParameter { 
     pub category: Option<String>,
     pub thread: Option<String>
+}
+
+/// Existence of parameters indicates which kind of form to generate
+#[derive(serde::Deserialize, Debug)]
+pub struct PostEditParameters { 
+    pub post: Option<i64>,          // Either post is set...
+    pub thread: Option<String>,     // Or thread is set. But we don't worry about it, because the logic is in the forum renderer, not our router
+    pub reply: Option<i64>,
+    pub widget: Option<bool>
 }
