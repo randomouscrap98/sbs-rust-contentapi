@@ -6,4 +6,4 @@ settings.*.toml
 run*.sh
 /junk
 /publish
-
+.vscode

@@ -65,6 +65,7 @@ impl Default for UserConfig {
 pub struct MainLayoutData {
     pub links: LinkConfig,     
     pub user_config: UserConfig,    
+    /// Should be the path ONLY, no machine or query. If it's not that, it's an error!
     pub current_path: String, 
     pub override_nav_path: Option<&'static str>,
     pub user: Option<contentapi::User>,

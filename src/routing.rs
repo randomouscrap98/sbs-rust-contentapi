@@ -259,11 +259,12 @@ impl FromRequestParts<Arc<GlobalState>> for RequestContext
         let cookies = parts.extract::<Cookies>()
             .await
             .map_err(|err| Self::Rejection::Other(err.1.to_string()))?;
-        let path = parts.extract::<axum::http::Uri>()
+        let full_uri = parts.extract::<axum::http::Uri>()
             .await.unwrap(); //Infallible?
+        let path = full_uri.path();
 
         let token = cookies.get(SESSIONCOOKIE).and_then(|t| Some(t.value().to_string()));
         let config_raw = cookies.get(SETTINGSCOOKIE).and_then(|c| Some(c.value().to_string()));
-        RequestContext::generate(state.clone(), &path.to_string(), token, config_raw).await
+        RequestContext::generate(state.clone(), path, token, config_raw).await
     }
 }
