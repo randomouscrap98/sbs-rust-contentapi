@@ -85,7 +85,12 @@ pub fn activity_item(links: &LinkConfig, item: &SbsActivity) -> Markup {
 }
 
 pub fn activity_link(text: &str, href: &str) -> Markup {
-    html!( a."flatlink" href=(href) { (text) })
+    if text.trim().is_empty() {
+        html!( a."flatlink" href=(href) { "??? (NOTITLE)" })
+    }
+    else {
+        html!( a."flatlink" href=(href) { (text) })
+    }
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]

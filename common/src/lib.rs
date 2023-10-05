@@ -22,7 +22,7 @@ use fastrand;
 #[macro_export]
 macro_rules! opt_s {
     ($str:expr,$def:literal) => {
-        if let Some(ref thing) = $str { thing } else { $def }
+        if let Some(ref thing) = $str { if thing.trim().is_empty() { $def } else { thing } } else { $def }
     };
     ($str:expr) => {
         if let Some(ref thing) = $str { thing } else { "" }

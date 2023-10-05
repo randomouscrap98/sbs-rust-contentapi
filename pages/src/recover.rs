@@ -41,7 +41,7 @@ pub async fn post_render(context: PageContext, sensitive: &UserSensitive) -> (Re
 {
     match context.api_context.post_usersensitive(sensitive).await {
         Ok(token) => {
-            (Response::Redirect(String::from("/userhome")), Some(token))
+            (Response::Redirect(context.layout_data.links.userhome()), Some(token))
         },
         Err(error) => {
             (Response::Render(render(context.layout_data, Some(vec![error.to_user_string()]), Some(sensitive.currentEmail.clone()))), None)

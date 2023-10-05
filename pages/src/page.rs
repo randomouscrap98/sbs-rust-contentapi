@@ -45,12 +45,10 @@ pub async fn get_pid_redirect(mut context: PageContext, query: PageQuery) -> Res
 
     let page = pages.pop().ok_or(Error::NotFound(String::from("Could not find page!")))?;
 
-    let mut url = format!("/forum/thread/{}", opt_s!(&page.hash));
+    let mut url = context.layout_data.links.forum_thread(&page);
 
     if let Some(message) = messages.pop() {
-        if let Some(id) = message.id {
-            url = format!("{}/{}{}", url, id, LinkConfig::forum_post_hash(&message));
-        }
+        url = context.layout_data.links.forum_post(&message, &page);
     }
 
     Ok(Response::Redirect(url))

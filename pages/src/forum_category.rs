@@ -73,7 +73,7 @@ pub fn thread_item(links: &LinkConfig, thread: &ForumThread, users: &HashMap<i64
     html! {
         div."thread" {
             div."threadinfo" {
-                h3 { a."flatlink" href=(links.forum_thread(&thread.thread)) { (opt_s!(thread.thread.name)) } }
+                h3 { a."flatlink" href=(links.forum_thread(&thread.thread)) { (opt_s!(thread.thread.name, "??? (NOTITLE)")) } }
             }
             div."foruminfo aside mediumseparate" {
                 (threadicon(links, thread))

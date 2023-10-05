@@ -59,9 +59,9 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
             get(|context: RequestContext| srender!(pages::userhome::get_render(context.page_context)))
             .post(userhome::userhome_post))
         .route("/logout",
-            get(|cookies: Cookies| async move {
+            get(|context: RequestContext, cookies: Cookies| async move {
                 cookies.remove(Cookie::new(SESSIONCOOKIE, ""));
-                common::response::Response::Redirect(String::from("/"))
+                common::response::Response::Redirect(context.global_state.link_config.http_root.clone())
             }))
         .route("/user/:username",
             get(|context: RequestContext, Path(username): Path<String>| 

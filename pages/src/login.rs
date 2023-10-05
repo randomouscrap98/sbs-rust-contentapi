@@ -89,7 +89,7 @@ pub async fn post_login_render(context: PageContext, login: &contentapi::forms::
     (Response, Option<String>)
 {
     match context.api_context.post_login(login).await {
-        Ok(token) => (Response::Redirect(String::from("/userhome")), Some(token)),
+        Ok(token) => (Response::Redirect(context.layout_data.links.userhome()), Some(token)),
         Err(error) => {
             println!("Login raw error: {}", error.to_verbose_string());
             (Response::Render(render(context.layout_data, Some(vec![error.to_user_string()]), None, None)), None)

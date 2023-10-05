@@ -68,7 +68,7 @@ pub async fn post_render(context: PageContext, confirm: &contentapi::forms::Regi
     {
         //If confirmation is successful, we get a token back. We login and redirect to the userhome page
         Ok(token) => {
-            (Response::Redirect(String::from("/userhome")), Some(token))
+            (Response::Redirect(context.layout_data.links.userhome()), Some(token))
         },
         //If there's an error, we re-render the confirmation page with the errors.
         Err(error) => {

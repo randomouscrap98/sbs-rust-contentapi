@@ -23,6 +23,10 @@ impl LinkConfig {
         format!("{}/user/{}", self.http_root, user.username)
     }
 
+    pub fn userhome(&self) -> String {
+        format!("{}/userhome", self.http_root)
+    }
+
     pub fn image_default(&self, hash: &str) -> String { 
         self.image(hash, &QueryImage::default())
     }
