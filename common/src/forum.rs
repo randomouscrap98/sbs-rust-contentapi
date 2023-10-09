@@ -262,19 +262,22 @@ pub fn get_category_request(hash: Option<String>, fcid: Option<i64>) -> FullRequ
     let mut real_query = String::from("!notdeleted()");
 
     if let Some(hash) = hash {
+        // NOTE: I don't remember why I don't check for the category type when doing this 
+        // query. It might not be important and maybe you could always check for type, just be careful
         add_value!(request, "hash", hash);
         real_query.push_str(" and hash = @hash");
-    }
-    else if let Some(fcid) = fcid {
-        add_value!(request, "fcid_key", vec!["fcid"]);
-        add_value!(request, "fcid", vec![fcid]);
-        real_query.push_str(" and !valuein(@fcid_key, @fcid)");
     }
     else {
         //This is the "general" case, where yes, we actually do want to limit to categories. Otherwise,
         //if you pass a hash... it'll just work, regardless if it's a category or not.
         add_value!(request, "category_literals", FORUMCATEGORYTYPES);
         real_query.push_str(" and literalType in @category_literals");
+
+        if let Some(fcid) = fcid {
+            add_value!(request, "fcid_key", vec!["fcid"]);
+            add_value!(request, "fcid", vec![fcid]);
+            real_query.push_str(" and !valuein(@fcid_key, @fcid)");
+        }
     }
 
     let mut category_request = build_request!(

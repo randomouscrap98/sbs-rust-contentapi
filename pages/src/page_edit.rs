@@ -167,8 +167,8 @@ pub fn render(data: MainLayoutData, form: PageForm, mode: Option<String>, all_ca
 
 pub async fn get_render_categories(api_context: &mut ApiContext, subtype: &str) -> Result<Vec<Category>, Error> {
     let all_categories = map_categories(get_all_categories(api_context, None).await?);
-    let cloned_subtype = subtype.clone();
-    Ok(all_categories.into_iter().filter(move |c| &c.forcontent == &cloned_subtype).collect())
+    //let cloned_subtype = String::from(subtype); //.clone();
+    Ok(all_categories.into_iter().filter(move |c| &c.forcontent == subtype).collect())
 }
 
 pub async fn get_render_docpaths(api_context: &mut ApiContext) -> Result<Vec<String>, Error> {

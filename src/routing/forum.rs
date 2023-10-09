@@ -24,6 +24,7 @@ pub async fn forum_get(context: RequestContext, Query(query): Query<ForumFullQue
         pages::forum_thread::get_ftid_render(context.page_context, ftid, context.global_state.config.default_display_posts, query.page).await
     }
     else if let Some(fcid) = query.fcid {
+        //Err(common::response::Error::NotFound(String::from("FCID is disabled right now")))
         pages::forum_category::get_fcid_render(context.page_context, fcid, context.global_state.config.default_display_threads, query.page).await
     }
     else {
