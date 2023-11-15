@@ -121,7 +121,7 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     add_value!(request, "allowed_types", ACTIVITYTYPES); 
     add_value!(request, "deleted", UserAction::DELETE);
 
-    let mut user_query = String::new();
+    let mut user_query = String::from("!registered()");
     let mut message_query = String::from("!basiccomments() and !literaltypein(@allowed_types)");
     let mut activity_query = String::from("!basichistory() and (!literaltypein(@allowed_types) or action = @deleted)");
     let mut order_cd = "createDate_desc";
@@ -148,7 +148,7 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     if ! dq_part.is_empty() {
         message_query = format!("{} and createDate {}", message_query, dq_part);
         activity_query = format!("{} and date {}", activity_query, dq_part);
-        user_query = format!("createDate {}", dq_part);
+        user_query = format!("{} and createDate {}", user_query, dq_part);
     }
 
     let mut user_request = build_request!(

@@ -8,6 +8,7 @@ use common::response::*;
 use common::render::layout::*;
 use maud::*;
 
+#[allow(unused_variables)]
 pub fn render(data: MainLayoutData, confirm_errors: Option<Vec<String>>, email_errors: Option<Vec<String>>,
     email: Option<String>, user: Option<User>, resend_success: bool) -> String 
 {
@@ -19,14 +20,14 @@ pub fn render(data: MainLayoutData, confirm_errors: Option<Vec<String>>, email_e
                     p { "Hello, "(user.username)"!"}
                 }
                 p { 
-                    "You'll receive an email shortly from smilebasicsource@gmail.com with the to code to complete your "
+                    "You'll eventually receive an email from smilebasicsource@gmail.com with the to code to complete your "
                     "registration, enter it below. If you " span."error"{"reload or navigate away from the page"}", "
                     "you can still complete your registration, you'll just have to supply your email."
                 }
             }
             @else {
-                p {"If you've already registered, you'll receive a confirmation email shortly. Re-enter your email and the "
-                   "confirmation code here to complete your registration." }
+                p {"If you've already registered, you'll eventually receive a confirmation email from smilebasicsource@gmail.com. "
+                   "Re-enter your email and the confirmation code to complete your registration." }
             }
             form #"complete_form" method="POST" action={(data.links.http_root)"/register/confirm"} {
                 (errorlist(confirm_errors))
@@ -36,8 +37,20 @@ pub fn render(data: MainLayoutData, confirm_errors: Option<Vec<String>>, email_e
                 input."largeinput" #"complete_key" required="" type="text" name="key";
                 input type="submit" value="Complete registration";
             }
+             
             hr;
             h3 {"Didn't get the email?"}
+            p {
+                "We've had a lot of problems with bot accounts. As such, all registrations are now completed manually by me, "
+                "the site owner. "
+                "This means you may be waiting several days for your email, and even then it may show up in your spam folder. "
+            }
+            p {
+                "I'm sorry for the inconvenience! If you feel your registration confirmation may have gotten lost, you can "
+                "email me at smilebasicsource@gmail.com with the username you tried to register with and I can go look for "
+                "the code manually."
+            }
+            /* 
             p {"The email comes from smilebasicsource@gmail.com. It may be in your spam folder, and it may take up to a couple minutes "
                "to get through email filters. If you didn't receive it, you can send it again here:" }
             //Post to the special endpoint still under the "confirm" umbrella, so errors will be rendered "on the same page"
@@ -50,6 +63,7 @@ pub fn render(data: MainLayoutData, confirm_errors: Option<Vec<String>>, email_e
                 input #"resend_email" type="text" name="email" required="" value=[&email];
                 input type="submit" value="Resend confirmation email";
             }
+            */
         }
     }).into_string()
 }
