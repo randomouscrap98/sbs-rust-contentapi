@@ -15,7 +15,6 @@ pub mod login;
 pub mod userhome;
 pub mod admin;
 pub mod user;
-pub mod registerconfirm;
 pub mod forum;
 pub mod page;
 
@@ -79,15 +78,6 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
                 context.page_context.layout_data.user_config = form; //Is this safe? idk
                 pages::sessionsettings::get_render(context.page_context).await
             }))
-        .route("/register", 
-            get(|context: RequestContext|  
-                srender!(pages::register::get_render(context.page_context)))
-            .post(|context: RequestContext, Form(form): Form<contentapi::forms::Register>|
-                srender!(pages::register::post_render(context.page_context, &form))))
-        .route("/register/confirm", 
-            get(|context: RequestContext|  
-                srender!(pages::registerconfirm::get_render(context.page_context)))
-            .post(registerconfirm::registerconfirm_post))
         .route("/recover", 
             get(|context: RequestContext|  
                 srender!(pages::recover::get_render(context.page_context)))

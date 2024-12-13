@@ -1,36 +1,33 @@
-
-pub mod index;
 pub mod about;
-pub mod login;
 pub mod activity;
+pub mod index;
+pub mod login;
 pub mod search;
-pub mod widget_imagebrowser;
 pub mod widget_bbcodepreview;
-pub mod widget_recentactivity;
 pub mod widget_contentpreview;
+pub mod widget_imagebrowser;
+pub mod widget_recentactivity;
 //pub mod widget_forumpost;
+pub mod admin;
+pub mod documentation;
+pub mod forum_category;
+pub mod forum_edit_post;
+pub mod forum_edit_thread;
+pub mod forum_main;
+pub mod forum_thread;
+pub mod integrationtest;
+pub mod page;
+pub mod page_edit;
+pub mod recover;
+pub mod searchall;
+pub mod sessionsettings;
+pub mod user;
+pub mod userhome;
+pub mod widget_qr;
 pub mod widget_thread;
 pub mod widget_votes;
-pub mod widget_qr;
-pub mod userhome;
-pub mod recover;
-pub mod register;
-pub mod registerconfirm;
-pub mod user;
-pub mod forum_main;
-pub mod forum_category;
-pub mod forum_thread;
-pub mod sessionsettings;
-pub mod page;
-pub mod admin;
-pub mod integrationtest;
-pub mod forum_edit_thread;
-pub mod forum_edit_post;
-pub mod page_edit;
-pub mod documentation;
-pub mod searchall;
 
-//Email errors are weird with their true/false return. 
+//Email errors are weird with their true/false return.
 macro_rules! email_errors {
     ($result:expr) => {
         {
@@ -47,7 +44,7 @@ macro_rules! email_errors {
                 Err(error) => {
                     println!("Email endpoint raw error: {}", error.to_verbose_string());
                     errors.push(error.to_user_string());
-                } 
+                }
             }
             errors
         }
