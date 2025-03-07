@@ -139,9 +139,7 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
                 srender!(pages::widget_thread::get_render(context.page_context, query))))
         .route("/widget/votes/:id", 
             get(|context: RequestContext, Path(id): Path<i64>| 
-                srender!(pages::widget_votes::get_render(context.page_context, id)))
-            .post(|context: RequestContext, Path(id): Path<i64>, Form(form): Form<common::forms::VoteForm>|
-                srender!(pages::widget_votes::post_render(context.page_context, id, form))))
+                srender!(pages::widget_votes::get_render(context.page_context, id))))
         .route("/widget/recentactivity", 
             get(|context: RequestContext, Query(query): Query<pages::widget_recentactivity::RecentActivityConfig>| 
                 srender!(pages::widget_recentactivity::get_render(context.page_context, query))))
