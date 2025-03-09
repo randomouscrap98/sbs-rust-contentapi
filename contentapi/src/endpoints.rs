@@ -118,17 +118,15 @@ macro_rules! parseerr {
 pub struct ApiContext {
     api_url: String,
     client: hyper::client::Client<hyper::client::HttpConnector>,
-    user_token: Option<String>,
 
     #[cfg(feature = "profiling")]
     pub profiler: onestop::OneList<onestop::OneDuration>,
 }
 
 impl ApiContext {
-    pub fn new(api_url: String, user_token: Option<String>) -> Self {
+    pub fn new(api_url: String) -> Self {
         Self {
             api_url,
-            user_token,
             client: hyper::client::Client::new(),
 
             #[cfg(feature = "profiling")]
@@ -139,12 +137,10 @@ impl ApiContext {
     #[cfg(feature = "profiling")]
     pub fn new_with_profiler(
         api_url: String,
-        user_token: Option<String>,
         profiler: onestop::OneList<onestop::OneDuration>,
     ) -> Self {
         Self {
             api_url,
-            user_token,
             client: hyper::client::Client::new(),
             profiler,
         }
@@ -165,14 +161,10 @@ impl ApiContext {
             request
         )?;
 
-        let mut reqbuilder = hyper::Request::builder()
+        let reqbuilder = hyper::Request::builder()
             .method(method)
             .uri(endpoint_uri)
             .header("Accept", "application/json");
-
-        if let Some(token) = &self.user_token {
-            reqbuilder = reqbuilder.header("Authorization", format!("Bearer {}", token));
-        }
 
         Ok(reqbuilder)
     }

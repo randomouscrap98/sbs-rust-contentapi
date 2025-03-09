@@ -13,7 +13,6 @@ use crate::srender;
 
 pub mod forum;
 
-static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
 
 type StdResponse = Result<common::response::Response, common::response::Error>;
@@ -171,8 +170,7 @@ impl FromRequestParts<Arc<GlobalState>> for RequestContext
             .await.unwrap(); //Infallible?
         let path = full_uri.path();
 
-        let token = cookies.get(SESSIONCOOKIE).and_then(|t| Some(t.value().to_string()));
         let config_raw = cookies.get(SETTINGSCOOKIE).and_then(|c| Some(c.value().to_string()));
-        RequestContext::generate(state.clone(), path, token, config_raw).await
+        RequestContext::generate(state.clone(), path, config_raw).await
     }
 }
