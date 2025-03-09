@@ -52,11 +52,6 @@ pub fn header(data: &MainLayoutData) -> Markup {
                 (main_nav_link(data,"Search","🔎", "/allsearch",Some("mainsearchlink")))
             }
         }
-        @if let Some(alert) = &data.raw_alert {
-            @if alert.len() > 0 {
-                div."alert" { (PreEscaped(alert)) }
-            }
-        }
     }
 }
 

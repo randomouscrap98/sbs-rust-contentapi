@@ -32,7 +32,7 @@ impl RequestContext {
         let profiler = onestop::OneList::<onestop::OneDuration>::new(); //One profiler per request
 
         #[cfg(feature = "profiling")]
-        let mut context = ApiContext::new(state.config.api_endpoint.clone());
+        let context = ApiContext::new(state.config.api_endpoint.clone());
 
         #[cfg(not(feature = "profiling"))]
         let context = ApiContext::new(state.config.api_endpoint.clone(), token.clone());
@@ -49,7 +49,6 @@ impl RequestContext {
             current_path: String::from(path), //String::from(path.as_str()),
             override_nav_path: None,
             about_api: context.get_about().await?,
-            raw_alert: (common::prefab::get_system_alert(&mut context).await?).and_then(|x| x.text),
 
             #[cfg(feature = "profiling")]
             profiler: profiler.clone(),

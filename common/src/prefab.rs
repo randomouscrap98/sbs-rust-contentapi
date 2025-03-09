@@ -72,18 +72,9 @@ pub async fn get_system_any(context: &mut ApiContext, ty: &str) -> Result<Option
     Ok(content.pop())
 }
 
-/// Returns the system alert; these should be in HTML format!
-pub async fn get_system_alert(context: &mut ApiContext) -> Result<Option<Content>, Error> {
-    get_system_any(context, SBSPageType::ALERT).await
-}
-
 /// Returns the frontpage; this shoudl be in HTML format!
 pub async fn get_system_frontpage(context: &mut ApiContext) -> Result<Option<Content>, Error> {
     get_system_any(context, SBSPageType::FRONTPAGE).await
-}
-
-pub async fn get_system_docscustom(context: &mut ApiContext) -> Result<Option<Content>, Error> {
-    get_system_any(context, SBSPageType::DOCSCUSTOM).await
 }
 
 // ----------------------
@@ -218,4 +209,3 @@ pub async fn get_documentation_parent(
 pub async fn get_documentation_group(context: &mut ApiContext) -> Result<User, ApiError> {
     context.get_user_by_username(DOCSGROUPUSERNAME, "*").await //User has lots of required fields, just do *
 }
-

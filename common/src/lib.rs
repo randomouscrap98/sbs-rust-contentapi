@@ -81,7 +81,6 @@ pub struct MainLayoutData {
     pub current_path: String,
     pub override_nav_path: Option<&'static str>,
     pub about_api: contentapi::About,
-    pub raw_alert: Option<String>,
 
     #[cfg(feature = "profiling")]
     pub profiler: onestop::OneList<onestop::OneDuration>,
@@ -159,4 +158,3 @@ pub fn parse_compound_value(original: &str) -> Vec<String> {
 pub fn random_id(postfix: &str) -> String {
     format!("{}_{}", fastrand::u32(..), postfix)
 }
-
