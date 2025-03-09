@@ -306,6 +306,4 @@ impl ApiContext {
         #[cfg(not(feature = "profiling"))]
         return self.post_request(request).await;
     }
-
-    //Some special wrappers
 }
