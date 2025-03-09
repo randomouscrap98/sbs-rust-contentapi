@@ -1,28 +1,25 @@
 use std::collections::HashMap;
 
 use super::*;
-use crate::*;
-use crate::view::*;
 use crate::constants::*;
+use crate::view::*;
+use crate::*;
 
 use contentapi::*;
-use contentapi::forms::*;
 use maud::*;
 
-pub fn pageicon(links: &LinkConfig, page: &Content) -> Markup 
-{
+pub fn pageicon(links: &LinkConfig, page: &Content) -> Markup {
     pageicon_limited(links, page, 99)
 }
 
-pub fn pageicon_limited(links: &LinkConfig, page: &Content, max: i32) -> Markup 
-{
+pub fn pageicon_limited(links: &LinkConfig, page: &Content, max: i32) -> Markup {
     let systems = get_systems(page);
     let mut count = 0;
     html! {
         //Don't forget the program type! if it exists anyway
         @if systems.len() > 0 {
             @for system in systems {
-                @if let Some(title) = get_sbs_system_title(&system) { 
+                @if let Some(title) = get_sbs_system_title(&system) {
                     img title=(title) class="sysicon" src={(links.resource_root)"/"(system)".svg"};
                     ({
                         count = count + 1;
@@ -48,14 +45,16 @@ pub fn pageicon_limited(links: &LinkConfig, page: &Content, max: i32) -> Markup
     }
 }
 
-pub fn page_card(links: &LinkConfig, page: &Content, users: &HashMap<i64, User>) -> Markup 
-{
+pub fn page_card(links: &LinkConfig, page: &Content, users: &HashMap<i64, User>) -> Markup {
     let user = user_or_default(users.get(&page.createUserId.unwrap_or(0)));
     //very wasteful allocations but whatever
     let link = links.forum_thread(page);
-    let values = match &page.values { Some(values) => values.clone(), None => HashMap::new() };
+    let values = match &page.values {
+        Some(values) => values.clone(),
+        None => HashMap::new(),
+    };
     let systems = get_systems(page);
-    html!{
+    html! {
         div.{"pagecard "(opt_s!(page.literalType))} {
             div."cardmain" {
                 div."cardtext" {
@@ -75,7 +74,7 @@ pub fn page_card(links: &LinkConfig, page: &Content, users: &HashMap<i64, User>)
             div."smallseparate cardbottom" {
                 a."user flatlink" href=(links.user(&user)) { (user.username) }
                 //This may have conditional display? I don't know, depends on how much room there is!
-                time."aside" datetime=(d(&page.createDate)) { (timeago_o(&page.createDate)) } 
+                time."aside" datetime=(d(&page.createDate)) { (timeago_o(&page.createDate)) }
                 //All this junk needs "key" so it can display properly... probably should change this?
                 @if let Some(key) = values.get(SBSValue::DOWNLOADKEY).and_then(|k| k.as_str()) {
                     span."key" { (key) }
@@ -96,3 +95,4 @@ pub fn page_card(links: &LinkConfig, page: &Content, users: &HashMap<i64, User>)
         }
     }
 }
+

@@ -1,27 +1,31 @@
-use common::{*, render::submissions::pageicon_limited};
 use common::constants::THREADTYPES;
 use common::render::layout::*;
 use common::response::*;
-use contentapi::*;
+use common::{render::submissions::pageicon_limited, *};
 use contentapi::conversion::cast_result_required;
-use contentapi::forms::QueryImage;
+use contentapi::QueryImage;
+use contentapi::*;
 use maud::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
 pub struct SearchAllForm {
-    pub search : Option<String>
+    pub search: Option<String>,
 }
 
 pub enum SearchAllResult {
     User(contentapi::User),
-    Content(contentapi::Content)
+    Content(contentapi::Content),
 }
 
 //This will render the entire index! It's a handler WITH the template in it! Maybe that's kinda weird? who knows...
 //pub fn index(data: MainLayoutData) -> Result<impl warp::Reply, Infallible>{
-pub fn render(data: MainLayoutData, search_results: Option<Vec<SearchAllResult>>, search_form: SearchAllForm) -> String {
+pub fn render(
+    data: MainLayoutData,
+    search_results: Option<Vec<SearchAllResult>>,
+    search_form: SearchAllForm,
+) -> String {
     layout(&data, html!{
         (data.links.style("/forpage/forum.css"))
         (data.links.style("/forpage/searchall.css"))
@@ -66,9 +70,11 @@ pub fn render(data: MainLayoutData, search_results: Option<Vec<SearchAllResult>>
 
 //There is no post, searching is done in the GET params
 
-pub async fn get_render(mut context: PageContext, search_form: SearchAllForm) -> Result<Response, Error> 
-{
-    let mut result : Option<Vec<SearchAllResult>> = None;
+pub async fn get_render(
+    mut context: PageContext,
+    search_form: SearchAllForm,
+) -> Result<Response, Error> {
+    let mut result: Option<Vec<SearchAllResult>> = None;
     //Don't do a search unless a search was given of course
     if let Some(ref search) = search_form.search {
         if search.len() > 0 {
@@ -78,8 +84,7 @@ pub async fn get_render(mut context: PageContext, search_form: SearchAllForm) ->
             if search.len() < 2 {
                 //If the search is too short, do the significantly faster search of 'starts with'
                 add_value!(request, "search", format!("{}%", search));
-            }
-            else {
+            } else {
                 //Otherwise, we can do the slow search of 'contains'
                 add_value!(request, "search", format!("%{}%", search));
             }
@@ -88,7 +93,9 @@ pub async fn get_render(mut context: PageContext, search_form: SearchAllForm) ->
             let content_request = build_request!(
                 RequestType::content,
                 String::from("id,name,literalType,hash,values"), //need values for icon
-                format!("literalType in @allowed_types and name like @search or !keywordlike(@search)")
+                format!(
+                    "literalType in @allowed_types and name like @search or !keywordlike(@search)"
+                )
             );
             request.requests.push(content_request);
 
@@ -100,20 +107,34 @@ pub async fn get_render(mut context: PageContext, search_form: SearchAllForm) ->
             );
             request.requests.push(user_request);
 
-            let search_result = context.api_context.post_request_profiled_opt(&request, "searchall").await?;
+            let search_result = context
+                .api_context
+                .post_request_profiled_opt(&request, "searchall")
+                .await?;
             let content = cast_result_required::<Content>(&search_result, "content")?;
             let users = cast_result_required::<User>(&search_result, "user")?;
 
-            let mut result_combined : Vec<SearchAllResult> = content.into_iter().map(|x| SearchAllResult::Content(x)).collect();
+            let mut result_combined: Vec<SearchAllResult> = content
+                .into_iter()
+                .map(|x| SearchAllResult::Content(x))
+                .collect();
             result_combined.extend(users.into_iter().map(|x| SearchAllResult::User(x)));
 
             let searchlower = search.to_ascii_lowercase();
-            result_combined.sort_by(|a, b| search_score(b, &searchlower).partial_cmp(&search_score(a, &searchlower)).unwrap());
+            result_combined.sort_by(|a, b| {
+                search_score(b, &searchlower)
+                    .partial_cmp(&search_score(a, &searchlower))
+                    .unwrap()
+            });
 
             result = Some(result_combined);
         }
     }
-    Ok(Response::Render(render(context.layout_data, result, search_form)))
+    Ok(Response::Render(render(
+        context.layout_data,
+        result,
+        search_form,
+    )))
 }
 
 /// Score the item based on the given PRE-LOWERCASED search term
@@ -140,11 +161,15 @@ fn search_score(item: &SearchAllResult, search: &str) -> f32 {
 }
 
 /// Score the name based on the given PRE-LOWERCASED search term
-fn search_score_name(name: &str, search: &str) -> f32
-{
+fn search_score_name(name: &str, search: &str) -> f32 {
     let mut score = 0.0;
     let namelower = name.to_ascii_lowercase();
-    if namelower.starts_with(search) { score += 1.0; }
-    if namelower.contains(search) { score += 1.0; }
+    if namelower.starts_with(search) {
+        score += 1.0;
+    }
+    if namelower.contains(search) {
+        score += 1.0;
+    }
     score
 }
+

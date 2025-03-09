@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use contentapi::forms::*;
 use contentapi::*;
 use maud::*;
 use serde_json::Value;

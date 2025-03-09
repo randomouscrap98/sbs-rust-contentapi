@@ -1,8 +1,6 @@
 use contentapi::*;
 use crate::constants::*;
 use crate::forms::*;
-use crate::forum::can_delete_thread;
-use crate::forum::can_edit_thread;
 use crate::prefab::*;
 
 /// Generate the complicated FullRequest for the given search. Could be a "From" if 
@@ -99,7 +97,3 @@ pub fn get_search_request(search: &PageSearch, per_page: i32) -> FullRequest
 
     request
 }
-
-//Both of these are the same as threads for now
-pub fn can_edit_page(user: &User, page: &Content) -> bool { can_edit_thread(user, page) }
-pub fn can_delete_page(user: &User, page: &Content) -> bool { can_delete_thread(user, page) }

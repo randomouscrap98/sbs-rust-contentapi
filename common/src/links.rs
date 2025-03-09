@@ -1,20 +1,18 @@
-//use crate::constants::SBSPageType;
-
 use super::*;
 use contentapi::*;
-use contentapi::forms::*;
 use render::i;
 
 /// Extend LinkConfig to have additional functionality
 impl LinkConfig {
-
-    pub fn image(&self, hash: &str, query: &QueryImage) -> String 
-    {
+    pub fn image(&self, hash: &str, query: &QueryImage) -> String {
         match serde_urlencoded::to_string(&query) {
             Ok(querystring) => format!("{}/{}?{}", self.file_root, hash, querystring),
             Err(error) => {
-                println!("Serde_qs failed? Not printing link for {}. Error: {}", hash, error);
-                format!("#ERRORFOR-{}",hash)
+                println!(
+                    "Serde_qs failed? Not printing link for {}. Error: {}",
+                    hash, error
+                );
+                format!("#ERRORFOR-{}", hash)
             }
         }
     }
@@ -27,7 +25,7 @@ impl LinkConfig {
         format!("{}/userhome", self.http_root)
     }
 
-    pub fn image_default(&self, hash: &str) -> String { 
+    pub fn image_default(&self, hash: &str) -> String {
         self.image(hash, &QueryImage::default())
     }
 
@@ -58,7 +56,7 @@ impl LinkConfig {
     /// Create a category link using the current link system, which only uses the hash AVOID AS MUCH AS POSSIBLE!
     /// The implementation of the links may change!
     pub fn forum_category_unsafe(&self, hash: &str) -> String {
-        format!("{}/forum/category/{}", self.http_root, hash) 
+        format!("{}/forum/category/{}", self.http_root, hash)
     }
 
     pub fn forum_thread(&self, thread: &Content) -> String {
@@ -70,16 +68,29 @@ impl LinkConfig {
     }
 
     pub fn forum_post(&self, post: &Message, thread: &Content) -> String {
-        format!("{}/forum/thread/{}/{}{}", self.http_root, opt_s!(thread.hash), post.id.unwrap_or_default(), Self::forum_post_hash(post))
+        format!(
+            "{}/forum/thread/{}/{}{}",
+            self.http_root,
+            opt_s!(thread.hash),
+            post.id.unwrap_or_default(),
+            Self::forum_post_hash(post)
+        )
     }
 
-
     pub fn forum_thread_editor_new(&self, category: &Content) -> String {
-        format!("{}/forum/edit/thread?category={}", self.http_root, opt_s!(category.hash))
+        format!(
+            "{}/forum/edit/thread?category={}",
+            self.http_root,
+            opt_s!(category.hash)
+        )
     }
 
     pub fn forum_thread_editor_edit(&self, thread: &Content) -> String {
-        format!("{}/forum/edit/thread?thread={}", self.http_root, opt_s!(thread.hash))
+        format!(
+            "{}/forum/edit/thread?thread={}",
+            self.http_root,
+            opt_s!(thread.hash)
+        )
     }
 
     pub fn forum_thread_delete(&self, thread: &Content) -> String {
@@ -89,15 +100,19 @@ impl LinkConfig {
     /// Get the link to the post editor for a brand new post. You HAVE to specify which thread you're posting on, but
     /// you can also optionally specify which post you're replying to.
     pub fn forum_post_editor_new(&self, thread: &Content, reply_to: Option<&Message>) -> String {
-        format!("{}/forum/edit/post?thread={}{}", self.http_root, opt_s!(thread.hash),
+        format!(
+            "{}/forum/edit/post?thread={}{}",
+            self.http_root,
+            opt_s!(thread.hash),
             if let Some(reply) = reply_to {
                 format!("&reply={}", i(&reply.id))
             } else {
                 String::from("")
-            })
+            }
+        )
     }
 
-    /// Get the link to the post editor to edit the given message. You don't need extra data in this case, since 
+    /// Get the link to the post editor to edit the given message. You don't need extra data in this case, since
     /// the message to edit has all the info you need
     pub fn forum_post_editor_edit(&self, post: &Message) -> String {
         format!("{}/forum/edit/post?post={}", self.http_root, i(&post.id))
@@ -107,12 +122,10 @@ impl LinkConfig {
         format!("{}/forum/edit/post", self.http_root)
     }
 
-
     /// Get the link to delete a post. You'll need to POST to this to delete
     pub fn forum_post_delete(&self, post: &Message) -> String {
         format!("{}/forum/delete/post/{}", self.http_root, i(&post.id))
     }
-
 
     pub fn page_editor_new(&self, mode: &str) -> String {
         format!("{}/page/edit?mode={}", self.http_root, mode)
@@ -130,19 +143,15 @@ impl LinkConfig {
         format!("{}/page/delete/{}", self.http_root, i(&page.id))
     }
 
-
     pub fn search_category(&self, category: i64) -> String {
         format!("{}/search?category={}", self.http_root, category)
     }
-
 }
 
-impl MainLayoutData 
-{
+impl MainLayoutData {
     /// Get a plain path (no query) pointing to this current request. This SHOULD work anywhere...
     /// but how often do you REALLY want this one?
     pub fn current(&self) -> String {
         format!("{}{}", self.links.http_root, self.current_path)
     }
 }
-

@@ -1,32 +1,34 @@
 use chrono::SecondsFormat;
 use chrono::{DateTime, Utc};
-use common::*;
 use common::constants::*;
-use common::render::*;
 use common::render::layout::*;
+use common::render::*;
 use common::response::*;
 use common::view::*;
-use contentapi::*;
-use contentapi::forms::*;
+use common::*;
 use contentapi::conversion::*;
+use contentapi::*;
 use maud::{html, Markup, PreEscaped};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 pub static POSTACTIVITYKEY: &str = "post_activity";
 pub static USERACTIVITYKEY: &str = "user_activity";
 pub static ACTIVITYKEY: &str = "activity";
 
-pub fn render(data: MainLayoutData, activity: Vec<SbsActivity>, query: ActivityQuery) -> String
-{
+pub fn render(data: MainLayoutData, activity: Vec<SbsActivity>, query: ActivityQuery) -> String {
     let prev_query = ActivityQuery {
         start: None,
-        end: activity.first().and_then(|a| Some(a.date))
+        end: activity.first().and_then(|a| Some(a.date)),
     };
     let next_query = ActivityQuery {
         start: activity.last().and_then(|a| Some(a.date)),
-        end: None
+        end: None,
     };
-    let newerlink = format!("{}/activity?{}", data.links.http_root, serde_urlencoded::to_string(prev_query).unwrap_or_default());
+    let newerlink = format!(
+        "{}/activity?{}",
+        data.links.http_root,
+        serde_urlencoded::to_string(prev_query).unwrap_or_default()
+    );
 
     layout(&data, html!{
         (data.links.style("/forpage/activity.css"))
@@ -74,7 +76,7 @@ pub fn activity_item(links: &LinkConfig, item: &SbsActivity) -> Markup {
                         }
                     }
                     //span."action" { (PreEscaped(&item.action_text)) }
-                    time."aside" datetime=(dd(&item.date)) { (timeago(&item.date)) } 
+                    time."aside" datetime=(dd(&item.date)) { (timeago(&item.date)) }
                 }
                 @if let Some(extra) = &item.extra_text {
                     div."aside extra postpreview" { (PreEscaped(extra)) }
@@ -87,8 +89,7 @@ pub fn activity_item(links: &LinkConfig, item: &SbsActivity) -> Markup {
 pub fn activity_link(text: &str, href: &str) -> Markup {
     if text.trim().is_empty() {
         html!( a."flatlink" href=(href) { "??? (NOTITLE)" })
-    }
-    else {
+    } else {
         html!( a."flatlink" href=(href) { (text) })
     }
 }
@@ -99,17 +100,16 @@ pub struct ActivityQuery {
     /// Used when moving forward through activity: the "next" button
     pub start: Option<DateTime<Utc>>,
     /// Used when moving backward through activity: the "previous" button
-    pub end: Option<DateTime<Utc>>
+    pub end: Option<DateTime<Utc>>,
 }
 
 pub struct SbsActivity<'a> {
     pub date: DateTime<Utc>,
     pub user: &'a User,
     pub action_text: String,
-    pub activity_href: Option<(Option<String>,String)>,
+    pub activity_href: Option<(Option<String>, String)>,
     pub extra_text: Option<String>, //This is RAW, output as 'PreEscaped'
 }
-
 
 /// Returns the constructed query and whether you need to invert the results from your normal order
 pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest //(FullRequest, bool)
@@ -118,34 +118,41 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
 
     //Note: the allowed list of types for activity is NOT the same as the allowed list of types for
     //displaying as a thread! We don't want to scare people by putting private threads in the activity
-    add_value!(request, "allowed_types", ACTIVITYTYPES); 
+    add_value!(request, "allowed_types", ACTIVITYTYPES);
     add_value!(request, "deleted", UserAction::DELETE);
 
     let mut user_query = String::from("!registered()");
     let mut message_query = String::from("!basiccomments() and !literaltypein(@allowed_types)");
-    let mut activity_query = String::from("!basichistory() and (!literaltypein(@allowed_types) or action = @deleted)");
+    let mut activity_query =
+        String::from("!basichistory() and (!literaltypein(@allowed_types) or action = @deleted)");
     let mut order_cd = "createDate_desc";
     let mut order_d = "date_desc";
 
     let dq_part = if let Some(start) = query.start {
         //NOTE: in order for these to be fairly accurate, we have to have millisecond precision
-        add_value!(request, "start", start.to_rfc3339_opts(SecondsFormat::Millis, true));
+        add_value!(
+            request,
+            "start",
+            start.to_rfc3339_opts(SecondsFormat::Millis, true)
+        );
         //Strictly less than, it's the last date from the previous page
         "< @start"
-    }
-    else if let Some(end) = query.end {
-        add_value!(request, "end", end.to_rfc3339_opts(SecondsFormat::Millis, true));
+    } else if let Some(end) = query.end {
+        add_value!(
+            request,
+            "end",
+            end.to_rfc3339_opts(SecondsFormat::Millis, true)
+        );
         order_cd = "id";
         order_d = "date";
         //Strictly greater than, it's the first date from the next page
         "> @end"
-    }
-    else {
+    } else {
         ""
     };
 
     // We ARE limiting by date, go ahead and finish constructing the queries
-    if ! dq_part.is_empty() {
+    if !dq_part.is_empty() {
         message_query = format!("{} and createDate {}", message_query, dq_part);
         activity_query = format!("{} and date {}", activity_query, dq_part);
         user_query = format!("{} and createDate {}", user_query, dq_part);
@@ -182,45 +189,53 @@ pub fn get_activity_request(query: &ActivityQuery, per_page: i32) -> FullRequest
     activity_request.name = Some(String::from(ACTIVITYKEY));
     request.requests.push(activity_request);
 
-
     let content_request = build_request!(
         RequestType::content,
         String::from("id,name,hash,literalType"), //query, order, limit
-        format!("id in @{}.contentId or id in @{}.contentId", POSTACTIVITYKEY, ACTIVITYKEY)
+        format!(
+            "id in @{}.contentId or id in @{}.contentId",
+            POSTACTIVITYKEY, ACTIVITYKEY
+        )
     );
     request.requests.push(content_request);
 
     let user_request = build_request!(
         RequestType::user,
         String::from("*"), //query, order, limit
-        format!("id in @{}.id or id in @{}.createUserId or id in @{}.userId", USERACTIVITYKEY, POSTACTIVITYKEY, ACTIVITYKEY)
+        format!(
+            "id in @{}.id or id in @{}.createUserId or id in @{}.userId",
+            USERACTIVITYKEY, POSTACTIVITYKEY, ACTIVITYKEY
+        )
     );
     request.requests.push(user_request);
 
     //println!("Activity request: {:#?}", &request);
 
     request
-
 }
 
 macro_rules! getdef {
-    ($default:ident,$map:ident,$idfield:expr) => {
-        {
-            let mut this_thing = &$default;
-            if let Some(id) = &$idfield {
-                if let Some(item) = &$map.get(id) {
-                    this_thing = item;
-                }
+    ($default:ident,$map:ident,$idfield:expr) => {{
+        let mut this_thing = &$default;
+        if let Some(id) = &$idfield {
+            if let Some(item) = &$map.get(id) {
+                this_thing = item;
             }
-            this_thing
         }
-    };
+        this_thing
+    }};
 }
 
-pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page: i32) -> Result<Response, Error>
-{
+pub async fn get_render(
+    mut context: PageContext,
+    query: ActivityQuery,
+    per_page: i32,
+) -> Result<Response, Error> {
     let request = get_activity_request(&query, per_page);
-    let response = context.api_context.post_request_profiled_opt(&request, "activity-main").await?;
+    let response = context
+        .api_context
+        .post_request_profiled_opt(&request, "activity-main")
+        .await?;
 
     let user_activity = cast_result_required::<User>(&response, USERACTIVITYKEY)?;
     let post_activity = cast_result_required::<Message>(&response, POSTACTIVITYKEY)?;
@@ -230,79 +245,102 @@ pub async fn get_render(mut context: PageContext, query: ActivityQuery, per_page
     let users = map_users(users_raw);
     let content = map_content(content_raw);
 
-    let mut result : Vec<SbsActivity> = Vec::new();
+    let mut result: Vec<SbsActivity> = Vec::new();
 
     for newuser in &user_activity {
-        result.push(SbsActivity { 
-            date: newuser.createDate, 
-            user: newuser, 
-            action_text: String::from("created an account!"), 
+        result.push(SbsActivity {
+            date: newuser.createDate,
+            user: newuser,
+            action_text: String::from("created an account!"),
             activity_href: None,
-            extra_text: None
+            extra_text: None,
         })
     }
 
     let default_user = user_or_default(None);
     let default_content = content_or_default(None);
 
-    for post in &post_activity 
-    {
+    for post in &post_activity {
         let this_user = getdef!(default_user, users, post.createUserId);
         let this_content = getdef!(default_content, content, post.contentId);
-        result.push(SbsActivity { 
-            date: post.createDate.unwrap_or_default(), 
+        result.push(SbsActivity {
+            date: post.createDate.unwrap_or_default(),
             user: this_user,
-            action_text: String::from("posted on"), 
-            activity_href: Some((Some(context.layout_data.links.forum_post(post, &this_content)),String::from(opt_s!(this_content.name)))),
-            extra_text: Some(context.bbcode.parse_profiled_opt(opt_s!(post.text), format!("post-{}", i(&post.id))))
+            action_text: String::from("posted on"),
+            activity_href: Some((
+                Some(context.layout_data.links.forum_post(post, &this_content)),
+                String::from(opt_s!(this_content.name)),
+            )),
+            extra_text: Some(
+                context
+                    .bbcode
+                    .parse_profiled_opt(opt_s!(post.text), format!("post-{}", i(&post.id))),
+            ),
         })
     }
 
-    for activity in &content_activity 
-    {
+    for activity in &content_activity {
         let this_user = getdef!(default_user, users, activity.userId);
         let this_content = getdef!(default_content, content, activity.contentId);
 
-        let action_text = format!("{} {}",
-            match activity.action.unwrap_or_else(||0) {
+        let action_text = format!(
+            "{} {}",
+            match activity.action.unwrap_or_else(|| 0) {
                 UserAction::CREATE => "created",
                 UserAction::UPDATE => "edited",
                 UserAction::DELETE => "deleted",
-                _ => "did SOMETHING UNKNOWN(??)"
+                _ => "did SOMETHING UNKNOWN(??)",
             },
             {
                 //let lit_type = this_content.literalType.as_ref().and_then(|lt| Some(lt.clone())).unwrap_or_else(||String::new());
-                if this_content.literalType.as_deref() == Some(SBSPageType::PROGRAM) { "program" }
-                else if this_content.literalType.as_deref() == Some(SBSPageType::FORUMTHREAD) { "thread" }
-                else if this_content.literalType.as_deref() == Some(SBSPageType::RESOURCE) { "page" }
-                else { "content" }
+                if this_content.literalType.as_deref() == Some(SBSPageType::PROGRAM) {
+                    "program"
+                } else if this_content.literalType.as_deref() == Some(SBSPageType::FORUMTHREAD) {
+                    "thread"
+                } else if this_content.literalType.as_deref() == Some(SBSPageType::RESOURCE) {
+                    "page"
+                } else {
+                    "content"
+                }
             }
         );
 
-        result.push(SbsActivity { 
-            date: activity.date.unwrap_or_default(), 
+        result.push(SbsActivity {
+            date: activity.date.unwrap_or_default(),
             user: this_user,
             action_text,
             activity_href: if activity.action == Some(UserAction::DELETE) {
-                Some((None, format!("{} ({})", opt_s!(this_content.hash), i(&this_content.id))))
+                Some((
+                    None,
+                    format!("{} ({})", opt_s!(this_content.hash), i(&this_content.id)),
+                ))
             } else {
-                Some((Some(context.layout_data.links.forum_thread(&this_content)), String::from(opt_s!(this_content.name))))
+                Some((
+                    Some(context.layout_data.links.forum_thread(&this_content)),
+                    String::from(opt_s!(this_content.name)),
+                ))
             },
             //All this is html! macro stuff is to reuse maud as an html escaper
-            extra_text: activity.message.as_ref().and_then(|m| Some(html!((m)).into_string()))
+            extra_text: activity
+                .message
+                .as_ref()
+                .and_then(|m| Some(html!((m)).into_string())),
         })
     }
 
-    let real_activity : Vec<SbsActivity> = 
-        if query.end.is_some() {
-            result.sort_by(|a, b| a.date.partial_cmp(&b.date).unwrap());
-            result.into_iter().take(per_page as usize).rev().collect()
-        }
-        else {
-            //Normal ordering, simple take
-            result.sort_by(|a, b| b.date.partial_cmp(&a.date).unwrap());
-            result.into_iter().take(per_page as usize).collect()
-        };
+    let real_activity: Vec<SbsActivity> = if query.end.is_some() {
+        result.sort_by(|a, b| a.date.partial_cmp(&b.date).unwrap());
+        result.into_iter().take(per_page as usize).rev().collect()
+    } else {
+        //Normal ordering, simple take
+        result.sort_by(|a, b| b.date.partial_cmp(&a.date).unwrap());
+        result.into_iter().take(per_page as usize).collect()
+    };
 
-    Ok(Response::Render(render(context.layout_data, real_activity, query)))
+    Ok(Response::Render(render(
+        context.layout_data,
+        real_activity,
+        query,
+    )))
 }
+

@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use bbscope::BBCode;
 use common::prefab::get_documentation_group;
-use contentapi::forms::*;
 use contentapi::*;
 
 use common::forms::*;
