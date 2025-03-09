@@ -46,7 +46,6 @@ pub fn header(data: &MainLayoutData) -> Markup {
                 a."plainlink" #"homelink" href={(data.links.http_root)"/"} {
                     img src={(data.links.resource_root)"/favicon.ico"} alt="Website Logo";
                 }
-                (main_nav_link(data,"Activity","🕒", "/activity",Some("mainactivitylink")))
                 (main_nav_link(data,"Browse","🎮", "/search",Some("mainbrowselink")))
                 (main_nav_link(data,"Forums","📰", "/forum",Some("mainforumlink")))
                 (main_nav_link(data,"Docs","📖", "/documentation",Some("maindocumentationlink")))
@@ -172,12 +171,6 @@ pub fn layout_with_meta(main_data: &MainLayoutData, meta: LayoutMeta, page: Mark
         html! {
             (header(&main_data))
             main {
-                /*section {
-                    p {
-                        span."error" { "This is a preview website! Changes will not carry over or be saved in the end! " }
-                        "Original website still up at " a href="https://old.smilebasicsource.com" { "https://old.smilebasicsource.com" }
-                    }
-                }*/
                 (page)
             }
             (footer(&main_data))

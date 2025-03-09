@@ -1,5 +1,4 @@
 pub mod about;
-pub mod activity;
 pub mod documentation;
 pub mod forum_category;
 pub mod forum_main;
@@ -11,6 +10,5 @@ pub mod searchall;
 pub mod sessionsettings;
 pub mod user;
 pub mod widget_qr;
-pub mod widget_recentactivity;
 pub mod widget_thread;
 pub mod widget_votes;
