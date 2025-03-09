@@ -12,11 +12,9 @@ use crate::state::{RequestContext, GlobalState};
 use crate::srender;
 
 pub mod login;
-pub mod userhome;
 pub mod admin;
 pub mod user;
 pub mod forum;
-pub mod page;
 
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
 static SETTINGSCOOKIE: &str = "sbs-rust-contentapi-settings";
@@ -54,9 +52,6 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
         .route("/login",
             get(|context: RequestContext| srender!(pages::login::get_render(context.page_context)))
             .post(login::login_post))
-        .route("/userhome", 
-            get(|context: RequestContext| srender!(pages::userhome::get_render(context.page_context)))
-            .post(userhome::userhome_post))
         .route("/logout",
             get(|context: RequestContext, cookies: Cookies| async move {
                 cookies.remove(Cookie::new(SESSIONCOOKIE, ""));
@@ -116,24 +111,6 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
         .route("/page",
             get(|context: RequestContext, Query(query): Query<pages::page::PageQuery>|
                 srender!(pages::page::get_pid_redirect(context.page_context, query))))
-        .route("/page/edit", 
-            get(|context: RequestContext, Query(query): Query<page::PageEditParameter>| 
-                srender!(pages::page_edit::get_render(context.page_context, query.mode, query.page)))
-            .post(|context: RequestContext, Form(form): Form<common::forms::PageForm>|
-                srender!(pages::page_edit::post_render(context.page_context, form))))
-        .route("/page/delete/:id",
-            post(|context: RequestContext, Path(id): Path<i64>|
-                srender!(pages::page_edit::delete_render(context.page_context, id))))
-        .route("/widget/bbcodepreview", 
-            get(|context: RequestContext| srender!(pages::widget_bbcodepreview::get_render(context.page_context)))
-            .post(|context: RequestContext, Form(form) : Form<common::forms::BasicText>| 
-                srender!(pages::widget_bbcodepreview::post_render(context.page_context, form.text))))
-        .route("/widget/contentpreview", 
-            post(|context: RequestContext, Form(form) : Form<pages::widget_contentpreview::ContentPreviewForm>| 
-                srender!(pages::widget_contentpreview::post_render(context.page_context, form))))
-        .route("/widget/imagebrowser", 
-            get(|context: RequestContext, Query(query): Query<pages::widget_imagebrowser::Search>| 
-                srender!(pages::widget_imagebrowser::query_render(context.page_context, query, context.global_state.config.default_imagebrowser_count))))
         .route("/widget/thread", 
             get(|context: RequestContext, Query(query): Query<common::forms::ThreadQuery>| 
                 srender!(pages::widget_thread::get_render(context.page_context, query))))
