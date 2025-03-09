@@ -8,7 +8,7 @@ macro_rules! string_const {
 
         impl $name {
         $(
-            pub const $item: &str = $val;    
+            pub const $item: &str = $val;
         )*
         }
     };
@@ -16,7 +16,7 @@ macro_rules! string_const {
 
 pub const CONTENT_CHEAPFIELDS : &str = "~keywordCount,popScore1,lastRevisionId,watchCount,commentCount,lastCommentId,engagement,keywords,permissions";
 
-string_const!{ SBSValue => {
+string_const! { SBSValue => {
     (DOWNLOADKEY:"dlkey"),
     (VERSION:"version"),
     (SIZE:"size"),
@@ -27,7 +27,7 @@ string_const!{ SBSValue => {
     (DOCPATH:"docpath")
 }}
 
-string_const!{ SBSPageType => {
+string_const! { SBSPageType => {
     (PROGRAM:"program"),
     (RESOURCE:"resource"),
     (CATEGORY:"category"),
@@ -44,40 +44,37 @@ string_const!{ SBSPageType => {
     (DOCUMENTATION:"documentation")
 }}
 
-
-pub const USERTHEMES: &[(&str,&str)] = &[
+pub const USERTHEMES: &[(&str, &str)] = &[
     ("sbs", "SBS (default)"),
     ("sbs-dark", "SBS Dark"),
     ("sbs-blue", "SBS Blue"),
     ("sbs-contrast", "SBS High Contrast"),
-    ("sbs-dark-contrast", "SBS Dark High Contrast")
+    ("sbs-dark-contrast", "SBS Dark High Contrast"),
 ];
 
 pub const UPVOTE: &str = "+";
 pub const DOWNVOTE: &str = "-";
 pub const VOTETYPE: &str = "vote";
 
-pub const POPSCORE1SORT: &str = "popScore1_desc";
+pub const DEFAULTPAGESORT: &str = "id";
 pub const ANYSYSTEM: &str = "any";
 pub const PTCSYSTEM: &str = "ptc";
 pub const MARKUPBBCODE: &str = "bbcode";
 pub const DOCSPARENTHASH: &str = "system-docparent";
 pub const DOCSGROUPUSERNAME: &str = "docsgroup";
-//pub const MARKUP12y: &str = "12y";
-//pub const MARKUP12y2: &str = "12y2";
 
-pub const SBSSYSTEMS: &[(&str,&str)] = &[
-    (ANYSYSTEM, "Any"), 
-    (PTCSYSTEM, "Petit Computer (DSi)"), 
-    ("3ds", "Nintendo 3DS"), 
-    ("wiiu", "Nintendo WiiU"), 
-    ("switch", "Nintendo Switch")
-]; 
+pub const SBSSYSTEMS: &[(&str, &str)] = &[
+    (ANYSYSTEM, "Any"),
+    (PTCSYSTEM, "Petit Computer (DSi)"),
+    ("3ds", "Nintendo 3DS"),
+    ("wiiu", "Nintendo WiiU"),
+    ("switch", "Nintendo Switch"),
+];
 
-pub const SBSMARKUPS: &[(&str,&str)] = &[
+pub const SBSMARKUPS: &[(&str, &str)] = &[
     (MARKUPBBCODE, "BBCode (static rendered!)"),
     ("12y", "12y original (js rendered!)"),
-    ("12y2", "12y2 (unstable? js rendered!)")
+    ("12y2", "12y2 (unstable? js rendered!)"),
 ];
 
 pub fn get_sbs_system_title(key: &str) -> Option<&str> {
@@ -89,42 +86,40 @@ pub fn get_sbs_system_title(key: &str) -> Option<&str> {
     return None;
 }
 
-pub const ACTIVITYTYPES : &[&str] = &[
-    SBSPageType::PROGRAM, 
+pub const ACTIVITYTYPES: &[&str] = &[
+    SBSPageType::PROGRAM,
     SBSPageType::RESOURCE,
     SBSPageType::FORUMTHREAD,
-    SBSPageType::DOCUMENTATION
+    SBSPageType::DOCUMENTATION,
 ];
 
-pub const THREADTYPES : &[&str] = &[
+pub const THREADTYPES: &[&str] = &[
     SBSPageType::FORUMTHREAD,
     SBSPageType::PROGRAM,
     SBSPageType::RESOURCE,
     SBSPageType::DIRECTMESSAGE,
-    SBSPageType::DOCUMENTATION
+    SBSPageType::DOCUMENTATION,
 ];
 
-pub const FORUMCATEGORYTYPES : &[&str] = &[
+pub const FORUMCATEGORYTYPES: &[&str] = &[
     SBSPageType::FORUMCATEGORY,
     SBSPageType::SUBMISSIONS,
-    SBSPageType::DOCPARENT
+    SBSPageType::DOCPARENT,
 ];
 
-pub const SEARCHPAGETYPES: &[(&str,&str)] = &[
+pub const SEARCHPAGETYPES: &[(&str, &str)] = &[
     ("", "Any"),
-    (SBSPageType::PROGRAM, "Programs"), 
-    (SBSPageType::RESOURCE, "Resources")
+    (SBSPageType::PROGRAM, "Programs"),
+    (SBSPageType::RESOURCE, "Resources"),
 ];
 
-pub const SEARCHPAGEORDERS: &[(&str,&str)] = &[
-    (POPSCORE1SORT, "Popular"), 
-    ("id_desc", "Created (newest)"), 
+pub const SEARCHPAGEORDERS: &[(&str, &str)] = &[
     ("id", "Created (oldest)"),
-    ("lastRevisionId_desc", "Edited (newest)"),
-    ("lastRevisionId", "Edited (oldest)"),
+    ("id_desc", "Created (newest)"),
     ("name", "Alphabetical (A-Z)"),
     ("name_desc", "Alphabetical (Z-A)"),
-    ("random", "Random")
+    ("lastRevisionId_desc", "Edited (newest)"),
+    ("lastRevisionId", "Edited (oldest)"),
 ];
 
 pub const CATEGORYPREFIX: &str = "tag:";
