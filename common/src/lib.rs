@@ -1,18 +1,18 @@
-pub mod forum;
-pub mod render;
-pub mod pagination;
-pub mod search;
 pub mod constants;
 pub mod forms;
+pub mod forum;
 pub mod links;
-pub mod view;
+pub mod pagination;
 pub mod prefab;
+pub mod render;
 pub mod response;
+pub mod search;
+pub mod view;
 
 use std::collections::HashMap;
 
 use maud::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_urlencoded;
 
 use bbscope::BBCode;
@@ -22,10 +22,22 @@ use fastrand;
 #[macro_export]
 macro_rules! opt_s {
     ($str:expr,$def:literal) => {
-        if let Some(ref thing) = $str { if thing.trim().is_empty() { $def } else { thing } } else { $def }
+        if let Some(ref thing) = $str {
+            if thing.trim().is_empty() {
+                $def
+            } else {
+                thing
+            }
+        } else {
+            $def
+        }
     };
     ($str:expr) => {
-        if let Some(ref thing) = $str { thing } else { "" }
+        if let Some(ref thing) = $str {
+            thing
+        } else {
+            ""
+        }
     };
 }
 
@@ -36,7 +48,7 @@ pub struct LinkConfig {
     pub resource_root: String,
     pub file_root: String,
     pub file_upload_root: String,
-    pub cache_bust: String
+    pub cache_bust: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -63,18 +75,16 @@ impl Default for UserConfig {
 
 #[derive(Debug)]
 pub struct MainLayoutData {
-    pub links: LinkConfig,     
-    pub user_config: UserConfig,    
+    pub links: LinkConfig,
+    pub user_config: UserConfig,
     /// Should be the path ONLY, no machine or query. If it's not that, it's an error!
-    pub current_path: String, 
+    pub current_path: String,
     pub override_nav_path: Option<&'static str>,
-    pub user: Option<contentapi::User>,
-    pub user_token: Option<String>,
-    pub about_api: contentapi::About, 
+    pub about_api: contentapi::About,
     pub raw_alert: Option<String>,
 
     #[cfg(feature = "profiling")]
-    pub profiler: onestop::OneList<onestop::OneDuration>
+    pub profiler: onestop::OneList<onestop::OneDuration>,
 }
 
 /// A basic context for use in page rendering. Even if a page doesn't strictly need all
@@ -83,24 +93,25 @@ pub struct MainLayoutData {
 pub struct PageContext {
     pub layout_data: MainLayoutData,
     pub api_context: endpoints::ApiContext,
-    pub bbcode: BBCode
+    pub bbcode: BBCode,
 }
-
 
 // --------------------------
 // *    Helper utilities    *
 // --------------------------
 
 pub fn is_empty(string: &Option<String>) -> bool {
-    if let Some(s) = string { s.is_empty() }
-    else { true }
+    if let Some(s) = string {
+        s.is_empty()
+    } else {
+        true
+    }
 }
 
 pub fn user_or_default(user: Option<&User>) -> User {
     if let Some(u) = user {
         u.clone()
-    }
-    else {
+    } else {
         User {
             username: String::from("???"),
             id: 0,
@@ -109,7 +120,7 @@ pub fn user_or_default(user: Option<&User>) -> User {
             admin: false,
             special: None,
             createDate: chrono::Utc::now(),
-            groups: Vec::new()
+            groups: Vec::new(),
         }
     }
 }
@@ -122,8 +133,7 @@ pub fn get_user_or_default(uid: Option<i64>, users: &HashMap<i64, User>) -> User
 pub fn content_or_default(content: Option<&Content>) -> Content {
     if let Some(c) = content {
         c.clone()
-    }
-    else {
+    } else {
         let mut result = Content::default();
         result.hash = Some(String::from("#"));
         result.name = Some(String::from("???"));
@@ -133,8 +143,7 @@ pub fn content_or_default(content: Option<&Content>) -> Content {
 }
 
 /// Parse a comma or space separated string into parts
-pub fn parse_compound_value(original: &str) -> Vec<String>
-{
+pub fn parse_compound_value(original: &str) -> Vec<String> {
     //First, convert all commas into spaces
     let cleansed = original.replace(",", " ");
 
@@ -150,3 +159,4 @@ pub fn parse_compound_value(original: &str) -> Vec<String>
 pub fn random_id(postfix: &str) -> String {
     format!("{}_{}", fastrand::u32(..), postfix)
 }
+

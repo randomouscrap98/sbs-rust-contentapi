@@ -3,8 +3,6 @@ use core::fmt::Debug;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use forms;
-
 use super::*;
 
 //There is some "context" that represents a current user and their client connection,
@@ -279,87 +277,12 @@ macro_rules! make_post_endpoint {
     };
 }
 
-//Url encoded whatever
-#[derive(Serialize, Default)]
-struct EditMessageParam {
-    //Note: there are two identical fields because contentapi currently has a bit of a dumb
-    //inconsistency that I want to mask from users. Eventually the fields will be consistent and
-    //this duplication won't be necessary
-    #[serde(skip_serializing_if = "Option::is_none")]
-    message: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    activityMessage: Option<String>,
-}
-
-impl EditMessageParam {
-    fn new(message: Option<String>) -> Self {
-        EditMessageParam {
-            message: message.clone(),
-            activityMessage: message,
-        }
-    }
-}
-
 //This is the rest of the implementation, which are all the actual functions you want to call!
 impl ApiContext {
     make_get_endpoint! {get_about<About>("/status")}
-    make_get_endpoint! {get_me<User>("/user/me")}
-    make_get_endpoint! {get_userprivate<UserPrivate>("/user/privatedata")}
-
-    make_post_endpoint! {post_login<forms::Login,String>("/user/login")}
-    make_post_endpoint! {post_email_sendregistration<String,bool>("/user/sendregistrationcode")}
-    make_post_endpoint! {post_email_recover<String,bool>("/user/sendpasswordrecovery")}
-    make_post_endpoint! {post_usersensitive<forms::UserSensitive,String>("/user/privatedata")} //Returns token now
     make_post_endpoint! {post_request<FullRequest,RequestResult>("/request")}
-    make_post_endpoint! {post_userupdate<User,User>("/write/user")}
-    make_post_endpoint! {post_message<Message,Message>("/write/message")}
-    make_post_endpoint! {post_ban<UserBan,UserBan>("/write/ban")}
 
     //These endpoints don't really fit into the normal "make_post_endpoint" macro
-
-    pub async fn post_content(
-        &self,
-        content: &Content,
-        message: Option<String>,
-    ) -> Result<Content, ApiError> {
-        let msgParam = EditMessageParam::new(message);
-        let msgQuery =
-            serde_urlencoded::to_string(&msgParam).map_err(|e| ApiError::Other(e.to_string()))?;
-
-        self.basic_post_request(
-            AboutRequest {
-                endpoint: format!("/write/content?{}", msgQuery),
-                verb: String::from("POST"),
-                post_data: Some(format!("")),
-            },
-            content,
-        )
-        .await
-    }
-
-    pub async fn post_delete_content(&self, content_id: i64) -> Result<Content, ApiError> {
-        self.basic_post_request(
-            AboutRequest {
-                endpoint: format!("/delete/content/{}", content_id),
-                verb: String::from("POST"),
-                post_data: None,
-            },
-            &true,
-        )
-        .await
-    }
-
-    pub async fn post_delete_message(&self, message_id: i64) -> Result<Message, ApiError> {
-        self.basic_post_request(
-            AboutRequest {
-                endpoint: format!("/delete/message/{}", message_id),
-                verb: String::from("POST"),
-                post_data: None,
-            },
-            &true,
-        )
-        .await
-    }
 
     /// This MAY OR MAY NOT profile depending on your featureset!
     pub async fn post_request_profiled_opt(
@@ -393,33 +316,4 @@ impl ApiContext {
     }
 
     //Some special wrappers
-
-    /// This consumes the error and returns "None", since it could just be that the token is stupid. In the future,
-    /// we may want to alert the user that their token is invalid somewhere, which would require propogating the
-    /// error result AND checking the status to determine if we need JSON or not...
-    pub async fn get_me_safe(&self) -> Option<User> {
-        //Only run if there IS a token
-        match self.user_token {
-            //Once we have the token, try it against the api. If there's an error, just print it and move on
-            //with apparently "no" user
-            Some(_) => match self.get_me().await {
-                Ok(result) => Some(result),
-                Err(_error) => None, //Probably need to log at some point!
-            },
-            None => None,
-        }
-    }
-
-    pub async fn get_user_private_safe(&self) -> Option<UserPrivate> {
-        //Only run if there IS a token
-        match self.user_token {
-            //Once we have the token, try it against the api. If there's an error, just print it and move on
-            //with apparently "no" user
-            Some(_) => match self.get_userprivate().await {
-                Ok(result) => Some(result),
-                Err(_error) => None, //Probably need to log at some point!
-            },
-            None => None,
-        }
-    }
 }

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use axum::{
-    routing::{get, post},
-    Router, extract::{DefaultBodyLimit, Query, FromRequestParts, Path}, async_trait, Form, http::StatusCode, response::IntoResponse, 
+    routing::get,
+    Router, extract::{DefaultBodyLimit, Query, FromRequestParts, Path}, async_trait, Form,
 };
 
 use tower_cookies::{CookieManagerLayer, Cookies, Cookie, cookie::{time::Duration, SameSite}};
@@ -11,9 +11,6 @@ use tower_http::{services::{ServeDir, ServeFile}, limit::RequestBodyLimitLayer};
 use crate::state::{RequestContext, GlobalState};
 use crate::srender;
 
-pub mod login;
-pub mod admin;
-pub mod user;
 pub mod forum;
 
 static SESSIONCOOKIE: &str = "sbs-rust-contentapi-session";
@@ -36,8 +33,6 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
             get(|context: RequestContext| srender!(pages::index::get_render(context.page_context))))
         .route("/about", 
             get(|context: RequestContext| srender!(pages::about::get_render(context.page_context))))
-        .route("/integrationtest", 
-            get(|context: RequestContext| srender!(pages::integrationtest::get_render(context.page_context))))
         .route("/documentation", 
             get(|context: RequestContext| srender!(pages::documentation::get_render(context.page_context))))
         .route("/activity",
@@ -49,22 +44,9 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
         .route("/allsearch", 
             get(|context: RequestContext, Query(search): Query<pages::searchall::SearchAllForm>| 
                 srender!(pages::searchall::get_render(context.page_context, search))))
-        .route("/login",
-            get(|context: RequestContext| srender!(pages::login::get_render(context.page_context)))
-            .post(login::login_post))
-        .route("/logout",
-            get(|context: RequestContext, cookies: Cookies| async move {
-                cookies.remove(Cookie::new(SESSIONCOOKIE, ""));
-                common::response::Response::Redirect(context.global_state.link_config.http_root.clone())
-            }))
         .route("/user/:username",
             get(|context: RequestContext, Path(username): Path<String>| 
-                srender!(pages::user::get_render(context.page_context, username)))
-            .post(user::user_post))
-        .route("/admin", 
-            get(|context: RequestContext, Query(search): Query<common::forms::AdminSearchParams>| 
-                srender!(pages::admin::get_render(context.page_context, search)))
-            .post(admin::admin_post))
+                srender!(pages::user::get_render(context.page_context, username))))
         .route("/sessionsettings", 
             get(|context: RequestContext| 
                 srender!(pages::sessionsettings::get_render(context.page_context)))
@@ -72,14 +54,6 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
                 cookies.add(get_settings_cookie_convert(&form, &context.global_state.config)?);
                 context.page_context.layout_data.user_config = form; //Is this safe? idk
                 pages::sessionsettings::get_render(context.page_context).await
-            }))
-        .route("/recover", 
-            get(|context: RequestContext|  
-                srender!(pages::recover::get_render(context.page_context)))
-            .post(|context: RequestContext, cookies: Cookies, Form(form): Form<contentapi::forms::UserSensitive>| async move {
-                let (response,token) = pages::recover::post_render(context.page_context, &form).await;
-                if let Some(token) = token { cookies.add(get_new_login_cookie(token, context.global_state.config.default_cookie_expire as i64)); }
-                StdResponse::Ok(response)
             }))
         .route("/forum", 
             get(forum::forum_get))
@@ -92,22 +66,6 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
         .route("/forum/thread/:hash/:post", 
             get(|context: RequestContext, Path((hash,post)): Path<(String,i64)>|
                 srender!(pages::forum_thread::get_hash_postid_render(context.page_context, hash, post, context.global_state.config.default_display_posts))))
-        .route("/forum/delete/thread/:id",
-            post(|context: RequestContext, Path(id): Path<i64>|
-                srender!(pages::forum_edit_thread::delete_render(context.page_context, id))))
-        .route("/forum/delete/post/:id",
-            post(|context: RequestContext, Path(id): Path<i64>|
-                srender!(pages::forum_edit_post::delete_render(context.page_context, id))))
-        .route("/forum/edit/thread", 
-            get(|context: RequestContext, Query(query): Query<forum::ThreadEditParameter>| 
-                srender!(pages::forum_edit_thread::get_render(context.page_context, query.category, query.thread)))
-            .post(|context: RequestContext, Form(form): Form<common::forms::ThreadForm>|
-                srender!(pages::forum_edit_thread::post_render(context.page_context, form))))
-        .route("/forum/edit/post", 
-            get(|context: RequestContext, Query(query): Query<forum::PostEditParameters>| 
-                srender!(pages::forum_edit_post::get_render(context.page_context, query.thread, query.post, query.reply, query.widget.unwrap_or(false))))
-            .post(|context: RequestContext, Form(form): Form<common::forms::PostForm>|
-                srender!(pages::forum_edit_post::post_render(context.page_context, form))))
         .route("/page",
             get(|context: RequestContext, Query(query): Query<pages::page::PageQuery>|
                 srender!(pages::page::get_pid_redirect(context.page_context, query))))
@@ -138,15 +96,6 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router
     app
 }
 
-//Generate a new login cookie with all the bits and bobs set appropriately
-fn get_new_login_cookie(token: String, expire_seconds : i64) -> Cookie<'static> {
-    Cookie::build(SESSIONCOOKIE, token)
-        .max_age(Duration::seconds(expire_seconds))
-        .same_site(SameSite::Strict)
-        .path("/")
-        .finish()
-}
-
 fn get_new_settings_cookie(raw_settings: String, expire_seconds : i64) -> Cookie<'static> {
     Cookie::build(SETTINGSCOOKIE, raw_settings)
         .max_age(Duration::seconds(expire_seconds))
@@ -161,12 +110,6 @@ fn get_settings_cookie_convert(form: &common::UserConfig, config: &crate::Config
         Ok(cookie) => Ok(get_new_settings_cookie(String::from(cookie), config.long_cookie_expire as i64)), //cookie_raw = Some(String::from(cookie)),
         Err(error) => Err(common::response::Error::Other(error.to_string()))
     }
-}
-
-//Produce an error response if a "typed" form does not include the type (those POST endpoints that
-//accept multiple forms, and the type is the query parameter)
-fn missing_type_response() -> axum::response::Response {
-    (StatusCode::BAD_REQUEST, "Missing requisite submission type indicator (query parameter)").into_response()
 }
 
 #[macro_export]

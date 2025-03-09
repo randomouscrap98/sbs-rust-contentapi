@@ -16,7 +16,6 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
     categories: Vec<Category>) -> String 
 {
     //Need to split category search into parts 
-    //let search_system = match &search.system { Some(system) => system, None => };
     layout(&data, html!{
         (data.links.style("/forpage/search.css"))
         (data.links.script("/forpage/search.js"))
@@ -93,13 +92,6 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
             }
             //Generic pagelist generation (just need data)
             (page_navigation(&data, &search))
-            @if let Some(ref _user) = data.user {
-                div."pagelist smallseparate" {
-                    a."coolbutton" #"newprogram" href=(data.links.page_editor_new(SBSPageType::PROGRAM)) { "New SB Program" }
-                    a."coolbutton" #"newprogram" href=(data.links.page_editor_new(PTCSYSTEM)) { "New PTC Program" }
-                    a."coolbutton" #"newresource" href=(data.links.page_editor_new(SBSPageType::RESOURCE)) { "New Resource" }
-                }
-            }
         }
     }).into_string()
 }
@@ -139,6 +131,5 @@ pub async fn get_render(context: PageContext, search: PageSearch, per_page: i32)
     let categories = map_categories(categories);
 
     //Manually parse the search, because of the tag magic (no javascript)
-    //Err(Error::Other(String::from("wow")))
     Ok(Response::Render(render(context.layout_data, pages,  users, search, categories)))
 }

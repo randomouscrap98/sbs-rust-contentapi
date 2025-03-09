@@ -1,25 +1,39 @@
-//use crate::constants::SBSPageType;
-
 use super::super::*;
 
-use contentapi::forms::*;
-
 //Render basic navigation link with only text as the body
-pub fn main_nav_link(data: &MainLayoutData, text: &str, emoji: &str, href: &str, id: Option<&str>) -> Markup {
-    main_nav_link_raw(data, html!{
-        span."navemoji" title=(text) { (emoji) }
-        span."navtext" { (text) }
-    }, href, id)
+pub fn main_nav_link(
+    data: &MainLayoutData,
+    text: &str,
+    emoji: &str,
+    href: &str,
+    id: Option<&str>,
+) -> Markup {
+    main_nav_link_raw(
+        data,
+        html! {
+            span."navemoji" title=(text) { (emoji) }
+            span."navtext" { (text) }
+        },
+        href,
+        id,
+    )
 }
 
 //Produce a link for site navigation which supports highlighting if on current page. Body can be "anything"
-pub fn main_nav_link_raw(data: &MainLayoutData, body: Markup, href: &str, id: Option<&str>) -> Markup {
+pub fn main_nav_link_raw(
+    data: &MainLayoutData,
+    body: Markup,
+    href: &str,
+    id: Option<&str>,
+) -> Markup {
     let mut class = String::from("plainlink headertab");
     let compare_path = match &data.override_nav_path {
         Some(path) => path,
-        None => data.current_path.as_str()
+        None => data.current_path.as_str(),
     };
-    if compare_path.starts_with(href) { class.push_str(" current"); }
+    if compare_path.starts_with(href) {
+        class.push_str(" current");
+    }
     html! {
         a.(class) href={(data.links.http_root) (href)} id=[id] { (body) }
     }
@@ -37,23 +51,6 @@ pub fn header(data: &MainLayoutData) -> Markup {
                 (main_nav_link(data,"Forums","📰", "/forum",Some("mainforumlink")))
                 (main_nav_link(data,"Docs","📖", "/documentation",Some("maindocumentationlink")))
                 (main_nav_link(data,"Search","🔎", "/allsearch",Some("mainsearchlink")))
-                @if let Some(user) = &data.user {
-                    @if user.admin {
-                        //We were already using 'admin', so keep using it! 
-                        (main_nav_link(data,"Admin","🔒","/admin",None))
-                    }
-                }
-            }
-            div #"header-user" {
-                @if let Some(user) = &data.user {
-                    (main_nav_link_raw(data,html! {
-                        span { (user.username) }
-                        img src=(data.links.image(&user.avatar, &QueryImage::avatar(100)));
-                    },"/userhome",None))
-                }
-                @else {
-                    (main_nav_link(data,"Login","Login","/login",None))
-                }
             }
         }
         @if let Some(alert) = &data.raw_alert {
@@ -78,16 +75,20 @@ pub fn footer(data: &MainLayoutData) -> Markup {
 
 /// Basic skeleton to output a blank page with some pre-baked stuff from user settings and required
 /// css/js. NOTE: YOU'LL BE USING THIS FOR ALL WIDGETS!
-pub fn basic_skeleton(data: &MainLayoutData, head_inner: Markup, body_inner: Markup) -> Markup 
-{
+pub fn basic_skeleton(data: &MainLayoutData, head_inner: Markup, body_inner: Markup) -> Markup {
     //If available, this is MILLISECONDS
     #[allow(unused_assignments, dead_code, unused_mut)]
-    let mut profile_data: Option<HashMap<String,f64>> = None;
+    let mut profile_data: Option<HashMap<String, f64>> = None;
 
     #[cfg(feature = "profiling")]
     {
-        profile_data = Some(data.profiler.list_copy().into_iter()
-            .map(|pd| (pd.name, pd.duration.as_secs_f64() * 1000f64)).collect());
+        profile_data = Some(
+            data.profiler
+                .list_copy()
+                .into_iter()
+                .map(|pd| (pd.name, pd.duration.as_secs_f64() * 1000f64))
+                .collect(),
+        );
     }
 
     html! {
@@ -104,10 +105,9 @@ pub fn basic_skeleton(data: &MainLayoutData, head_inner: Markup, body_inner: Mar
                 (head_inner)
             }
             body data-compact[data.user_config.compact]
-                data-theme=(data.user_config.theme) 
-                //data-shadows[data.user_config.shadows]
-            { 
-                (body_inner) 
+                data-theme=(data.user_config.theme)
+            {
+                (body_inner)
                 //Gotta do it HERE so everything has already run!
                 @if let Some(profile_data) = profile_data {
                     script {
@@ -120,10 +120,10 @@ pub fn basic_skeleton(data: &MainLayoutData, head_inner: Markup, body_inner: Mar
 }
 
 pub struct LayoutMeta {
-    pub title : String,
-    pub description : String,
-    pub image : Option<String>,
-    pub canonical: Option<String>
+    pub title: String,
+    pub description: String,
+    pub image: Option<String>,
+    pub canonical: Option<String>,
 }
 
 pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
@@ -136,47 +136,51 @@ pub fn layout(main_data: &MainLayoutData, page: Markup) -> Markup {
 }
 
 pub fn layout_with_meta(main_data: &MainLayoutData, meta: LayoutMeta, page: Markup) -> Markup {
-    basic_skeleton(main_data, html!{
-        title { (meta.title) }
-        meta name="description" content=(meta.description);
-        @if let Some(meta_image) = meta.image {
-            meta property="og:title" content=(meta.title);
-            meta property="og:description" content=(meta.description);
-            meta property="og:image" content=(meta_image);
-        }
-        @if let Some(ref canonical) = meta.canonical {
-            link rel="canonical" href=(canonical);
-        }
-        //This is a terrible hit to take on all pages but... caching??
-        (main_data.links.script("/markup/langs.js"))
-        (main_data.links.script("/markup/legacy.js"))
-        (main_data.links.script("/markup/parse.js"))
-        (main_data.links.script("/markup/render.js"))
-        (main_data.links.script("/markup/helpers.js"))
-        (main_data.links.style("/markup/markup.css"))
-        //Our actually scripts and styles
-        (main_data.links.style("/layout.css"))
-        (main_data.links.script("/sb-highlight.js"))
-        //MUST come after, it uses sb-highlight!
-        (main_data.links.script("/layout.js"))
-        style { (PreEscaped(r#"
+    basic_skeleton(
+        main_data,
+        html! {
+            title { (meta.title) }
+            meta name="description" content=(meta.description);
+            @if let Some(meta_image) = meta.image {
+                meta property="og:title" content=(meta.title);
+                meta property="og:description" content=(meta.description);
+                meta property="og:image" content=(meta_image);
+            }
+            @if let Some(ref canonical) = meta.canonical {
+                link rel="canonical" href=(canonical);
+            }
+            //This is a terrible hit to take on all pages but... caching??
+            (main_data.links.script("/markup/langs.js"))
+            (main_data.links.script("/markup/legacy.js"))
+            (main_data.links.script("/markup/parse.js"))
+            (main_data.links.script("/markup/render.js"))
+            (main_data.links.script("/markup/helpers.js"))
+            (main_data.links.style("/markup/markup.css"))
+            //Our actually scripts and styles
+            (main_data.links.style("/layout.css"))
+            (main_data.links.script("/sb-highlight.js"))
+            //MUST come after, it uses sb-highlight!
+            (main_data.links.script("/layout.js"))
+            style { (PreEscaped(r#"
             body {
                 background-repeat: repeat;
                 background-image: url(""#))(main_data.links.resource_root)(PreEscaped(r#"/sb-tile.png")
             }
             "#))
-        }
-    }, html! {
-        (header(&main_data))
-        main { 
-            /*section {
-                p { 
-                    span."error" { "This is a preview website! Changes will not carry over or be saved in the end! " }
-                    "Original website still up at " a href="https://old.smilebasicsource.com" { "https://old.smilebasicsource.com" }
-                }
-            }*/
-            (page) 
-        }
-        (footer(&main_data))
-    })
+            }
+        },
+        html! {
+            (header(&main_data))
+            main {
+                /*section {
+                    p {
+                        span."error" { "This is a preview website! Changes will not carry over or be saved in the end! " }
+                        "Original website still up at " a href="https://old.smilebasicsource.com" { "https://old.smilebasicsource.com" }
+                    }
+                }*/
+                (page)
+            }
+            (footer(&main_data))
+        },
+    )
 }
