@@ -4,6 +4,7 @@ http_root = "" #Don't want double forwardslash
 host_address = "127.0.0.1:5011" # Address to bind, but you can change it to whatever (0.0.0.0 for global?)
 upload_dir = "data/uploads"
 thumbnail_dir = "data/thumbnails"
+db_file = "data/content.db"
 
 # The rest is whatever
 default_cookie_expire = 1209600 #14 days in seconds

@@ -15,6 +15,7 @@ serde_json = "1.0"
 onestop = { version = "0.0.2", optional = true }
 bbscope = { version = "0.2" }
 fastrand = "1.9.0"
+rusqlite = { version = "0.34.0", features = ["bundled"] }
 
 axum = { version = "0.6.18", optional = true }
 

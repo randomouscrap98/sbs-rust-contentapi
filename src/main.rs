@@ -17,6 +17,7 @@ onestop::create_config! {
     Config, OptConfig => {
         api_endpoint: String,
         upload_dir: String,
+        db_file: String,
         thumbnail_dir: String,
         http_root: String,
         default_cookie_expire: i32,

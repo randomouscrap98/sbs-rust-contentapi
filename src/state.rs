@@ -22,6 +22,18 @@ pub struct RequestContext {
     pub page_context: PageContext,
 }
 
+fn open_dbcon(db_path: &str) -> Result<rusqlite::Connection, common::response::Error> {
+    match rusqlite::Connection::open(db_path) {
+        Ok(conn) => Ok(conn),
+        Err(_) => Err(common::response::Error::Other(format!(
+            "Failed to open database"
+        ))),
+    }
+}
+
+//fn open_dbcon() -> Result
+//let dbcon = rusqlite::Connection::open(state.config.db_file)?;
+
 impl RequestContext {
     pub async fn generate(
         state: Arc<GlobalState>,
@@ -43,11 +55,14 @@ impl RequestContext {
             override_nav_path: None,
         };
 
+        let dbcon = open_dbcon(&state.config.db_file)?;
+
         return Ok(RequestContext {
             page_context: PageContext {
                 layout_data,
                 api_context: context,
                 bbcode: state.bbcode.clone(),
+                dbcon,
             },
             global_state: state,
         });

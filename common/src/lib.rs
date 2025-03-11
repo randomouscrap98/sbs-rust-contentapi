@@ -12,6 +12,7 @@ pub mod view;
 use std::collections::HashMap;
 
 use maud::*;
+use rusqlite;
 use serde::{Deserialize, Serialize};
 use serde_urlencoded;
 
@@ -89,6 +90,7 @@ pub struct PageContext {
     pub layout_data: MainLayoutData,
     pub api_context: endpoints::ApiContext,
     pub bbcode: BBCode,
+    pub dbcon: rusqlite::Connection,
 }
 
 // --------------------------
