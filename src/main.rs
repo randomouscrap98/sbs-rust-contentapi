@@ -16,8 +16,9 @@ static CONFIGNAME: &str = "settings";
 onestop::create_config! {
     Config, OptConfig => {
         api_endpoint: String,
+        upload_dir: String,
+        thumbnail_dir: String,
         http_root: String,
-        api_fileraw : String,
         default_cookie_expire: i32,
         long_cookie_expire: i32,
         default_imagebrowser_count: i32,
@@ -27,7 +28,6 @@ onestop::create_config! {
         default_display_pages : i32,
         default_activity_count: i32,
         forum_category_order: Vec<String>,
-        //file_maxsize: i32,
         body_maxsize: i32, //this can be used for a lot of things, I don't really care
         host_address: String,
     }
@@ -62,8 +62,8 @@ async fn main() {
             LinkConfig {
                 static_root: format!("{}/static", &root),
                 resource_root: format!("{}/static/resources", &root),
-                file_root: format!("{}/static/files", &root),
-                thumbnail_root: format!("{}/static/thumbnails", &root),
+                file_root: format!("{}/uploads/files", &root),
+                thumbnail_root: format!("{}/uploads/thumbnails", &root),
                 http_root: root,
                 cache_bust: chrono::offset::Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true), //.to_string()
             }

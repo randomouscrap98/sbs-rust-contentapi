@@ -1,11 +1,11 @@
 # This is the contentapi endpoint for the frontend, should point to SBS!
 api_endpoint = "http://localhost:5000/api"  # contentapi by default hosts on port 5000
 http_root = "" #Don't want double forwardslash
-api_fileraw = "http://localhost:5000/api/file"
 host_address = "127.0.0.1:5011" # Address to bind, but you can change it to whatever (0.0.0.0 for global?)
+upload_dir = "data/uploads"
+thumbnail_dir = "data/thumbnails"
 
 # The rest is whatever
-# token_cookie_key = "sbs_contentapi_token"
 default_cookie_expire = 1209600 #14 days in seconds
 long_cookie_expire = 31536000 # 365 days in seconds
 default_imagebrowser_count = 100

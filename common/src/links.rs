@@ -6,9 +6,9 @@ use render::i;
 impl LinkConfig {
     pub fn image(&self, hash: &str, query: QueryImage) -> String {
         match query {
-            QueryImage::Cropped100 => format!("{}/{}_s100", self.thumbnail_root, hash),
-            QueryImage::Cropped300 => format!("{}/{}_s300", self.thumbnail_root, hash),
-            QueryImage::Scaled300 => format!("{}/{}_300", self.thumbnail_root, hash),
+            QueryImage::Cropped100 => format!("{}/{}_s100.jpg", self.thumbnail_root, hash),
+            QueryImage::Cropped300 => format!("{}/{}_s300.jpg", self.thumbnail_root, hash),
+            QueryImage::Scaled300 => format!("{}/{}_300.jpg", self.thumbnail_root, hash),
             QueryImage::Original => format!("{}/{}", self.file_root, hash),
         }
     }

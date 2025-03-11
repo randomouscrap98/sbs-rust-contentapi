@@ -185,6 +185,11 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router {
             ),
         )
         .nest_service("/static", ServeDir::new("static"))
+        .nest_service("/uploads/files", ServeDir::new(&gstate.config.upload_dir))
+        .nest_service(
+            "/uploads/thumbnails",
+            ServeDir::new(&gstate.config.thumbnail_dir),
+        )
         .nest_service(
             "/favicon.ico",
             ServeFile::new("static/resources/favicon.ico"),
