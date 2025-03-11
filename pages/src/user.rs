@@ -25,10 +25,12 @@ pub struct UserPackage {
 pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackage) -> String {
     let user = user_package.user;
 
+    let avatar_link = data.links.image(&user.avatar, QueryImage::Cropped300);
+
     let meta = LayoutMeta {
         title: format!("SBS ⦁ {}", user.username),
         description: short_description_opt(user_package.userpage.as_ref()),
-        image: Some(data.links.image(&user.avatar, &QueryImage::avatar(200))),
+        image: Some(avatar_link.clone()),
         canonical: Some(data.links.user(&user)),
     };
 
@@ -36,7 +38,7 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackag
         (data.links.style("/forpage/user.css"))
         section {
             div #"pageuser" {
-                img src={(data.links.image(&user.avatar, &QueryImage::avatar(300)))};
+                img src={(avatar_link)};
                 div #"infoblock" {
                     h1 {(user.username)}
                     div."aside mediumseparate" #"userinfo" {

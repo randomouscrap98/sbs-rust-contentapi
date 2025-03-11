@@ -20,8 +20,6 @@ pub fn render(
     path: Vec<ForumPathItem>,
     pages: Vec<PagelistItem>,
 ) -> String {
-    let can_create_threads = false;
-
     if category.category.literalType.as_deref() == Some(SBSPageType::SUBMISSIONS) {
         data.override_nav_path = Some("/search");
     } else if category.category.literalType.as_deref() == Some(SBSPageType::DIRECTMESSAGES) {
@@ -51,12 +49,6 @@ pub fn render(
             div."smallseparate pagelist" {
                 @for page in pages {
                     a."current"[page.current] href={(data.links.forum_category(&category.category))"?page="(page.page)} { (page.text) }
-                }
-            }
-            //Not sure if we should re-use pagelist, probably bad
-            @if can_create_threads {
-                div."smallseparate pagelist" {
-                    a."coolbutton" #"newthread" href=(data.links.forum_thread_editor_new(&category.category)) { "New thread" }
                 }
             }
         }

@@ -19,20 +19,12 @@ pub const REQUESTRESULTLIMIT: usize = 1000;
 // *     QUERY PARAMETERS      *
 // -----------------------------
 
-/// Query string sent to /file/raw to change thumbnail received
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct QueryImage {
-    pub size: Option<i64>,
-    pub crop: Option<bool>,
-}
-
-impl QueryImage {
-    pub fn avatar(size: i64) -> Self {
-        QueryImage {
-            size: Some(size),
-            crop: Some(true),
-        }
-    }
+#[derive(Serialize, Deserialize, Debug)]
+pub enum QueryImage {
+    Cropped100,
+    Cropped300,
+    Scaled300,
+    Original,
 }
 
 // -----------------------------

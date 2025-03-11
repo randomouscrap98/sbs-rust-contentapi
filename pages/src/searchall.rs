@@ -3,7 +3,6 @@ use common::render::layout::*;
 use common::response::*;
 use common::{render::submissions::pageicon_limited, *};
 use contentapi::conversion::cast_result_required;
-use contentapi::QueryImage;
 use contentapi::*;
 use maud::*;
 use serde::{Deserialize, Serialize};
@@ -51,7 +50,7 @@ pub fn render(
                                         a."pagetitle flatlink searchname" target="_top" href=(data.links.forum_thread(content)) { (opt_s!(content.name)) }
                                     },
                                     SearchAllResult::User(user) => {
-                                        span."searchicon" { img."avatar" src=(data.links.image(&user.avatar, &QueryImage { crop: Some(true), size: Some(100) })); }
+                                        span."searchicon" { img."avatar" src=(data.links.image(&user.avatar, contentapi::QueryImage::Cropped100)); }
                                         a."username flatlink searchname" target="_top" href=(data.links.user(user)) { (user.username) }
                                     }
                                 }

@@ -18,13 +18,12 @@ pub fn render(mut context: PageContext, config: PostsConfig) -> String {
         title: format!("SBS ⦁ {}", opt_s!(config.thread.thread.name)),
         description: short_description(&config.thread.thread),
         image: get_thumbnail_hash(&config.thread.thread).and_then(|h| {
-            Some(context.layout_data.links.image(
-                &h,
-                &contentapi::QueryImage {
-                    size: Some(200),
-                    crop: None,
-                },
-            ))
+            Some(
+                context
+                    .layout_data
+                    .links
+                    .image(&h, contentapi::QueryImage::Scaled300),
+            )
         }),
         canonical: Some(
             context

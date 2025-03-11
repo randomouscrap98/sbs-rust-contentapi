@@ -358,12 +358,6 @@ pub fn render_page(
         None => HashMap::new(),
     };
 
-    let can_edit;
-    let can_delete;
-
-    can_edit = false;
-    can_delete = false;
-
     let systems = get_systems(&thread.thread);
 
     html! {
@@ -424,18 +418,6 @@ pub fn render_page(
             //    }
             //}
             (render_content(&thread.thread, bbcode))
-            @if can_edit || can_delete {
-                div."pagelist smallseparate" {
-                    @if can_edit {
-                        a."coolbutton" #"editpage" href=(data.links.page_editor_edit(&thread.thread)) { "Edit page" }
-                    }
-                    @if can_delete {
-                        form."nospacing" #"deletepage" method="POST" action=(data.links.page_delete(&thread.thread)) {
-                            input."coolbutton notheme" data-confirmdelete=(format!("page '{}'", opt_s!(&thread.thread.name))) type="submit" value="Delete page";
-                        }
-                    }
-                }
-            }
             @if let Some(categories) = &thread.categories {
                 //Documentation has no categories
                 @if thread.thread.literalType.as_deref() != Some(SBSPageType::DOCUMENTATION) {
@@ -535,7 +517,7 @@ pub fn post_item(
     html! {
         div.(class) #{"post_"(i(&post.id))} {
             div."postleft" {
-                img."avatar" src=(layout_data.links.image(&user.avatar, &QueryImage::avatar(100)));
+                img."avatar" src=(layout_data.links.image(&user.avatar, QueryImage::Cropped100 ));
                 @if config.thread.private {
                     div."private" { "PRIVATE" }
                 }
@@ -589,12 +571,9 @@ pub fn post_reply(
     html! {
         div."reply aside" {
             a."replylink" target="_top" href=(layout_data.links.forum_post(post, thread)) { "Replying to:" }
-            img src=(layout_data.links.image(&user.avatar, &QueryImage::avatar(50)));
+            img src=(layout_data.links.image(&user.avatar, QueryImage::Cropped100 ));
             a."flatlink username" href=(layout_data.links.user(&user)) { (&user.username) }
             @if let Some(text) = &post.text {
-                //Ignoring graphemes for now, sorry. In NEARLY all cases, 200 bytes should be enough to fill
-                //a line, unless you're being ridiculous
-                //@let text = if text.len() > 200 { &text[0..200] } else { &text };
                 div."content bbcode postpreview" { (PreEscaped(bbcode.parse_profiled_opt(text, format!("reply-{}",i(&post.id))))) }
             }
         }

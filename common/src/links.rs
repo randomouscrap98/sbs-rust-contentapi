@@ -4,16 +4,12 @@ use render::i;
 
 /// Extend LinkConfig to have additional functionality
 impl LinkConfig {
-    pub fn image(&self, hash: &str, query: &QueryImage) -> String {
-        match serde_urlencoded::to_string(&query) {
-            Ok(querystring) => format!("{}/{}?{}", self.file_root, hash, querystring),
-            Err(error) => {
-                println!(
-                    "Serde_qs failed? Not printing link for {}. Error: {}",
-                    hash, error
-                );
-                format!("#ERRORFOR-{}", hash)
-            }
+    pub fn image(&self, hash: &str, query: QueryImage) -> String {
+        match query {
+            QueryImage::Cropped100 => format!("{}/{}_s100", self.thumbnail_root, hash),
+            QueryImage::Cropped300 => format!("{}/{}_s300", self.thumbnail_root, hash),
+            QueryImage::Scaled300 => format!("{}/{}_300", self.thumbnail_root, hash),
+            QueryImage::Original => format!("{}/{}", self.file_root, hash),
         }
     }
 
@@ -21,24 +17,8 @@ impl LinkConfig {
         format!("{}/user/{}", self.http_root, user.username)
     }
 
-    pub fn userhome(&self) -> String {
-        format!("{}/userhome", self.http_root)
-    }
-
     pub fn image_default(&self, hash: &str) -> String {
-        self.image(hash, &QueryImage::default())
-    }
-
-    //pub fn page(&self, page: &Content) -> String {
-    //    format!("{}/page/{}", self.http_root, opt_s!(page.hash))
-    //}
-
-    pub fn activity(&self) -> String {
-        format!("{}/activity", self.http_root)
-    }
-
-    pub fn imagebrowser(&self) -> String {
-        format!("{}/widget/imagebrowser", self.http_root)
+        self.image(hash, QueryImage::Original)
     }
 
     pub fn votewidget(&self, content: &Content) -> String {
@@ -75,72 +55,6 @@ impl LinkConfig {
             post.id.unwrap_or_default(),
             Self::forum_post_hash(post)
         )
-    }
-
-    pub fn forum_thread_editor_new(&self, category: &Content) -> String {
-        format!(
-            "{}/forum/edit/thread?category={}",
-            self.http_root,
-            opt_s!(category.hash)
-        )
-    }
-
-    pub fn forum_thread_editor_edit(&self, thread: &Content) -> String {
-        format!(
-            "{}/forum/edit/thread?thread={}",
-            self.http_root,
-            opt_s!(thread.hash)
-        )
-    }
-
-    pub fn forum_thread_delete(&self, thread: &Content) -> String {
-        format!("{}/forum/delete/thread/{}", self.http_root, i(&thread.id))
-    }
-
-    /// Get the link to the post editor for a brand new post. You HAVE to specify which thread you're posting on, but
-    /// you can also optionally specify which post you're replying to.
-    pub fn forum_post_editor_new(&self, thread: &Content, reply_to: Option<&Message>) -> String {
-        format!(
-            "{}/forum/edit/post?thread={}{}",
-            self.http_root,
-            opt_s!(thread.hash),
-            if let Some(reply) = reply_to {
-                format!("&reply={}", i(&reply.id))
-            } else {
-                String::from("")
-            }
-        )
-    }
-
-    /// Get the link to the post editor to edit the given message. You don't need extra data in this case, since
-    /// the message to edit has all the info you need
-    pub fn forum_post_editor_edit(&self, post: &Message) -> String {
-        format!("{}/forum/edit/post?post={}", self.http_root, i(&post.id))
-    }
-
-    pub fn forum_post_editor(&self) -> String {
-        format!("{}/forum/edit/post", self.http_root)
-    }
-
-    /// Get the link to delete a post. You'll need to POST to this to delete
-    pub fn forum_post_delete(&self, post: &Message) -> String {
-        format!("{}/forum/delete/post/{}", self.http_root, i(&post.id))
-    }
-
-    pub fn page_editor_new(&self, mode: &str) -> String {
-        format!("{}/page/edit?mode={}", self.http_root, mode)
-    }
-
-    //pub fn page_editor_new_ptc(&self) -> String {
-    //    format!("{}/page/edit?type={}&mode=ptc", self.http_root, SBSPageType::PROGRAM)
-    //}
-
-    pub fn page_editor_edit(&self, page: &Content) -> String {
-        format!("{}/page/edit?page={}", self.http_root, opt_s!(page.hash))
-    }
-
-    pub fn page_delete(&self, page: &Content) -> String {
-        format!("{}/page/delete/{}", self.http_root, i(&page.id))
     }
 
     pub fn search_category(&self, category: i64) -> String {

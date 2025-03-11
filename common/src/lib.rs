@@ -47,7 +47,7 @@ pub struct LinkConfig {
     pub static_root: String,
     pub resource_root: String,
     pub file_root: String,
-    pub file_upload_root: String,
+    pub thumbnail_root: String,
     pub cache_bust: String,
 }
 

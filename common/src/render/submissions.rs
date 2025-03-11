@@ -66,7 +66,7 @@ pub fn page_card(links: &LinkConfig, page: &Content, users: &HashMap<i64, User>)
                     //we now have the images: we just need the first one (it's a hash?)
                     @if let Some(image) = images.get(0).and_then(|i| i.as_str()) {
                         a."cardimage" href=(link) {
-                            img src=(links.image(image, &QueryImage { size: Some(200), crop: None }));
+                            img src=(links.image(image, QueryImage::Scaled300));
                         }
                     }
                 }
@@ -95,4 +95,3 @@ pub fn page_card(links: &LinkConfig, page: &Content, users: &HashMap<i64, User>)
         }
     }
 }
-
