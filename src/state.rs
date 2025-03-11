@@ -41,7 +41,6 @@ impl RequestContext {
             user_config, //Local settings
             current_path: String::from(path),
             override_nav_path: None,
-            about_api: context.get_about().await?,
         };
 
         return Ok(RequestContext {

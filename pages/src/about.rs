@@ -54,20 +54,13 @@ pub fn render(data: MainLayoutData) -> String {
             h3 { "Technical info" }
             p { "All code for SmileBASIC source is open source and available on github:" }
             table {
-                tr { td { b { "Backend:" }} td { a href="https://github.com/randomouscrap98/contentapi" { "Contentapi" } " (by me)" } }
-                tr { td { b { "Frontend:" }} td { a href="https://github.com/randomouscrap98/sbs-rust-contentapi" { "Custom rust frontend" } " (by me)" } }
+                tr { td { b { "Backend (deprecated):" }} td { a href="https://github.com/randomouscrap98/contentapi" { "Contentapi" } " (by me)" } }
+                tr { td { b { "Frontend (readonly):" }} td { a href="https://github.com/randomouscrap98/sbs-rust-contentapi" { "Custom rust frontend" } " (by me)" } }
             }
             p { "SmileBASIC source uses the following technologies:" }
             table {
                 tr { td { a href="https://www.sqlite.org/index.html"{"SqLite:"}} td {"Database engine" } }
-                tr { td { a href="https://dotnet.microsoft.com/en-us/"{"Dotnet:"}} td {"Basis for Contentapi" } }
-                tr { td { a href="https://dotnet.microsoft.com/en-us/apps/aspnet"{"ASP.NET:"}} td {"Web API for Contentapi"} }
-                tr { td { a href="https://imagemagick.org/index.php"{"Image Magick:"}} td {"Image manipulation (thumbnails etc)"} }
-                tr { td { a href="https://github.com/DapperLib/Dapper"{"Dapper:"}} td {"Basic ORM for Contentapi"} }
                 tr { td { a href="https://www.rust-lang.org"{"Rust:"}} td {"Basis for this frontend"} }
-                tr { td { a href="https://github.com/seanmonstar/warp"{"Warp:"}} td {"Server-side web routing for this frontend"} }
-                tr { td { a href="https://aws.amazon.com"{"Amazon AWS:"}} td { "Hosting (EC2) and image/backup storage (S3)"} }
-                tr { td { a href="https://domains.google"{"Google:"}} td { "Our DNS and email provider"} }
             }
             h3 { "Contact info" }
             p { r#"This website is run by just me! If you need help with the website or have any website-related issues, 

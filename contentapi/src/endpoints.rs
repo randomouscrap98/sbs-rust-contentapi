@@ -222,19 +222,6 @@ impl ApiContext {
     }
 }
 
-macro_rules! make_get_endpoint {
-    ($name:ident<$type:ty>($endpoint:literal)) => {
-        pub async fn $name(&self) -> Result<$type, ApiError> {
-            self.basic_get_request(AboutRequest {
-                endpoint: String::from($endpoint),
-                verb: String::from("GET"),
-                post_data: None,
-            })
-            .await
-        }
-    };
-}
-
 macro_rules! make_post_endpoint {
     ($name:ident<$intype:ty,$type:ty>($endpoint:literal)) => {
         pub async fn $name(&self, data: &$intype) -> Result<$type, ApiError> {
@@ -253,6 +240,5 @@ macro_rules! make_post_endpoint {
 
 //This is the rest of the implementation, which are all the actual functions you want to call!
 impl ApiContext {
-    make_get_endpoint! {get_about<About>("/status")}
     make_post_endpoint! {post_request<FullRequest,RequestResult>("/request")}
 }

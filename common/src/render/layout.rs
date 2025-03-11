@@ -59,7 +59,7 @@ pub fn header(data: &MainLayoutData) -> Markup {
 pub fn footer(data: &MainLayoutData) -> Markup {
     html! {
         footer class="controlbar smallseparate" {
-            span #"api_about" { (data.about_api.environment) " - " (data.about_api.version) }
+            span #"api_about" { "contentapi - direct" }
             div #"footer-spacer" {}
             (main_nav_link(data,"Settings","Settings","/sessionsettings",Some("footer-settings")))
             (main_nav_link(data,"About","About", "/about",Some("footer-about")))

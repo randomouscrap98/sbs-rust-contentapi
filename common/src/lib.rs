@@ -80,7 +80,6 @@ pub struct MainLayoutData {
     /// Should be the path ONLY, no machine or query. If it's not that, it's an error!
     pub current_path: String,
     pub override_nav_path: Option<&'static str>,
-    pub about_api: contentapi::About,
 }
 
 /// A basic context for use in page rendering. Even if a page doesn't strictly need all
