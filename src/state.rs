@@ -28,14 +28,7 @@ impl RequestContext {
         path: &str,
         config_raw: Option<String>,
     ) -> Result<Self, common::response::Error> {
-        #[cfg(feature = "profiling")]
-        let profiler = onestop::OneList::<onestop::OneDuration>::new(); //One profiler per request
-
-        #[cfg(feature = "profiling")]
         let context = ApiContext::new(state.config.api_endpoint.clone());
-
-        #[cfg(not(feature = "profiling"))]
-        let context = ApiContext::new(state.config.api_endpoint.clone(), token.clone());
 
         let user_config = if let Some(config) = config_raw {
             serde_json::from_str::<UserConfig>(&config)?
@@ -45,35 +38,19 @@ impl RequestContext {
 
         let layout_data = MainLayoutData {
             links: state.link_config.clone(),
-            user_config,                      //Local settings
-            current_path: String::from(path), //String::from(path.as_str()),
+            user_config, //Local settings
+            current_path: String::from(path),
             override_nav_path: None,
             about_api: context.get_about().await?,
-
-            #[cfg(feature = "profiling")]
-            profiler: profiler.clone(),
         };
 
-        #[cfg(feature = "profiling")]
         return Ok(RequestContext {
             page_context: PageContext {
                 layout_data,
                 api_context: context,
-                bbcode: BBCode {
-                    matchers: state.bbcode.matchers.clone(),
-                    profiler: profiler.clone(),
-                },
+                bbcode: state.bbcode.clone(),
             },
-            //Custom construct bbcode so we copy the matchers but NOT the profiler!
             global_state: state,
-        });
-
-        #[cfg(not(feature = "profiling"))]
-        return Ok(RequestContext {
-            bbcode: state.bbcode.clone(),
-            global_state: state,
-            api_context: context,
-            layout_data,
         });
     }
 }

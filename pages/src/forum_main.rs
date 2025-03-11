@@ -1,13 +1,12 @@
-
-use contentapi::*;
 use contentapi::conversion::*;
 use contentapi::endpoints::ApiContext;
+use contentapi::*;
 
-use common::*;
-use common::render::*;
-use common::render::layout::*;
-use common::response::*;
 use common::forum::*;
+use common::render::layout::*;
+use common::render::*;
+use common::response::*;
+use common::*;
 use maud::*;
 
 pub fn render(data: MainLayoutData, categories: Vec<ForumCategory>) -> String {
@@ -43,41 +42,60 @@ pub fn render(data: MainLayoutData, categories: Vec<ForumCategory>) -> String {
     }).into_string()
 }
 
-async fn build_categories_with_threads(mut context: ApiContext, categories_cleaned: Vec<CleanedPreCategory>, limit: i32, skip: i32) -> 
-    Result<Vec<ForumCategory>, Error> 
-{
+async fn build_categories_with_threads(
+    context: ApiContext,
+    categories_cleaned: Vec<CleanedPreCategory>,
+    limit: i32,
+    skip: i32,
+) -> Result<Vec<ForumCategory>, Error> {
     //Next request: get the complicated dataset for each category (this somehow includes comments???)
-    let thread_request = get_thread_request(&categories_cleaned, limit, skip, false); 
-    let thread_result = context.post_request_profiled_opt(&thread_request, "threads").await?;
+    let thread_request = get_thread_request(&categories_cleaned, limit, skip, false);
+    let thread_result = context.post_request(&thread_request).await?;
 
     let messages_raw = cast_result_required::<Message>(&thread_result, "message")?;
 
     let mut categories = Vec::new();
 
     for category in categories_cleaned {
-        categories.push(ForumCategory::from_result(category, &thread_result, &messages_raw)?);
+        categories.push(ForumCategory::from_result(
+            category,
+            &thread_result,
+            &messages_raw,
+        )?);
     }
 
     Ok(categories)
 }
 
-
-pub async fn get_render(mut context: PageContext, order: &Vec<String>, show_threads: i32) -> Result<Response, Error> 
-{
+pub async fn get_render(
+    context: PageContext,
+    order: &Vec<String>,
+    show_threads: i32,
+) -> Result<Response, Error> {
     //First request: just get categories
     let request = get_category_request(None, None);
-    let category_result = context.api_context.post_request_profiled_opt(&request, "categories").await?;
-    let mut categories_cleaned = CleanedPreCategory::from_many(cast_result_required::<Content>(&category_result, CATEGORYKEY)?)?;
+    let category_result = context.api_context.post_request(&request).await?;
+    let mut categories_cleaned = CleanedPreCategory::from_many(cast_result_required::<Content>(
+        &category_result,
+        CATEGORYKEY,
+    )?)?;
 
     //Sort the categories by their name AGAINST the default list in the config. So, it should sort the categories
     //by the order defined in the config, with stuff not present going at the end. Tiebreakers are resolved alphabetically
     categories_cleaned.sort_by_key(|category| {
         //Nicole made this a tuple so tiebreakers are sorted alphabetically, which is coool
-        (order.iter().position(
-            |prefix| category.name.starts_with(prefix)).unwrap_or(usize::MAX), category.name.clone())
+        (
+            order
+                .iter()
+                .position(|prefix| category.name.starts_with(prefix))
+                .unwrap_or(usize::MAX),
+            category.name.clone(),
+        )
     });
 
-    let categories = build_categories_with_threads(context.api_context, categories_cleaned, show_threads, 0).await?;
+    let categories =
+        build_categories_with_threads(context.api_context, categories_cleaned, show_threads, 0)
+            .await?;
 
     Ok(Response::Render(render(context.layout_data, categories)))
 }

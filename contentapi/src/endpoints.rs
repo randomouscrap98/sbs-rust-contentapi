@@ -118,9 +118,6 @@ macro_rules! parseerr {
 pub struct ApiContext {
     api_url: String,
     client: hyper::client::Client<hyper::client::HttpConnector>,
-
-    #[cfg(feature = "profiling")]
-    pub profiler: onestop::OneList<onestop::OneDuration>,
 }
 
 impl ApiContext {
@@ -128,21 +125,6 @@ impl ApiContext {
         Self {
             api_url,
             client: hyper::client::Client::new(),
-
-            #[cfg(feature = "profiling")]
-            profiler: onestop::OneList::<onestop::OneDuration>::new(),
-        }
-    }
-
-    #[cfg(feature = "profiling")]
-    pub fn new_with_profiler(
-        api_url: String,
-        profiler: onestop::OneList<onestop::OneDuration>,
-    ) -> Self {
-        Self {
-            api_url,
-            client: hyper::client::Client::new(),
-            profiler,
         }
     }
 
@@ -273,37 +255,4 @@ macro_rules! make_post_endpoint {
 impl ApiContext {
     make_get_endpoint! {get_about<About>("/status")}
     make_post_endpoint! {post_request<FullRequest,RequestResult>("/request")}
-
-    //These endpoints don't really fit into the normal "make_post_endpoint" macro
-
-    /// This MAY OR MAY NOT profile depending on your featureset!
-    pub async fn post_request_profiled_opt(
-        &mut self,
-        request: &FullRequest,
-        _name: &str,
-    ) -> Result<RequestResult, ApiError> {
-        #[cfg(feature = "profiling")]
-        {
-            //put these IN the conditional compilation section
-            use onestop::OneDuration;
-            use std::time::Duration;
-
-            let result = self.post_request(request).await?;
-            //milli = 10^-3, micro = 10^-6, expanding milliseconds to micro before truncating
-            self.profiler.add(OneDuration::from_duration(
-                Duration::from_micros((result.totalTime * 1000f64) as u64),
-                format!("{}-total", _name),
-            ));
-            for (time_name, time) in &result.databaseTimes {
-                self.profiler.add(OneDuration::from_duration(
-                    Duration::from_micros((time * 1000f64) as u64),
-                    format!("{}-{}", _name, time_name),
-                ));
-            }
-            Ok(result)
-        }
-
-        #[cfg(not(feature = "profiling"))]
-        return self.post_request(request).await;
-    }
 }

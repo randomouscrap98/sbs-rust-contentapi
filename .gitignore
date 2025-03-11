@@ -8,3 +8,4 @@ run*.sh
 /publish
 .vscode
 /ignore
+/data

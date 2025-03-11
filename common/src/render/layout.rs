@@ -70,21 +70,6 @@ pub fn footer(data: &MainLayoutData) -> Markup {
 /// Basic skeleton to output a blank page with some pre-baked stuff from user settings and required
 /// css/js. NOTE: YOU'LL BE USING THIS FOR ALL WIDGETS!
 pub fn basic_skeleton(data: &MainLayoutData, head_inner: Markup, body_inner: Markup) -> Markup {
-    //If available, this is MILLISECONDS
-    #[allow(unused_assignments, dead_code, unused_mut)]
-    let mut profile_data: Option<HashMap<String, f64>> = None;
-
-    #[cfg(feature = "profiling")]
-    {
-        profile_data = Some(
-            data.profiler
-                .list_copy()
-                .into_iter()
-                .map(|pd| (pd.name, pd.duration.as_secs_f64() * 1000f64))
-                .collect(),
-        );
-    }
-
     html! {
         (DOCTYPE)
         html lang=(data.user_config.language) {
@@ -102,12 +87,6 @@ pub fn basic_skeleton(data: &MainLayoutData, head_inner: Markup, body_inner: Mar
                 data-theme=(data.user_config.theme)
             {
                 (body_inner)
-                //Gotta do it HERE so everything has already run!
-                @if let Some(profile_data) = profile_data {
-                    script {
-                        "var profiler_data = "(PreEscaped(serde_json::to_string(&profile_data).unwrap_or(String::from("{} /* COULD NOT SERIALIZE */"))))";"
-                    }
-                }
             }
         }
     }

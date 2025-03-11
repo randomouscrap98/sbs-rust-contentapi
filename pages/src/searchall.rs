@@ -20,7 +20,6 @@ pub enum SearchAllResult {
 }
 
 //This will render the entire index! It's a handler WITH the template in it! Maybe that's kinda weird? who knows...
-//pub fn index(data: MainLayoutData) -> Result<impl warp::Reply, Infallible>{
 pub fn render(
     data: MainLayoutData,
     search_results: Option<Vec<SearchAllResult>>,
@@ -71,7 +70,7 @@ pub fn render(
 //There is no post, searching is done in the GET params
 
 pub async fn get_render(
-    mut context: PageContext,
+    context: PageContext,
     search_form: SearchAllForm,
 ) -> Result<Response, Error> {
     let mut result: Option<Vec<SearchAllResult>> = None;
@@ -107,10 +106,7 @@ pub async fn get_render(
             );
             request.requests.push(user_request);
 
-            let search_result = context
-                .api_context
-                .post_request_profiled_opt(&request, "searchall")
-                .await?;
+            let search_result = context.api_context.post_request(&request).await?;
             let content = cast_result_required::<Content>(&search_result, "content")?;
             let users = cast_result_required::<User>(&search_result, "user")?;
 
@@ -172,4 +168,3 @@ fn search_score_name(name: &str, search: &str) -> f32 {
     }
     score
 }
-

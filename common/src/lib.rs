@@ -81,9 +81,6 @@ pub struct MainLayoutData {
     pub current_path: String,
     pub override_nav_path: Option<&'static str>,
     pub about_api: contentapi::About,
-
-    #[cfg(feature = "profiling")]
-    pub profiler: onestop::OneList<onestop::OneDuration>,
 }
 
 /// A basic context for use in page rendering. Even if a page doesn't strictly need all

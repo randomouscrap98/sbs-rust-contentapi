@@ -136,7 +136,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "942c35dce6c2d64058fef0b5595d0a075498ca2a9347d06b4c4207359d5ad587"
 dependencies = [
  "html-escape",
- "onestop",
  "regex",
 ]
 

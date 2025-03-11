@@ -1,21 +1,18 @@
-//use super::*;
-use contentapi::*;
-use contentapi::conversion::*;
-use common::*;
 use common::response::*;
+use common::*;
+use contentapi::conversion::*;
+use contentapi::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, Default)]
 #[serde(default)]
-pub struct PageQuery { 
+pub struct PageQuery {
     pid: i64,
-    cid: Option<i64>
-    //page: Option<i32> 
+    cid: Option<i64>,
 }
 
 //https://old.smilebasicsource.com/page?pid=1497&cid=16922#comment_16922
-pub async fn get_pid_redirect(mut context: PageContext, query: PageQuery) -> Result<Response, Error>
-{
+pub async fn get_pid_redirect(context: PageContext, query: PageQuery) -> Result<Response, Error> {
     let mut request = FullRequest::new();
     add_value!(request, "pidkey", vec!["pid"]);
     add_value!(request, "pid", vec![query.pid]);
@@ -39,11 +36,13 @@ pub async fn get_pid_redirect(mut context: PageContext, query: PageQuery) -> Res
         request.requests.push(cid_request);
     }
 
-    let result = context.api_context.post_request_profiled_opt(&request, "legacy_page").await?;
+    let result = context.api_context.post_request(&request).await?;
     let mut pages = cast_result_required::<Content>(&result, "content")?;
     let mut messages = cast_result_safe::<Message>(&result, "message")?;
 
-    let page = pages.pop().ok_or(Error::NotFound(String::from("Could not find page!")))?;
+    let page = pages
+        .pop()
+        .ok_or(Error::NotFound(String::from("Could not find page!")))?;
 
     let mut url = context.layout_data.links.forum_thread(&page);
 

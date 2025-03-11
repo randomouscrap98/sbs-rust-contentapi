@@ -24,8 +24,7 @@ pub fn get_allcategory_query() -> String {
 pub async fn get_all_categories(
     context: &mut ApiContext,
     limit: Option<Vec<i64>>,
-) -> Result<Vec<Content>, ApiError> //Box<dyn std::error::Error>>
-{
+) -> Result<Vec<Content>, ApiError> {
     let mut request = FullRequest::new();
 
     request.requests.push(build_request!(
@@ -43,9 +42,7 @@ pub async fn get_all_categories(
         )
     ));
 
-    let result = context
-        .post_request_profiled_opt(&request, "all_categories")
-        .await?;
+    let result = context.post_request(&request).await?;
     conversion::cast_result_required::<Content>(&result, &RequestType::content.to_string())
         .map_err(|e| e.into())
 }
@@ -65,9 +62,7 @@ pub async fn get_system_any(context: &mut ApiContext, ty: &str) -> Result<Option
         String::from("id") // Combined with 'pop', even if there are multiple alerts, we always get the last one
     );
     request.requests.push(alert_request);
-    let result = context
-        .post_request_profiled_opt(&request, "get-system")
-        .await?;
+    let result = context.post_request(&request).await?;
     let mut content = cast_result_required::<Content>(&result, "content")?;
     Ok(content.pop())
 }
@@ -117,9 +112,7 @@ pub async fn get_fullpage(
     ptc_request.name = Some(String::from("ptc"));
     request.requests.push(ptc_request);
 
-    let result = context
-        .post_request_profiled_opt(&request, "page_everything")
-        .await?;
+    let result = context.post_request(&request).await?;
     let mut main = cast_result_required::<Content>(&result, "main")?;
     let mut ptc = cast_result_required::<Content>(&result, "ptc")?;
 
@@ -171,12 +164,7 @@ pub async fn get_all_documentation(context: &mut ApiContext) -> Result<Vec<Conte
 
         request.requests.push(doc_request);
 
-        let api_result = context
-            .post_request_profiled_opt(
-                &request,
-                &format!("all_documentation_treeonly_skip{}", skip),
-            )
-            .await?;
+        let api_result = context.post_request(&request).await?;
         let this_block = conversion::cast_result_required::<Content>(
             &api_result,
             &RequestType::content.to_string(),

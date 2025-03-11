@@ -15,7 +15,6 @@ serde_json = "1.0"
 onestop = { version = "0.0.2", optional = true }
 bbscope = { version = "0.2" }
 fastrand = "1.9.0"
-# bbscope = { version = "0.1.7", path = "../../bbscope-rust" }
 
 axum = { version = "0.6.18", optional = true }
 
@@ -23,9 +22,4 @@ contentapi = { path = "../contentapi" }
 
 [features]
 default = [ "axum" ] # Just for now
-profiling = [
-    "contentapi/profiling", 
-    "bbscope/profiling",
-    "dep:onestop"
-]
 axum = [ "dep:axum" ]

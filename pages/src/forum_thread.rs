@@ -74,10 +74,7 @@ async fn render_thread(
     let mut page = page.unwrap_or(1) - 1; //we assume 1-based pages
 
     //Go lookup all the 'initial' data, which everything except posts and users
-    let pre_result = context
-        .api_context
-        .post_request_profiled_opt(&pre_request, "prepost")
-        .await?;
+    let pre_result = context.api_context.post_request(&pre_request).await?;
 
     //Pull out and parse all that stupid data. It's fun using strongly typed languages!! maybe...
     let mut categories_cleaned =
@@ -121,10 +118,7 @@ async fn render_thread(
     //OK NOW you can go lookup the posts, since we are sure about where in the postlist we want
     let after_request =
         get_finishpost_request(thread_id, vec![thread_create_uid], per_page, sequence_start);
-    let after_result = context
-        .api_context
-        .post_request_profiled_opt(&after_request, "finishpost")
-        .await?;
+    let after_result = context.api_context.post_request(&after_request).await?;
 
     //Pull the data out of THAT request
     let messages_raw = cast_result_required::<Message>(&after_result, "message")?;

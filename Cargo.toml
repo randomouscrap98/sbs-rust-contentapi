@@ -31,10 +31,4 @@ common = { path = "common"}
 pages = { path = "pages" }
 
 [features]
-default = ["profiling"] # Consider adding perf here someday
 perf = ["bbscope/perf"]
-profiling = [
-    "contentapi/profiling",
-    "common/profiling",
-    "pages/profiling"
-]

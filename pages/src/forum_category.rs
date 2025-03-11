@@ -103,9 +103,7 @@ async fn build_categories_with_threads(
 ) -> Result<Vec<ForumCategory>, Error> {
     //Next request: get the complicated dataset for each category (this somehow includes comments???)
     let thread_request = get_thread_request(&categories_cleaned, limit, skip, true); //context.config.default_category_threads, 0);
-    let thread_result = context
-        .post_request_profiled_opt(&thread_request, "getthreads")
-        .await?;
+    let thread_result = context.post_request(&thread_request).await?;
 
     let messages_raw = cast_result_required::<Message>(&thread_result, "message")?;
 
@@ -130,10 +128,7 @@ async fn render_threads(
 ) -> Result<Response, Error> {
     let page = page.unwrap_or(1) - 1;
 
-    let category_result = context
-        .api_context
-        .post_request_profiled_opt(&category_request, "getcategory")
-        .await?;
+    let category_result = context.api_context.post_request(&category_request).await?;
     let categories_cleaned = CleanedPreCategory::from_many(cast_result_required::<Content>(
         &category_result,
         CATEGORYKEY,
