@@ -1,3 +1,4 @@
+pub mod capi;
 pub mod constants;
 pub mod forms;
 pub mod forum;

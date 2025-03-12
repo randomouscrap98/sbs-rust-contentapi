@@ -23,7 +23,6 @@ onestop::create_config! {
         default_cookie_expire: i32,
         long_cookie_expire: i32,
         default_imagebrowser_count: i32,
-        default_category_threads : i32,
         default_display_threads : i32,
         default_display_posts : i32,
         default_display_pages : i32,

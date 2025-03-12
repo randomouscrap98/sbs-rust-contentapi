@@ -33,6 +33,12 @@ impl From<serde_json::Error> for Error {
     }
 }
 
+impl From<rusqlite::Error> for Error {
+    fn from(error: rusqlite::Error) -> Self {
+        Error::Other(error.to_string())
+    }
+}
+
 impl From<Box<dyn std::error::Error>> for Error {
     fn from(error: Box<dyn std::error::Error>) -> Self {
         Error::Other(error.to_string())
@@ -95,4 +101,3 @@ impl axum::response::IntoResponse for Error {
         flatten(Err(self)).into_response()
     }
 }
-

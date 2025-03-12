@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use super::*;
+use crate::capi::*;
 use crate::constants::*;
 use crate::response::*;
 use crate::view::*;
@@ -11,14 +12,62 @@ use contentapi::*;
 //Not sure if we need values, but I NEED permissions to know if the thread is locked
 pub static THREADFIELDS : &str = "id,name,lastCommentId,literalType,contentType,hash,parentId,commentCount,createDate,createUserId,values,permissions,lastRevisionId,lastActionDate";
 //Need values to know the stickies
-pub static CATEGORYFIELDS: &str =
-    "id,hash,name,description,literalType,contentType,values,permissions";
+pub static CATEGORYFIELDS: &str = "id,hash,name,description,literalType,contentType";
 
 //Note: these are keys for the REQUESTS, not anything else!
 pub static THREADKEY: &str = "thread";
 pub static CATEGORYKEY: &str = "category";
 pub static PREMESSAGEKEY: &str = "premessage";
 pub static PREMESSAGEINDEXKEY: &str = "premessage_index";
+
+// ---------------------------------------------
+//  DIRECT CONNECT NEW
+// ---------------------------------------------
+
+//Structs JUST for building data for the forum templates (so no need to be public)
+#[derive(Clone, Debug)]
+pub struct ForumCategory2 {
+    pub id: i64,
+    pub hash: String,
+    pub name: String,
+    pub description: String,
+    pub literal_type: String,
+    pub content_type: i64,
+    pub threads_count: i32,
+}
+
+pub fn get_categories(ctx: &PageContext, fcid: Option<i64>) -> Result<Vec<ForumCategory2>, Error> {
+    let mut query = format!(
+        "SELECT {},({}) AS thread_count FROM content WHERE {} AND literalType IN ({})",
+        CATEGORYFIELDS,
+        query_childcount("id"),
+        COMMONCONTENT,
+        query_vmap(FORUMCATEGORYTYPES.len())
+    );
+    let mut params: Vec<&dyn rusqlite::types::ToSql> = vec![];
+    for t in FORUMCATEGORYTYPES.iter() {
+        params.push(t);
+    }
+    let tfcid: i64;
+    if let Some(fcid) = fcid {
+        query.push_str(" AND id = ?");
+        tfcid = fcid;
+        params.push(&tfcid);
+    }
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let category_iter = stmt.query_map(params.as_slice(), |row| {
+        Ok(ForumCategory2 {
+            id: row.get(0)?,
+            hash: row.get(1)?,
+            name: row.get(2)?,
+            description: row.get(3)?,
+            literal_type: row.get(4)?,
+            content_type: row.get(5)?,
+            threads_count: row.get(6)?,
+        })
+    })?;
+    Ok(category_iter.collect::<Result<Vec<ForumCategory2>, rusqlite::Error>>()?)
+}
 
 struct Keygen();
 
