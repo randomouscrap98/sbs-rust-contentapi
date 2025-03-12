@@ -278,3 +278,51 @@ pub fn get_engagements(ctx: &PageContext, content: i64) -> Result<HashMap<String
 
     Ok(result)
 }
+
+// #[derive(Clone, Debug)]
+// pub struct RawContent {
+//     pub id: i64,
+//     pub create_user_id: i64,
+//     pub create_date: DateTime<Utc>,
+//     pub content_type: i64,
+//     pub literal_type: String,
+//     pub meta: Option<String>, // Option because this is parsed as json later
+//     pub description: String,
+//     pub hash: String,
+//     pub name: String,
+//     pub text: String,
+//     pub parent_id: i64,
+// }
+
+#[derive(Clone, Debug)]
+pub struct SystemPage {
+    pub id: i64,
+    pub hash: String,
+    pub name: String,
+    pub text: String,
+}
+
+// Get any system content with given literaltype
+pub fn get_systempage(ctx: &PageContext, literal_type: String) -> Result<Vec<SystemPage>, Error> {
+    let query = format!(
+        "SELECT id,hash,name,text FROM content WHERE {} AND contentType = ? AND literalType = ?",
+        COMMONCONTENT
+    );
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let system_iter = stmt.query_map(
+        rusqlite::params![ContentType::SYSTEM, &literal_type],
+        |row| {
+            Ok(SystemPage {
+                id: row.get(0)?,
+                hash: row.get(1)?,
+                name: row.get(2)?,
+                text: row.get(3)?,
+            })
+        },
+    )?;
+
+    #[cfg(feature = "querydump")]
+    println!("Query: {:?}", &query);
+
+    Ok(system_iter.collect::<Result<Vec<SystemPage>, rusqlite::Error>>()?)
+}
