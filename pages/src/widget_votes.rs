@@ -1,24 +1,21 @@
-use common::constants::{DOWNVOTE, UPVOTE, VOTETYPE};
+use std::collections::HashMap;
+
+use common::capi::get_engagements;
+use common::constants::{DOWNVOTESTR, UPVOTESTR};
 use common::render::layout::*;
 use common::response::*;
 use common::*;
 use maud::*;
 
-use contentapi::*;
-
-pub fn render(data: MainLayoutData, content: Content) -> String {
+pub fn render(data: MainLayoutData, engagement: HashMap<String, i32>) -> String {
     let mut downvotes = 0;
     let mut upvotes = 0;
 
-    if let Some(ref engagement) = content.engagement {
-        if let Some(vote_engagements) = engagement.get(VOTETYPE) {
-            if let Some(downvote_count) = vote_engagements.get(DOWNVOTE) {
-                downvotes = *downvote_count;
-            }
-            if let Some(upvote_count) = vote_engagements.get(UPVOTE) {
-                upvotes = *upvote_count;
-            }
-        }
+    if let Some(downvote_count) = engagement.get(DOWNVOTESTR) {
+        downvotes = *downvote_count;
+    }
+    if let Some(upvote_count) = engagement.get(UPVOTESTR) {
+        upvotes = *upvote_count;
     }
 
     let totalvotes = downvotes + upvotes;
@@ -38,10 +35,6 @@ pub fn render(data: MainLayoutData, content: Content) -> String {
 }
 
 pub async fn get_render(context: PageContext, content_id: i64) -> Result<Response, Error> {
-    let content = context
-        .api_context
-        .get_content_by_id(content_id, "id,name,engagement")
-        .await?;
-
-    return Ok(Response::Render(render(context.layout_data, content)));
+    let engagement = get_engagements(&context, content_id)?;
+    return Ok(Response::Render(render(context.layout_data, engagement)));
 }

@@ -251,3 +251,30 @@ pub fn get_threads(
 
     Ok(thread_iter.collect::<Result<Vec<ForumThread2>, rusqlite::Error>>()?)
 }
+
+// Get engagement for a particular content
+pub fn get_engagements(ctx: &PageContext, content: i64) -> Result<HashMap<String, i32>, Error> {
+    // WARN: you can get engagements for content that is private! You also get engagements
+    // for deleted users/etc!
+    let query = format!("SELECT `type`,engagement,count(*) FROM content_engagement WHERE contentId = ? GROUP BY `type`,engagement");
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let engagement_iter = stmt.query_map([&content], |row| {
+        let mut typ: String = row.get(0)?;
+        let eng: String = row.get(1)?;
+        typ.push_str(&eng);
+        let count: i32 = row.get(2)?;
+        Ok((typ, count))
+    })?;
+
+    #[cfg(feature = "querydump")]
+    println!("Query: {:?}", &query);
+
+    let mut result = HashMap::<String, i32>::new();
+
+    for engagement in engagement_iter {
+        let reng = engagement?;
+        result.insert(reng.0, reng.1);
+    }
+
+    Ok(result)
+}

@@ -56,6 +56,9 @@ pub const UPVOTE: &str = "+";
 pub const DOWNVOTE: &str = "-";
 pub const VOTETYPE: &str = "vote";
 
+pub const UPVOTESTR: &str = "vote+";
+pub const DOWNVOTESTR: &str = "vote-";
+
 pub const DEFAULTPAGESORT: &str = "id";
 pub const ANYSYSTEM: &str = "any";
 pub const PTCSYSTEM: &str = "ptc";
