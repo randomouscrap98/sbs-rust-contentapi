@@ -1,4 +1,4 @@
-use common::forum::*;
+use common::capi::*;
 use common::render::layout::*;
 use common::response::*;
 use common::*;

@@ -15,12 +15,12 @@ serde_json = "1.0"
 onestop = { version = "0.0.2", optional = true }
 bbscope = { version = "0.2" }
 fastrand = "1.9.0"
-rusqlite = { version = "0.34.0", features = ["bundled"] }
+rusqlite = { version = "0.34.0", features = ["bundled", "chrono"] }
 
-axum = { version = "0.6.18", optional = true }
+axum = { version = "0.6.18" }
 
 contentapi = { path = "../contentapi" }
 
 [features]
-default = [ "axum" ] # Just for now
-axum = [ "dep:axum" ]
+default = [ "querydump" ] # Just for now
+querydump = []

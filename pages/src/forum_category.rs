@@ -4,6 +4,7 @@ use contentapi::conversion::*;
 use contentapi::endpoints::ApiContext;
 use contentapi::*;
 
+use common::capi::*;
 use common::constants::*;
 use common::forum::*;
 use common::pagination::*;
