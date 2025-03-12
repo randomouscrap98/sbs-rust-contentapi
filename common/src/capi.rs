@@ -18,7 +18,10 @@ pub fn select_postcount(idname: &str) -> String {
     return format!("SELECT COUNT(*) FROM messages WHERE contentId = {}", idname);
 }
 pub fn select_maxpost(idname: &str) -> String {
-    return format!("SELECT MAX(id) FROM messages WHERE contentId = {}", idname);
+    return format!(
+        "SELECT COALESCE(MAX(id),0) FROM messages WHERE contentId = {}",
+        idname
+    );
 }
 
 pub fn params_list(count: usize) -> String {

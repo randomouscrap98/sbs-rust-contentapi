@@ -8,6 +8,43 @@ use crate::*;
 use contentapi::*;
 use maud::*;
 
+pub fn pageicon2(
+    links: &LinkConfig,
+    values: &HashMap<String, String>,
+    literal_type: &str,
+) -> Markup {
+    let systems = get_systems2(values);
+    let mut count = 0;
+    html! {
+        //Don't forget the program type! if it exists anyway
+        @if systems.len() > 0 {
+            @for system in systems {
+                @if let Some(title) = get_sbs_system_title(&system) {
+                    img title=(title) class="sysicon" src={(links.resource_root)"/"(system)".svg"};
+                    ({
+                        count = count + 1;
+                        if count >= 99 { break; }
+                        ""
+                    })
+                }
+            }
+        }
+        @else {
+            @if literal_type == SBSPageType::DOCUMENTATION {
+                //This icon may change later
+                img title="Documentation" src={(links.resource_root)"/sb-docs.png"};
+            }
+            @else if literal_type == SBSPageType::RESOURCE {
+                img title="Resource" src={(links.resource_root)"/sb-info.png"};
+            }
+            @else {
+                //Anything else
+                img title="Thread" src={(links.resource_root)"/sb-page.png"};
+            }
+        }
+    }
+}
+
 pub fn pageicon(links: &LinkConfig, page: &Content) -> Markup {
     pageicon_limited(links, page, 99)
 }

@@ -57,7 +57,7 @@ pub fn thread_item(links: &LinkConfig, thread: &ForumThread2) -> Markup {
                 h3 { a."flatlink" href=(links.forum_thread_unsafe(&thread.hash)) { (thread.name) } }
             }
             div."foruminfo aside mediumseparate" {
-                //(threadicon(links, thread))
+                (threadicon2(links, thread))
                 div { b { "Posts: " } (thread.posts_count) }
                 div {
                     b { "Created: " }

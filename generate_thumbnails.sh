@@ -20,9 +20,9 @@ for file in "$IMGDIR"/*; do
   if [[ -f "$file" ]]; then
     tf=$(basename "$file")
     # Use convert to resize image while preserving aspect ratio
-    magick "$file" -resize "300x300" "$THMBDIR/${tf}_300.jpg" &
-    magick "$file" -resize "300x300^" -gravity center -extent "300x300" "$THMBDIR/${tf}_s300.jpg" &
-    magick "$file" -resize "100x100^" -gravity center -extent "100x100" "$THMBDIR/${tf}_s100.jpg" &
+    magick "$file"[0] -resize "300x300" "$THMBDIR/${tf}_300.jpg" &
+    magick "$file"[0] -resize "300x300^" -gravity center -extent "300x300" "$THMBDIR/${tf}_s300.jpg" &
+    magick "$file"[0] -resize "100x100^" -gravity center -extent "100x100" "$THMBDIR/${tf}_s100.jpg" &
     wait
     # convert "$file" -resize "300x300" -gravity center -extent "${TARGET_SIZE}" "resized_$file"
   fi

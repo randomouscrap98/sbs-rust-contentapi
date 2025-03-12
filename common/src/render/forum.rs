@@ -5,6 +5,7 @@ use maud::*;
 use serde_json::Value;
 
 use crate::capi::ForumCategory2;
+use crate::capi::ForumThread2;
 use crate::constants::*;
 use crate::forms::*;
 use crate::forum::*;
@@ -72,6 +73,14 @@ pub fn threadicon(config: &LinkConfig, thread: &ForumThread) -> Markup {
     html! {
         div."threadicon smallseparate" {
             (render::submissions::pageicon(config, &thread.thread))
+        }
+    }
+}
+
+pub fn threadicon2(config: &LinkConfig, thread: &ForumThread2) -> Markup {
+    html! {
+        div."threadicon smallseparate" {
+            (render::submissions::pageicon2(config, &thread.values, &thread.literal_type))
         }
     }
 }

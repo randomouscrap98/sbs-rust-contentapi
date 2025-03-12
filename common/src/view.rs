@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use crate::{constants::*, opt_s};
 use contentapi::*;
 
+use serde_json;
+
 // This is for NON-API basic data conversion / organization related to views.
 
 /// Get the list of category ids this content is tagged under
@@ -59,6 +61,20 @@ pub fn get_systems(content: &Content) -> Vec<String> {
     }
 
     return result;
+}
+
+pub fn get_systems2(values: &HashMap<String, String>) -> Vec<String> {
+    if let Some(systems) = values.get(SBSValue::SYSTEMS) {
+        match serde_json::from_str(systems) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("Can't parse systems: {}", e);
+                Vec::new()
+            }
+        }
+    } else {
+        Vec::new()
+    }
 }
 
 #[derive(Debug)]
