@@ -131,7 +131,7 @@ async fn render_thread(
         ForumPathItem::from_thread(&thread),
     ];
     let thread_tags_ids = get_tagged_categories(&thread);
-    let mut full_thread = ForumThread::from_content(thread, &messages_raw, &category.stickies)?;
+    let mut full_thread = ForumThread::from_content(thread, &messages_raw)?;
     full_thread.categories =
         Some(get_all_categories(&mut context.api_context, Some(thread_tags_ids)).await?);
     let mut post_config = PostsConfig::thread_mode(

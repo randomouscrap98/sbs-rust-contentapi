@@ -49,7 +49,7 @@ async fn build_categories_with_threads(
     skip: i32,
 ) -> Result<Vec<ForumCategory>, Error> {
     //Next request: get the complicated dataset for each category (this somehow includes comments???)
-    let thread_request = get_thread_request(&categories_cleaned, limit, skip, false);
+    let thread_request = get_thread_request(&categories_cleaned, limit, skip);
     let thread_result = context.post_request(&thread_request).await?;
 
     let messages_raw = cast_result_required::<Message>(&thread_result, "message")?;

@@ -29,56 +29,23 @@ impl Keygen {
     fn threads(id: i64) -> String {
         format!("threads_{id}")
     }
-    fn stickythreads(id: i64) -> String {
-        format!("stickythreads_{id}")
-    }
-    fn stickies(id: i64) -> String {
-        format!("stickies_{id}")
-    }
 }
 
 #[derive(Clone, Debug)]
 pub struct ForumThread {
     pub thread: Content,
     pub id: i64,
-    pub sticky: bool,
-    pub locked: bool,
-    pub private: bool,
-    pub neutral: bool, //Used by the frontend
     pub posts: Vec<Message>,
     pub categories: Option<Vec<Content>>,
 }
 
 impl ForumThread {
-    pub fn from_content(
-        thread: Content,
-        messages_raw: &Vec<Message>,
-        stickies: &Vec<i64>,
-    ) -> Result<Self, Error> {
+    pub fn from_content(thread: Content, messages_raw: &Vec<Message>) -> Result<Self, Error> {
         let thread_id = thread.id.unwrap_or(0);
-        let permissions = match thread.permissions {
-            Some(ref p) => Ok(p),
-            None => Err(Error::Other(String::from(
-                "Thread didn't have permissions in resultset!",
-            ))),
-        }?;
         //"get" luckily already gets the thing as a reference
-        //These are APPROXIMATIONS for display only! They should NOT be used to determine ACTUAL functionality!
-        let global_perms = permissions
-            .get("0")
-            .and_then(|s| Some(s.as_str()))
-            .unwrap_or_else(|| "");
-        //ok_or(Error::Other(String::from("Thread didn't have global permissions!")))?;
-        let locked = !global_perms.contains('C'); //Right... the order matters. need to finish using it before you give up thread
-        let private = !global_perms.contains('R');
-        let sticky = stickies.contains(&thread_id);
         Ok(ForumThread {
-            locked,
-            sticky,
             thread,
-            private,
             id: thread_id,
-            neutral: !locked && !sticky,
             posts: messages_raw
                 .iter()
                 .filter(|m| m.contentId == Some(thread_id))
@@ -95,7 +62,6 @@ pub struct ForumCategory {
     pub category: Content,
     pub id: i64,
     pub threads: Vec<ForumThread>,
-    pub stickies: Vec<ForumThread>,
     pub threads_count: i32,
     pub users: HashMap<i64, User>,
 }
@@ -106,15 +72,12 @@ impl ForumCategory {
         thread_result: &RequestResult,
         messages_raw: &Vec<Message>,
     ) -> Result<Self, Error> {
-        //let id = category.id.ok_or(anyhow!("Given forum category didn't have an id!"))?;
         let threadcount_name = Keygen::threadcount(category.id);
         let threads_name = Keygen::threads(category.id);
-        let stickies_name = Keygen::stickythreads(category.id);
 
         let special_counts =
             cast_result_required::<SpecialCount>(&thread_result, &threadcount_name)?;
         let threads_raw = cast_result_required::<Content>(&thread_result, &threads_name)?;
-        let stickies_raw = cast_result_safe::<Content>(&thread_result, &stickies_name)?;
         let users_raw = cast_result_required::<User>(&thread_result, "user")?;
 
         Ok(ForumCategory {
@@ -122,11 +85,7 @@ impl ForumCategory {
             category: category.category, //partial move
             threads: threads_raw
                 .into_iter()
-                .map(|thread| ForumThread::from_content(thread, messages_raw, &category.stickies))
-                .collect::<Result<Vec<_>, _>>()?,
-            stickies: stickies_raw
-                .into_iter()
-                .map(|thread| ForumThread::from_content(thread, messages_raw, &category.stickies))
+                .map(|thread| ForumThread::from_content(thread, messages_raw))
                 .collect::<Result<Vec<_>, _>>()?,
             users: map_users(users_raw),
             threads_count: special_counts
@@ -144,7 +103,6 @@ impl ForumCategory {
 //for use in other computations
 pub struct CleanedPreCategory {
     pub category: Content,
-    pub stickies: Vec<i64>,
     pub id: i64,
     pub name: String,
 }
@@ -161,36 +119,8 @@ impl CleanedPreCategory {
             .id
             .ok_or(Error::Other(String::from("Categories didn't have ids!")))?;
         //Need to get the list of stickies
-        let cvalues = match category.values {
-            Some(ref values) => Ok(values),
-            None => Err(Error::Other(String::from(
-                "Given category didn't have values!",
-            ))),
-        }?;
-        let stickies;
-        //it is OK for something to not have stickied threads!
-        if let Some(sticky_value) = cvalues.get("stickies") {
-            //}.ok_or(Error::Other(String::from("Category didn't have stickies value!!")))?;
-            let sticky_array = sticky_value
-                .as_array()
-                .ok_or(Error::Other(String::from("Sticky wasn't array!")))?;
-            stickies = sticky_array
-                .iter()
-                .map(|s| -> Result<i64, Error> {
-                    s.as_i64()
-                        .ok_or(Error::Other(format!("Couldn't convert sticky value {}", s)))
-                })
-                .collect::<Result<Vec<i64>, _>>()?;
-        } else {
-            stickies = Vec::new();
-        }
         //let stickies = category.get_stickies()?;
-        Ok(CleanedPreCategory {
-            category: category,
-            stickies,
-            id,
-            name,
-        })
+        Ok(CleanedPreCategory { category, id, name })
     }
 
     pub fn from_many(categories: Vec<Content>) -> Result<Vec<CleanedPreCategory>, Error> {
@@ -348,7 +278,6 @@ pub fn get_thread_request(
     categories: &Vec<CleanedPreCategory>,
     limit: i32,
     skip: i32,
-    get_stickies: bool,
 ) -> FullRequest {
     let mut request = FullRequest::new();
     add_value!(request, "page_type", ContentType::PAGE);
@@ -358,10 +287,6 @@ pub fn get_thread_request(
 
     for ref category in categories.iter() {
         let category_id = category.id;
-        let sticky_key = Keygen::stickies(category_id);
-        request
-            .values
-            .insert(sticky_key.clone(), category.stickies.clone().into());
 
         //Standard threads get (for latest N threads)
         let base_query = format!("parentId = {{{{{category_id}}}}} and contentType = @page_type and literalType in @allowed_types and !notdeleted()");
@@ -370,8 +295,8 @@ pub fn get_thread_request(
         let mut threads_request = build_request!(
             RequestType::content,
             String::from(THREADFIELDS),
-            format!("{} and id not in @{}", base_query, sticky_key),
-            String::from("lastActionDate_desc"), //"lastCommentId_desc,lastRevisionId_desc"),
+            format!("{}", base_query),
+            String::from("lastActionDate_desc"),
             limit,
             skip
         );
@@ -380,21 +305,6 @@ pub fn get_thread_request(
         threads_request.name = Some(key.clone());
         request.requests.push(threads_request);
         keys.push(key);
-
-        // NO limits on sticky request. The "only if no skip" might not be great
-        if skip == 0 && get_stickies {
-            let mut sticky_request = build_request!(
-                RequestType::content,
-                String::from(THREADFIELDS),
-                format!("{} and id in @{}", base_query, sticky_key),
-                String::from("lastCommentId_desc")
-            );
-
-            let key = Keygen::stickythreads(category_id);
-            sticky_request.name = Some(key.clone());
-            request.requests.push(sticky_request);
-            keys.push(key);
-        }
 
         //Thread count get (if the previous is too expensive, consider just doing this)
         let mut count_request = build_request!(

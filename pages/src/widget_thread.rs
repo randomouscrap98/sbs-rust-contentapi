@@ -46,18 +46,12 @@ pub async fn get_render(mut context: PageContext, query: ThreadQuery) -> Result<
         let pre_result = context.api_context.post_request(&pre_request).await?;
 
         //Pull out and parse all that stupid data. It's fun using strongly typed languages!! maybe...
-        let mut categories_cleaned = CleanedPreCategory::from_many(
-            cast_result_required::<Content>(&pre_result, CATEGORYKEY)?,
-        )?;
         let mut threads_raw = cast_result_required::<Content>(&pre_result, THREADKEY)?;
 
         //There must be one category, and one thread, otherwise return 404
         let thread = threads_raw
             .pop()
             .ok_or(Error::NotFound(String::from("Could not find thread!")))?;
-        let category = categories_cleaned
-            .pop()
-            .ok_or(Error::NotFound(String::from("Could not find category!")))?;
 
         //OK NOW you can go lookup the posts, since we are sure about where in the postlist we want
         let after_request = get_reply_request(post_id);
@@ -71,7 +65,7 @@ pub async fn get_render(mut context: PageContext, query: ThreadQuery) -> Result<
         Ok(Response::Render(render(
             &mut context,
             PostsConfig::reply_mode(
-                ForumThread::from_content(thread, &messages_raw, &category.stickies)?,
+                ForumThread::from_content(thread, &messages_raw)?,
                 map_messages(related_raw),
                 map_users(users_raw),
                 query.selected,
@@ -83,4 +77,3 @@ pub async fn get_render(mut context: PageContext, query: ThreadQuery) -> Result<
         )))
     }
 }
-

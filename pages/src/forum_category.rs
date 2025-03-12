@@ -34,11 +34,6 @@ pub fn render(
             (forum_path(&data.links, &path))
         }
         section {
-            //Assume the stickies list is correct, they always come first no matter what
-            @for sticky in &category.stickies {
-                (thread_item(&data.links, sticky, &category.users))
-                hr."smaller";
-            }
             //Only care about 'unless' in the main list, the only time this DOES work is if there are ONLY stickies
             @for (index,thread) in category.threads.iter().enumerate() {
                 (thread_item(&data.links, thread, &category.users))
@@ -94,7 +89,7 @@ async fn build_categories_with_threads(
     skip: i32,
 ) -> Result<Vec<ForumCategory>, Error> {
     //Next request: get the complicated dataset for each category (this somehow includes comments???)
-    let thread_request = get_thread_request(&categories_cleaned, limit, skip, true); //context.config.default_category_threads, 0);
+    let thread_request = get_thread_request(&categories_cleaned, limit, skip);
     let thread_result = context.post_request(&thread_request).await?;
 
     let messages_raw = cast_result_required::<Message>(&thread_result, "message")?;
