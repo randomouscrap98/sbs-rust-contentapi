@@ -38,9 +38,9 @@ pub struct ForumCategory2 {
 
 pub fn get_categories(ctx: &PageContext, fcid: Option<i64>) -> Result<Vec<ForumCategory2>, Error> {
     let mut query = format!(
-        "SELECT {},({}) AS thread_count FROM content WHERE {} AND literalType IN ({})",
+        "SELECT {},({}) AS thread_count FROM content c WHERE {} AND literalType IN ({})",
         CATEGORYFIELDS,
-        query_childcount("id"),
+        query_childcount("c.id"),
         COMMONCONTENT,
         query_vmap(FORUMCATEGORYTYPES.len())
     );

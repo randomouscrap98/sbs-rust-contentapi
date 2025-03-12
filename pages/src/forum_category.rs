@@ -16,34 +16,36 @@ use maud::*;
 
 pub fn render(
     mut data: MainLayoutData,
-    category: ForumCategory,
+    category: ForumCategory2,
+    threads: Vec<ForumThread>,
+    users: HashMap<i64, User>,
     path: Vec<ForumPathItem>,
     pages: Vec<PagelistItem>,
 ) -> String {
-    if category.category.literalType.as_deref() == Some(SBSPageType::SUBMISSIONS) {
+    if category.literal_type == SBSPageType::SUBMISSIONS {
         data.override_nav_path = Some("/search");
-    } else if category.category.literalType.as_deref() == Some(SBSPageType::DIRECTMESSAGES) {
+    } else if category.literal_type == SBSPageType::DIRECTMESSAGES {
         data.override_nav_path = Some("/userhome");
     }
 
     layout(&data, html!{
         (data.links.style("/forpage/forum.css"))
         section {
-            h1 { (opt_s!(category.category.name)) }
-            p."aside" {(opt_s!(category.category.description))}
+            h1 { (category.name) }
+            p."aside" {(category.description)}
             (forum_path(&data.links, &path))
         }
         section {
             //Only care about 'unless' in the main list, the only time this DOES work is if there are ONLY stickies
-            @for (index,thread) in category.threads.iter().enumerate() {
-                (thread_item(&data.links, thread, &category.users))
-                @if index < category.threads.len() - 1 {
+            @for (index,thread) in threads.iter().enumerate() {
+                (thread_item(&data.links, thread, &users))
+                @if index < threads.len() - 1 {
                     hr."smaller";
                 }
             }
             div."smallseparate pagelist" {
                 @for page in pages {
-                    a."current"[page.current] href={(data.links.forum_category(&category.category))"?page="(page.page)} { (page.text) }
+                    a."current"[page.current] href={(data.links.forum_category_unsafe(&category.hash))"?page="(page.page)} { (page.text) }
                 }
             }
         }
@@ -134,7 +136,7 @@ async fn render_threads(
         .ok_or(Error::NotFound(String::from("Couldn't find that category")))?;
     let pagelist = get_pagelist(category.threads_count, per_page, page);
 
-    //println!("Please: {:?}", category);
+    let mut real_category = get_categories(&context, Some(category.id))?;
 
     let path = vec![
         ForumPathItem::root(),
@@ -142,7 +144,11 @@ async fn render_threads(
     ];
     Ok(Response::Render(render(
         context.layout_data,
-        category,
+        real_category.pop().ok_or(Error::NotFound(String::from(
+            "Couldn't find that category (direct)",
+        )))?,
+        category.threads,
+        category.users,
         path,
         pagelist,
     )))
