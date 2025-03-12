@@ -1,12 +1,10 @@
-use std::collections::HashMap;
-
-use contentapi::conversion::*;
-use contentapi::endpoints::ApiContext;
-use contentapi::*;
+// use contentapi::conversion::*;
+// use contentapi::endpoints::ApiContext;
+// use contentapi::*;
 
 use common::capi::*;
 use common::constants::*;
-use common::forum::*;
+// use common::forum::*;
 use common::pagination::*;
 use common::render::forum::*;
 use common::render::layout::*;
@@ -18,8 +16,7 @@ use maud::*;
 pub fn render(
     mut data: MainLayoutData,
     category: ForumCategory2,
-    threads: Vec<ForumThread>,
-    users: HashMap<i64, User>,
+    threads: Vec<ForumThread2>,
     path: Vec<ForumPathItem>,
     pages: Vec<PagelistItem>,
 ) -> String {
@@ -39,7 +36,7 @@ pub fn render(
         section {
             //Only care about 'unless' in the main list, the only time this DOES work is if there are ONLY stickies
             @for (index,thread) in threads.iter().enumerate() {
-                (thread_item(&data.links, thread, &users))
+                (thread_item(&data.links, thread))
                 @if index < threads.len() - 1 {
                     hr."smaller";
                 }
@@ -53,30 +50,25 @@ pub fn render(
     }).into_string()
 }
 
-pub fn thread_item(links: &LinkConfig, thread: &ForumThread, users: &HashMap<i64, User>) -> Markup {
+pub fn thread_item(links: &LinkConfig, thread: &ForumThread2) -> Markup {
     html! {
         div."thread" {
             div."threadinfo" {
-                h3 { a."flatlink" href=(links.forum_thread(&thread.thread)) { (opt_s!(thread.thread.name, "??? (NOTITLE)")) } }
+                h3 { a."flatlink" href=(links.forum_thread_unsafe(&thread.hash)) { (thread.name) } }
             }
             div."foruminfo aside mediumseparate" {
-                (threadicon(links, thread))
-                div { b { "Posts: " } (i(&thread.thread.commentCount.into())) }
+                //(threadicon(links, thread))
+                div { b { "Posts: " } (thread.posts_count) }
                 div {
                     b { "Created: " }
-                    time datetime=(d(&thread.thread.createDate)) { (timeago_o(&thread.thread.createDate)) }
+                    time datetime=(dd(&thread.create_date)) { (timeago(&thread.create_date)) }
                 }
-                @if let Some(post) = thread.posts.get(0) {
+                @if thread.max_post_id > 0 {
                     div {
                         b { "Last: " }
-                        a."flatlink" href=(links.forum_post(post, &thread.thread)) {
-                            time datetime=(d(&post.createDate)) { (timeago_o(&post.createDate)) }
-                        }
-                        " by "
-                        @if let Some(user_id) = post.createUserId {
-                            @if let Some(user) = users.get(&user_id) {
-                                a."flatlink" href=(links.user(user)) { (user.username) }
-                            }
+                        a."flatlink" href=(links.forum_post_unsafe(thread.max_post_id, &thread.hash)) {
+                            (thread.max_post_id)
+                            //time datetime=(d(&post.createDate)) { (timeago_o(&post.createDate)) }
                         }
                     }
                 }
@@ -85,71 +77,84 @@ pub fn thread_item(links: &LinkConfig, thread: &ForumThread, users: &HashMap<i64
     }
 }
 
-async fn build_categories_with_threads(
-    context: &mut ApiContext,
-    categories_cleaned: Vec<CleanedPreCategory>,
-    limit: i32,
-    skip: i32,
-) -> Result<Vec<ForumCategory>, Error> {
-    //Next request: get the complicated dataset for each category (this somehow includes comments???)
-    let thread_request = get_thread_request(&categories_cleaned, limit, skip);
-    let thread_result = context.post_request(&thread_request).await?;
-
-    let messages_raw = cast_result_required::<Message>(&thread_result, "message")?;
-
-    let mut categories = Vec::new();
-
-    for category in categories_cleaned {
-        categories.push(ForumCategory::from_result(
-            category,
-            &thread_result,
-            &messages_raw,
-        )?);
-    }
-
-    Ok(categories)
-}
+// async fn build_categories_with_threads(
+//     context: &mut ApiContext,
+//     categories_cleaned: Vec<CleanedPreCategory>,
+//     limit: i32,
+//     skip: i32,
+// ) -> Result<Vec<ForumCategory>, Error> {
+//     //Next request: get the complicated dataset for each category (this somehow includes comments???)
+//     let thread_request = get_thread_request(&categories_cleaned, limit, skip);
+//     let thread_result = context.post_request(&thread_request).await?;
+//
+//     let messages_raw = cast_result_required::<Message>(&thread_result, "message")?;
+//
+//     let mut categories = Vec::new();
+//
+//     for category in categories_cleaned {
+//         categories.push(ForumCategory::from_result(
+//             category,
+//             &thread_result,
+//             &messages_raw,
+//         )?);
+//     }
+//
+//     Ok(categories)
+// }
 
 async fn render_threads(
-    mut context: PageContext,
-    category_request: FullRequest,
+    context: PageContext,
+    idhash: Option<IdOrHash>,
     per_page: i32,
     page: Option<i32>,
 ) -> Result<Response, Error> {
+    let category = get_categories(&context, idhash.clone())?
+        .pop()
+        .ok_or(Error::NotFound(String::from(
+            "Couldn't find that category (direct)",
+        )))?;
+
     let page = page.unwrap_or(1) - 1;
 
-    let category_result = context.api_context.post_request(&category_request).await?;
-    let categories_cleaned = CleanedPreCategory::from_many(cast_result_required::<Content>(
-        &category_result,
-        CATEGORYKEY,
-    )?)?;
-    let mut categories = build_categories_with_threads(
-        &mut context.api_context,
-        categories_cleaned,
-        per_page,
-        page * per_page,
-    )
-    .await?;
+    let threads = get_threads(
+        &context,
+        None,
+        Some(category.id),
+        QueryLimit {
+            limit: Some(per_page),
+            skip: Some(per_page * page),
+        },
+    )?;
 
-    //TODO: Might want to add data to these RouteErrors?
-    let category = categories
-        .pop()
-        .ok_or(Error::NotFound(String::from("Couldn't find that category")))?;
+    //let category_result = context.api_context.post_request(&category_request).await?;
+    // let categories_cleaned = CleanedPreCategory::from_many(cast_result_required::<Content>(
+    //     &category_result,
+    //     CATEGORYKEY,
+    // )?)?;
+    // let mut categories = build_categories_with_threads(
+    //     &mut context.api_context,
+    //     categories_cleaned,
+    //     per_page,
+    //     page * per_page,
+    // )
+    // .await?;
+
+    // //TODO: Might want to add data to these RouteErrors?
+    // let category = categories
+    //     .pop()
+    //     .ok_or(Error::NotFound(String::from("Couldn't find that category")))?;
     let pagelist = get_pagelist(category.threads_count, per_page, page);
 
-    let mut real_category = get_categories(&context, Some(category.id))?;
+    //let mut real_category = get_categories(&context, Some(category.id))?;
 
     let path = vec![
         ForumPathItem::root(),
-        ForumPathItem::from_category(&category.category),
+        ForumPathItem::from_category_c(&category),
     ];
     Ok(Response::Render(render(
         context.layout_data,
-        real_category.pop().ok_or(Error::NotFound(String::from(
-            "Couldn't find that category (direct)",
-        )))?,
-        category.threads,
-        category.users,
+        category,
+        threads,
         path,
         pagelist,
     )))
@@ -161,13 +166,7 @@ pub async fn get_hash_render(
     per_page: i32,
     page: Option<i32>,
 ) -> Result<Response, Error> {
-    render_threads(
-        context,
-        get_category_request(Some(hash), None),
-        per_page,
-        page,
-    )
-    .await
+    render_threads(context, Some(IdOrHash::Hash(hash)), per_page, page).await
 }
 
 pub async fn get_fcid_render(
@@ -176,11 +175,5 @@ pub async fn get_fcid_render(
     per_page: i32,
     page: Option<i32>,
 ) -> Result<Response, Error> {
-    render_threads(
-        context,
-        get_category_request(None, Some(fcid)),
-        per_page,
-        page,
-    )
-    .await
+    render_threads(context, Some(IdOrHash::Id(fcid)), per_page, page).await
 }

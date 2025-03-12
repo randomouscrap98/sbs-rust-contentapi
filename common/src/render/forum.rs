@@ -4,6 +4,7 @@ use contentapi::*;
 use maud::*;
 use serde_json::Value;
 
+use crate::capi::ForumCategory2;
 use crate::constants::*;
 use crate::forms::*;
 use crate::forum::*;
@@ -23,6 +24,12 @@ pub struct ForumPathItem {
 }
 
 impl ForumPathItem {
+    pub fn from_category_c(category: &ForumCategory2) -> Self {
+        Self {
+            link: format!("/forum/category/{}", &category.hash),
+            title: category.name.clone(),
+        }
+    }
     pub fn from_category(category: &Content) -> Self {
         Self {
             link: format!("/forum/category/{}", opt_s!(category.hash)),

@@ -42,6 +42,9 @@ impl LinkConfig {
     pub fn forum_thread(&self, thread: &Content) -> String {
         format!("{}/forum/thread/{}", self.http_root, opt_s!(thread.hash))
     }
+    pub fn forum_thread_unsafe(&self, hash: &str) -> String {
+        format!("{}/forum/thread/{}", self.http_root, hash)
+    }
 
     pub fn forum_post_hash(post: &Message) -> String {
         format!("#post_{}", post.id.unwrap_or_default())
@@ -54,6 +57,16 @@ impl LinkConfig {
             opt_s!(thread.hash),
             post.id.unwrap_or_default(),
             Self::forum_post_hash(post)
+        )
+    }
+
+    pub fn forum_post_unsafe(&self, pid: i64, thash: &str) -> String {
+        format!(
+            "{}/forum/thread/{}/{}{}",
+            self.http_root,
+            thash,
+            pid,
+            format!("#post_{}", pid),
         )
     }
 
