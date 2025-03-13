@@ -134,7 +134,7 @@ async fn render_thread(
     let mut full_thread = ForumThread::from_content(thread, &messages_raw)?;
     full_thread.categories =
         Some(get_all_categories(&mut context.api_context, Some(thread_tags_ids)).await?);
-    let mut post_config = PostsConfig::thread_mode(
+    let post_config = PostsConfig::thread_mode(
         full_thread,
         map_messages(related_raw),
         map_users(users_raw),
@@ -143,9 +143,9 @@ async fn render_thread(
         1 + per_page * page,
         selected_post.and_then(|m| m.id),
     );
-    if post_config.thread.thread.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION) {
-        post_config.docs_content = Some(get_all_documentation(&mut context.api_context).await?);
-    }
+    // if post_config.thread.thread.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION) {
+    //     post_config.docs_content = Some(get_all_documentation(&mut context.api_context).await?);
+    // }
     Ok(Response::Render(render(context, post_config)))
 }
 

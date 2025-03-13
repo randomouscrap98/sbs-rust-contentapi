@@ -1,14 +1,15 @@
-use common::prefab::get_all_documentation;
+use common::capi::*;
+//use common::prefab::get_all_documentation;
 use common::render::forum::display_doctree;
 use common::render::layout::*;
 use common::response::*;
 use common::*;
-use contentapi::*;
+//use contentapi::*;
 use maud::*;
 
 //This will render the entire index! It's a handler WITH the template in it! Maybe that's kinda weird? who knows...
 //pub fn index(data: MainLayoutData) -> Result<impl warp::Reply, Infallible>{
-pub fn render(data: MainLayoutData, documentation: &Vec<Content>) -> String {
+pub fn render(data: MainLayoutData, documentation: Vec<DocTreeContent>) -> String {
     layout(
         &data,
         html! {
@@ -22,10 +23,7 @@ pub fn render(data: MainLayoutData, documentation: &Vec<Content>) -> String {
     .into_string()
 }
 
-pub async fn get_render(mut context: PageContext) -> Result<Response, Error> {
-    let documentation = get_all_documentation(&mut context.api_context).await?;
-    Ok(Response::Render(render(
-        context.layout_data,
-        &documentation,
-    )))
+pub async fn get_render(context: PageContext) -> Result<Response, Error> {
+    let documentation = get_all_documentation(&context)?; //get_all_documentation(&mut context.api_context).await?;
+    Ok(Response::Render(render(context.layout_data, documentation)))
 }

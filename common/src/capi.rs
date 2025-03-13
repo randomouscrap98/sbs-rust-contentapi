@@ -326,3 +326,38 @@ pub fn get_systempage(ctx: &PageContext, literal_type: String) -> Result<Vec<Sys
 
     Ok(system_iter.collect::<Result<Vec<SystemPage>, rusqlite::Error>>()?)
 }
+
+#[derive(Clone, Debug)]
+pub struct DocTreeContent {
+    pub id: i64,
+    pub hash: String,
+    pub name: String,
+    pub values: HashMap<String, String>,
+}
+
+// Get any system content with given literaltype
+pub fn get_all_documentation(ctx: &PageContext) -> Result<Vec<DocTreeContent>, Error> {
+    let query = format!(
+        "SELECT id,hash,name FROM content WHERE {} AND contentType = ? AND literalType = ?",
+        COMMONCONTENT
+    );
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let mut vstmt = ctx.dbcon.prepare(VALUESELECT)?;
+    let doc_iter = stmt.query_map(
+        rusqlite::params![ContentType::PAGE, SBSPageType::DOCUMENTATION],
+        |row| {
+            let id = row.get(0)?;
+            Ok(DocTreeContent {
+                id,
+                hash: row.get(1)?,
+                name: row.get(2)?,
+                values: gather_values(&mut vstmt, id)?,
+            })
+        },
+    )?;
+
+    #[cfg(feature = "querydump")]
+    println!("Query: {:?}", &query);
+
+    Ok(doc_iter.collect::<Result<Vec<DocTreeContent>, rusqlite::Error>>()?)
+}

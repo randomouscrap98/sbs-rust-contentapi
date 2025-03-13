@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{constants::*, opt_s};
+use crate::{capi::DocTreeContent, constants::*};
 use contentapi::*;
 
 use serde_json;
@@ -110,28 +110,30 @@ pub fn map_categories(categories: Vec<Content>) -> Vec<Category> {
 
 /// Map content into paths containing the list of content within each path. Can be used to later
 /// build a tree, or to get a list of all paths (they keys of result)
-pub fn get_all_docpaths(documentation: &Vec<Content>) -> HashMap<String, Vec<&Content>> {
-    let mut result: HashMap<String, Vec<&Content>> = HashMap::new();
+pub fn get_all_docpaths(
+    documentation: &Vec<DocTreeContent>,
+) -> HashMap<String, Vec<&DocTreeContent>> {
+    let mut result: HashMap<String, Vec<&DocTreeContent>> = HashMap::new();
 
     for doc in documentation {
-        //Go through the absurd unwrapping to get to the actual docpath
-        if let Some(ref values) = doc.values {
-            if let Some(docpath) = values.get(SBSValue::DOCPATH) {
-                if let Some(docpath) = docpath.as_str() {
-                    //Finally, either add the content to the list or insert a new key if the hashmap didn't have it
-                    if let Some(list) = result.get_mut(docpath) {
+        // println!("Values: {:?}", doc.values);
+        if let Some(docpath) = doc.values.get(SBSValue::DOCPATH) {
+            //println!("Docpath: {}", docpath);
+            match serde_json::from_str::<&str>(docpath) {
+                Ok(v) => {
+                    if let Some(list) = result.get_mut(v) {
                         list.push(doc);
                     } else {
-                        result.insert(docpath.to_string(), vec![doc]);
+                        result.insert(v.to_string(), vec![doc]);
                     }
-                    continue;
+                }
+                Err(e) => {
+                    println!("Can't parse docpath: {}", e);
                 }
             }
+        } else {
+            println!("WARNING: documentation {} didn't have a docpath!", doc.name);
         }
-        println!(
-            "WARNING: documentation {} didn't have a docpath!",
-            opt_s!(doc.name)
-        );
     }
 
     result
@@ -144,7 +146,7 @@ pub fn get_all_docpaths(documentation: &Vec<Content>) -> HashMap<String, Vec<&Co
 pub struct DocTreeNode<'a> {
     pub name: String,
     pub tree_nodes: Vec<DocTreeNode<'a>>,
-    pub page_nodes: Vec<&'a Content>,
+    pub page_nodes: Vec<&'a DocTreeContent>,
 }
 
 impl<'a> DocTreeNode<'a> {
@@ -156,7 +158,7 @@ impl<'a> DocTreeNode<'a> {
         }
     }
 
-    pub fn add_content_fill_path(&mut self, path: &[&str], nodes: Vec<&'a Content>) {
+    pub fn add_content_fill_path(&mut self, path: &[&str], nodes: Vec<&'a DocTreeContent>) {
         if let Some(part) = path.get(0) {
             //OK this is the next part of the path. We need to find something inside ourselves or add it if not
             if self.tree_nodes.iter().any(|n| n.name == *part) {
@@ -182,11 +184,11 @@ impl<'a> DocTreeNode<'a> {
 
 /// Build a document tree and return the root node, which you can use to traverse the whole tree. The root node
 /// has no name, and all other actual roots go below (since there could be multiple, such as SB4, SB3, etc)
-pub fn get_doctree<'a>(documentation: &'a Vec<Content>) -> DocTreeNode<'a> {
+pub fn get_doctree<'a>(documentation: &'a Vec<DocTreeContent>) -> DocTreeNode<'a> {
     //Easiest to just pre-compute the paths (it's a little wasteful but whatever)
     let docpaths = get_all_docpaths(documentation);
 
-    //println!("Docpaths used for tree: {:#?}", docpaths);
+    // println!("Docpaths used for tree: {:#?}", docpaths);
 
     let mut root_node = DocTreeNode::default();
 
@@ -239,4 +241,3 @@ pub fn map_messages(messages: Vec<Message>) -> HashMap<i64, Message> {
         .map(|u| (u.id.unwrap_or_else(|| 0), u))
         .collect::<HashMap<i64, Message>>()
 }
-

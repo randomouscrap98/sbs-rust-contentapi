@@ -4,6 +4,7 @@ use contentapi::*;
 use maud::*;
 use serde_json::Value;
 
+use crate::capi::DocTreeContent;
 use crate::capi::ForumCategory2;
 use crate::capi::ForumThread2;
 use crate::constants::*;
@@ -101,8 +102,7 @@ pub struct PostsConfig {
     pub pages: Option<Vec<PagelistItem>>,
     pub start_num: Option<i32>,
     pub selected_post_id: Option<i64>,
-    pub docs_content: Option<Vec<Content>>, //DocTreeNode<'a>>,
-
+    //pub docs_content: Option<Vec<Content>>, //DocTreeNode<'a>>,
     pub render_header: bool,
     pub render_page: bool,
     pub render_reply_chain: bool,
@@ -133,7 +133,7 @@ impl PostsConfig {
             render_reply_chain: false,
             render_reply_link: true,
             render_controls: true,
-            docs_content: None,
+            //docs_content: None,
         }
     }
     pub fn reply_mode(
@@ -155,7 +155,7 @@ impl PostsConfig {
             render_reply_chain: true,
             render_reply_link: false,
             render_controls: false,
-            docs_content: None,
+            //docs_content: None,
         }
     }
 }
@@ -262,7 +262,7 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup {
             }
         }
         @if config.render_page && is_pagetype {
-            (render_page(&data, bbcode, &thread, &config.docs_content))
+            (render_page(&data, bbcode, &thread)) //, &config.docs_content))
         }
         //it says "thread-top" because it is: it's the beginning of the section that displays posts. After the
         //for loop, it then displays pages, which is on the bottom of the thread, so it might seem confusing.
@@ -326,7 +326,7 @@ fn walk_doctree_recursive(
             }
             ul {
                 @for content in &tree.page_nodes {
-                    li { a."flatlink" href=(layout_data.links.forum_thread(content)) { (opt_s!(content.name)) } }
+                    li { a."flatlink" href=(layout_data.links.forum_thread_unsafe(&content.hash)) { (content.name) } }
                 }
             }
         }
@@ -347,12 +347,12 @@ fn walk_doctree(layout_data: &MainLayoutData, tree: &DocTreeNode, open_levels: i
 
 pub fn display_doctree(
     layout_data: &MainLayoutData,
-    documentation: &Vec<Content>,
+    documentation: Vec<DocTreeContent>,
     open_levels: i32,
 ) -> Markup {
     html! {
         div."documenttree" {
-            (walk_doctree(layout_data, &mut get_doctree(documentation), open_levels))
+            (walk_doctree(layout_data, &mut get_doctree(&documentation), open_levels))
         }
     }
 }
@@ -363,7 +363,7 @@ pub fn render_page(
     data: &MainLayoutData,
     bbcode: &mut BBCode,
     thread: &ForumThread,
-    _docs_content: &Option<Vec<Content>>,
+    //_docs_content: &Option<Vec<Content>>,
 ) -> Markup {
     let values = match &thread.thread.values {
         Some(values) => values.clone(),
