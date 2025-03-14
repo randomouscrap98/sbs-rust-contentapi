@@ -538,15 +538,13 @@ pub fn get_browse(
     if let Some(stext) = &search.search {
         params.push(Box::new(format!("%{}%", stext)));
         params.push(Box::new(format!("%{}%", stext)));
-        query.push_str(" AND (name LIKE ? OR id IN (SELECT contentId FROM content_keywords WHERE `value` LIKE ?))");
+        query.push_str(" AND (name LIKE ? OR c.id IN (SELECT contentId FROM content_keywords WHERE `value` LIKE ?))");
     }
 
     if let Some(category) = search.category {
         if category != 0 {
             params.push(Box::new(format!("{}{}", CATEGORYPREFIX, category)));
-            query.push_str(
-                " AND contentId IN (SELECT contentId FROM content_values WHERE `key` = ?)",
-            );
+            query.push_str(" AND c.id IN (SELECT contentId FROM content_values WHERE `key` = ?)");
         }
     }
 
