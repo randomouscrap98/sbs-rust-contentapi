@@ -18,7 +18,7 @@ pub struct UserPackage {
     pub userpage: Option<capi::BasicContent>,
     pub users: HashMap<i64, capi::User2>,
     pub submissions: Vec<capi::BrowseContent>,
-    pub badges: Vec<Content>,
+    pub badges: Vec<capi::BrowseContent>,
 }
 
 pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackage) -> String {
@@ -73,7 +73,7 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackag
                 h2 { "Legacy badges:" }
                 div."badges" {
                     @for ref badge in user_package.badges {
-                        img."badge" title=(opt_s!(badge.name)) src=(data.links.image_default(opt_s!(badge.hash)));
+                        img."badge" title=(&badge.name) src=(data.links.image_default(&badge.hash));
                     }
                 }
                 p."aside" {"Don't worry if you don't have these!"}
@@ -87,49 +87,50 @@ pub async fn get_render_internal(
     username: String,
 ) -> Result<Response, Error> {
     //Go get the user and their userpage
-    let mut request = FullRequest::new();
-    add_value!(request, "username", username.clone());
-    add_value!(request, "relationtype", UserRelationType::ASSIGNCONTENT);
-    add_value!(request, "file", ContentType::FILE);
-
-    request.requests.push(build_request!(
-        RequestType::user,
-        String::from("id,username"),
-        String::from("username = @username")
-    ));
+    // let mut request = FullRequest::new();
+    // add_value!(request, "username", username.clone());
+    // add_value!(request, "relationtype", UserRelationType::ASSIGNCONTENT);
+    // add_value!(request, "file", ContentType::FILE);
 
     // request.requests.push(build_request!(
-    //     RequestType::content,
-    //     String::from("*"), //ok do we really need it ALL?
-    //     String::from("!userpage(@user.id)")
+    //     RequestType::user,
+    //     String::from("id,username"),
+    //     String::from("username = @username")
     // ));
 
-    request.requests.push(build_request!(
-        RequestType::userrelation,
-        String::from("*"), //ok do we really need it ALL?
-        String::from("userId = @user.id AND type = @relationtype") //Unfortunately, we don't do anything else with assigned content in sbs
-    ));
+    // // request.requests.push(build_request!(
+    // //     RequestType::content,
+    // //     String::from("*"), //ok do we really need it ALL?
+    // //     String::from("!userpage(@user.id)")
+    // // ));
 
-    let mut badge_request = build_request!(
-        RequestType::content,
-        String::from("id,name,description,contentType,hash,literalType"),
-        String::from("id in @userrelation.relatedId and contentType = @file") //Unfortunately, we don't do anything else with assigned content in sbs
-    );
-    badge_request.name = Some(String::from("badges"));
-    request.requests.push(badge_request);
+    // request.requests.push(build_request!(
+    //     RequestType::userrelation,
+    //     String::from("*"), //ok do we really need it ALL?
+    //     String::from("userId = @user.id AND type = @relationtype") //Unfortunately, we don't do anything else with assigned content in sbs
+    // ));
 
-    let result = context.api_context.post_request(&request).await?;
+    // let mut badge_request = build_request!(
+    //     RequestType::content,
+    //     String::from("id,name,description,contentType,hash,literalType"),
+    //     String::from("id in @userrelation.relatedId and contentType = @file") //Unfortunately, we don't do anything else with assigned content in sbs
+    // );
+    // badge_request.name = Some(String::from("badges"));
+    // request.requests.push(badge_request);
+
+    // let result = context.api_context.post_request(&request).await?;
 
     //Now try to parse two things out of it
     //let mut users_raw = contentapi::conversion::cast_result_required::<User>(&result, "user")?;
     //let mut content_raw = contentapi::conversion::cast_result_required::<Content>(&result, "content")?;
-    let badges_raw = contentapi::conversion::cast_result_required::<Content>(&result, "badges")?;
+    //let badges_raw = contentapi::conversion::cast_result_required::<Content>(&result, "badges")?;
 
     let user = capi::get_user_by_name(&context, &username)?; //users_raw.pop();
 
     if let Some(user) = user {
         let mut users = HashMap::new();
         users.insert(user.id, user.clone());
+        let badges = capi::get_badges(&context, user.id)?;
 
         //OK we did the standard user request. we COULD'VE merged these two, but it's just easier to
         //make a second request for their submissions!
@@ -145,7 +146,7 @@ pub async fn get_render_internal(
         let package = UserPackage {
             user,
             userpage: capi::get_userpage(&context, user_id)?, //content_raw.pop(),
-            badges: badges_raw,
+            badges,
             submissions: pages, //conversion::cast_result_safe::<Content>(&result, "content")?,
             users, //common::view::map_users(conversion::cast_result_safe::<User>(&result, "user")?),
         };

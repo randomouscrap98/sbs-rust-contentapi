@@ -4,6 +4,8 @@ use super::*;
 use crate::constants::*;
 use crate::response::*;
 
+pub static BROWSEFIELDS: &str =
+    "id,hash,name,COALESCE(description,''),COALESCE(literalType,''),createDate,createUserId";
 pub static USER2FIELDS: &str = "id,`type`,username,avatar,special,super,createDate";
 pub static CATEGORYFIELDS2: &str = "id,hash,name,COALESCE(description,'') AS description,COALESCE(literalType,'') AS lt,contentType";
 pub static THREADFIELDS2: &str =
@@ -47,6 +49,17 @@ pub fn gather_values(
     }
     Ok(result)
 }
+pub fn maybe_gather_values(
+    vstmt: &mut Option<rusqlite::Statement>,
+    id: i64,
+) -> Result<HashMap<String, String>, rusqlite::Error> {
+    if let Some(vstmt) = vstmt.as_mut() {
+        gather_values(vstmt, id)
+    } else {
+        Ok(HashMap::default())
+    }
+}
+
 pub fn gather_keywords(
     kstmt: &mut rusqlite::Statement,
     id: i64,
@@ -572,17 +585,43 @@ pub struct BrowseContent {
     pub values: HashMap<String, String>,
 }
 
+pub fn gather_browsecontent(
+    stmt: &mut rusqlite::Statement,
+    vstmt: &mut Option<rusqlite::Statement>,
+    params: &[&dyn rusqlite::ToSql],
+) -> Result<Vec<BrowseContent>, Error> {
+    let browse_iter = stmt.query_map(params, |row| {
+        let id: i64 = row.get(0)?;
+        Ok(BrowseContent {
+            id,
+            hash: row.get(1)?,
+            name: row.get(2)?,
+            description: row.get(3)?,
+            literal_type: row.get(4)?,
+            create_date: row.get(5)?,
+            create_user_id: row.get(6)?,
+            values: maybe_gather_values(vstmt, id)?,
+            //if let Some(mut vstmt) = &vstmt {
+            //    gather_values(&mut vstmt, id)?
+            //} else {
+            //    HashMap::default()
+            //},
+        })
+    })?;
+
+    return Ok(browse_iter.collect::<Result<Vec<BrowseContent>, rusqlite::Error>>()?);
+}
+
 pub fn get_browse(
     ctx: &PageContext,
     search: &forms::PageSearch,
     limits: QueryLimit,
 ) -> Result<Vec<BrowseContent>, Error> {
     let mut query = format!(
-        r##"SELECT id,hash,name,COALESCE(description,''),COALESCE(literalType,''),createDate,createUserId,
-            (SELECT COUNT(*) FROM content_engagement WHERE contentId=c.id AND `type`=? AND engagement = ?) AS upvotes 
+        r##"SELECT {}, (SELECT COUNT(*) FROM content_engagement WHERE contentId=c.id AND `type`=? AND engagement = ?) AS upvotes 
         FROM content AS c WHERE {} AND contentType=? AND parentId IN
             (SELECT id FROM content WHERE contentType = ? AND literalType = ?)"##,
-        COMMONCONTENT,
+        BROWSEFIELDS, COMMONCONTENT,
     );
     let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![
         Box::new(VOTETYPE),
@@ -661,30 +700,40 @@ pub fn get_browse(
     limits.mod_query(&mut query, &mut params);
 
     let mut stmt = ctx.dbcon.prepare(&query)?;
-    let mut vstmt = ctx.dbcon.prepare(VALUESELECT)?;
-    let browse_iter = stmt.query_map(
+    let vstmt = ctx.dbcon.prepare(VALUESELECT)?;
+
+    #[cfg(feature = "querydump")]
+    println!("Query: {:?}", &query);
+
+    gather_browsecontent(
+        &mut stmt,
+        &mut Some(vstmt),
         params
             .iter()
             .map(|x| x.as_ref())
             .collect::<Vec<_>>()
             .as_slice(),
-        |row| {
-            let id: i64 = row.get(0)?;
-            Ok(BrowseContent {
-                id,
-                hash: row.get(1)?,
-                name: row.get(2)?,
-                description: row.get(3)?,
-                literal_type: row.get(4)?,
-                create_date: row.get(5)?,
-                create_user_id: row.get(6)?,
-                values: gather_values(&mut vstmt, id)?,
-            })
-        },
-    )?;
+    )
+}
+
+pub fn get_badges(ctx: &PageContext, uid: i64) -> Result<Vec<BrowseContent>, Error> {
+    let query = format!(
+        "SELECT {} FROM content AS c WHERE {} AND contentType=? AND c.id IN (SELECT relatedId FROM user_relations WHERE userId = ? AND type = ?)",
+        BROWSEFIELDS,
+        COMMONCONTENT,
+    );
+    //String::from("userId = @user.id AND type = @relationtype") //Unfortunately, we don't do anything else with assigned content in sbs
+    //String::from("id in @userrelation.relatedId and contentType = @file") //Unfortunately, we don't do anything else with assigned content in sbs
+    //(SELECT id FROM content WHERE contentType = ? AND literalType = ?)"##,
+
+    let mut stmt = ctx.dbcon.prepare(&query)?;
 
     #[cfg(feature = "querydump")]
     println!("Query: {:?}", &query);
 
-    return Ok(browse_iter.collect::<Result<Vec<BrowseContent>, rusqlite::Error>>()?);
+    gather_browsecontent(
+        &mut stmt,
+        &mut None,
+        rusqlite::params![&ContentType::FILE, &uid, &UserRelationType::ASSIGNCONTENT],
+    )
 }
