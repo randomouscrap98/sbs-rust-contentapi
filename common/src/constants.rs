@@ -59,7 +59,7 @@ pub const VOTETYPE: &str = "vote";
 pub const UPVOTESTR: &str = "vote+";
 pub const DOWNVOTESTR: &str = "vote-";
 
-pub const DEFAULTPAGESORT: &str = "id";
+pub const DEFAULTPAGESORT: &str = "upvotes";
 pub const ANYSYSTEM: &str = "any";
 pub const PTCSYSTEM: &str = "ptc";
 pub const MARKUPBBCODE: &str = "bbcode";
@@ -117,12 +117,13 @@ pub const SEARCHPAGETYPES: &[(&str, &str)] = &[
 ];
 
 pub const SEARCHPAGEORDERS: &[(&str, &str)] = &[
+    ("upvotes", "Upvotes"),
     ("id", "Created (oldest)"),
     ("id_desc", "Created (newest)"),
     ("name", "Alphabetical (A-Z)"),
     ("name_desc", "Alphabetical (Z-A)"),
-    ("lastRevisionId_desc", "Edited (newest)"),
-    ("lastRevisionId", "Edited (oldest)"),
+    //("lastRevisionId_desc", "Edited (newest)"),
+    //("lastRevisionId", "Edited (oldest)"),
 ];
 
 pub const CATEGORYPREFIX: &str = "tag:";

@@ -13,6 +13,7 @@ pub static COMMONUSER: &str =
     " deleted = 0 AND `type`= 1 AND (registrationKey IS NULL OR registrationKey = '') ";
 pub static VALUESELECT: &str = "SELECT `key`,`value` FROM content_values WHERE contentId=?";
 pub static KEYWORDSELECT: &str = "SELECT `value` FROM content_keywords WHERE contentId=?";
+//pub static SUBMISSIONPARENT: &str = "SELECT id FROM content WHERE contentId=?";
 
 pub fn select_childcount(idname: &str) -> String {
     return format!("SELECT COUNT(*) FROM content WHERE parentId = {}", idname);
@@ -501,4 +502,135 @@ pub fn get_submission_categories(ctx: &PageContext) -> Result<Vec<SubmissionCate
     println!("Query: {:?}", &query);
 
     Ok(cat_iter.collect::<Result<Vec<SubmissionCategory>, rusqlite::Error>>()?)
+}
+
+#[derive(Clone, Debug)]
+pub struct BrowseContent {
+    pub id: i64,
+    pub hash: String,
+    pub name: String,
+    pub description: String,
+    pub literal_type: String,
+    pub create_date: DateTime<Utc>,
+    pub create_user_id: i64,
+    pub values: HashMap<String, String>,
+}
+
+pub fn get_browse(
+    ctx: &PageContext,
+    search: &forms::PageSearch,
+    limits: QueryLimit,
+) -> Result<Vec<BrowseContent>, Error> {
+    let mut query = format!(
+        r##"SELECT id,hash,name,COALESCE(description,''),COALESCE(literalType,''),createDate,createUserId,
+            (SELECT COUNT(*) FROM content_engagement WHERE contentId=c.id AND `type`=? AND engagement = ?) AS upvotes 
+        FROM content AS c WHERE {} AND contentType=? AND parentId IN
+            (SELECT id FROM content WHERE contentType = ? AND literalType = ?)"##,
+        COMMONCONTENT,
+    );
+    let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![
+        Box::new(VOTETYPE),
+        Box::new(UPVOTE),
+        Box::new(ContentType::PAGE),
+        Box::new(ContentType::SYSTEM),
+        Box::new(SBSPageType::SUBMISSIONS),
+    ];
+    if let Some(stext) = &search.search {
+        params.push(Box::new(format!("%{}%", stext)));
+        params.push(Box::new(format!("%{}%", stext)));
+        query.push_str(" AND (name LIKE ? OR id IN (SELECT contentId FROM content_keywords WHERE `value` LIKE ?))");
+    }
+
+    if let Some(category) = search.category {
+        if category != 0 {
+            params.push(Box::new(format!("{}{}", CATEGORYPREFIX, category)));
+            query.push_str(
+                " AND contentId IN (SELECT contentId FROM content_values WHERE `key` = ?)",
+            );
+        }
+    }
+
+    if let Some(user_id) = search.user_id {
+        if user_id != 0 {
+            params.push(Box::new(user_id));
+            query.push_str(" AND createUserId = ?");
+        }
+    }
+
+    if let Some(subtype) = &search.subtype {
+        if !subtype.is_empty() {
+            params.push(Box::new(subtype.clone()));
+            query.push_str(" AND literalType = ?");
+            if subtype == SBSPageType::PROGRAM {
+                //MUST have a key unless the user specifies otherwise
+                if !search.removed {
+                    params.push(Box::new(SBSValue::DOWNLOADKEY));
+                    params.push(Box::new(SBSValue::SYSTEMS));
+                    params.push(Box::new(format!("%{}%", PTCSYSTEM)));
+                    //add_value!(request, "dlkeylist", vec![SBSValue::DOWNLOADKEY]);
+                    query.push_str(
+                        " AND c.id IN (SELECT contentId FROM content_values WHERE `key`= ? OR (`key` = ? AND `value` LIKE ?))" //(!valuekeyin(@dlkeylist) or !valuelike(@systemkey, @ptcsystem))",
+                    );
+                }
+                if search.system != ANYSYSTEM {
+                    params.push(Box::new(SBSValue::SYSTEMS));
+                    params.push(Box::new(format!("%{}%", search.system)));
+                    query.push_str(" AND c.id IN (SELECT contentId FROM content_values WHERE `key`=? AND `value` LIKE ?)");
+                    //) !valuelike(@systemkey, @system)");
+                    //add_value!(request, "system", format!("%{}%", search.system)); //Systems is actually a json list but this should be fine
+                }
+            }
+
+            //add_value!(request, "systemkey", SBSValue::SYSTEMS);
+            //add_value!(request, "ptcsystem", format!("%{}%", PTCSYSTEM));
+            //Ignore certain search criteria
+        }
+    }
+
+    if search.order == "id" {
+        query.push_str(" ORDER BY id");
+    } else if search.order == "id_desc" {
+        query.push_str(" ORDER BY id DESC");
+    } else if search.order == "upvotes" {
+        query.push_str(" ORDER BY upvotes DESC");
+    } else if search.order == "name" {
+        query.push_str(" ORDER BY name");
+    } else if search.order == "name_desc" {
+        query.push_str(" ORDER BY name DESC");
+    } else {
+        return Err(Error::User(format!(
+            "Unknown search order: {}",
+            search.order
+        )));
+    }
+
+    limits.mod_query(&mut query, &mut params);
+
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let mut vstmt = ctx.dbcon.prepare(VALUESELECT)?;
+    let browse_iter = stmt.query_map(
+        params
+            .iter()
+            .map(|x| x.as_ref())
+            .collect::<Vec<_>>()
+            .as_slice(),
+        |row| {
+            let id: i64 = row.get(0)?;
+            Ok(BrowseContent {
+                id,
+                hash: row.get(1)?,
+                name: row.get(2)?,
+                description: row.get(3)?,
+                literal_type: row.get(4)?,
+                create_date: row.get(5)?,
+                create_user_id: row.get(6)?,
+                values: gather_values(&mut vstmt, id)?,
+            })
+        },
+    )?;
+
+    #[cfg(feature = "querydump")]
+    println!("Query: {:?}", &query);
+
+    return Ok(browse_iter.collect::<Result<Vec<BrowseContent>, rusqlite::Error>>()?);
 }

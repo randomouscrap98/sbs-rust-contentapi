@@ -123,6 +123,22 @@ pub fn user_or_default(user: Option<&User>) -> User {
     }
 }
 
+pub fn user_or_default2(user: Option<&capi::User2>) -> capi::User2 {
+    if let Some(u) = user {
+        u.clone()
+    } else {
+        capi::User2 {
+            id: 0,
+            username: String::from("???"),
+            avatar: String::from("0"),
+            user_type: UserType::USER,
+            admin: false,
+            special: None,
+            create_date: chrono::Utc::now(),
+        }
+    }
+}
+
 pub fn get_user_or_default(uid: Option<i64>, users: &HashMap<i64, User>) -> User {
     user_or_default(users.get(&uid.unwrap_or(0)))
     //user_or_default(users.get(&uid.unwrap_or(0)))

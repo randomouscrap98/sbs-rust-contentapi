@@ -1,20 +1,22 @@
 use std::collections::HashMap;
 
+//use common::capi::get_browse;
 use common::capi::get_submission_categories;
+use common::capi::QueryLimit;
 use common::capi::SubmissionCategory;
-use contentapi::*;
+//use contentapi::*;
 
 use common::*;
-use common::view::*;
+//use common::view::*;
 use common::forms::*;
-use common::search::*;
+//use common::search::*;
 use common::constants::*;
 use common::response::*;
 use common::render::layout::*;
 use common::render::submissions::*;
 use maud::*;
 
-pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, User>, search: PageSearch,
+pub fn render(data: MainLayoutData, pages: Vec<capi::BrowseContent>, users: HashMap<i64, capi::User2>, search: PageSearch,
     categories: Vec<SubmissionCategory>) -> String 
 {
     //Need to split category search into parts 
@@ -89,7 +91,7 @@ pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, Use
             div."cardslist" {
                 //Or maybe in here
                 @for page in &pages {
-                    (page_card(&data.links, page, &users))
+                    (page_card2(&data.links, page, &users))
                 }
             }
             //Generic pagelist generation (just need data)
@@ -121,16 +123,21 @@ fn page_navigation(data: &MainLayoutData, search: &PageSearch) -> Markup {
 
 pub async fn get_render(context: PageContext, search: PageSearch, per_page: i32) -> Result<Response, Error> 
 {
-    let request = get_search_request(&search, per_page);
-
-    let result = context.api_context.post_request(&request).await?;
-    //println!("RESULT: {:#?}", &result);
-    let pages = conversion::cast_result_safe::<Content>(&result, "content")?;
-    let users = conversion::cast_result_safe::<User>(&result, "user")?;
-    //let categories = conversion::cast_result_safe::<Content>(&result, "categories")?;
-    let users = map_users(users);
-
+    let pages = capi::get_browse(&context, &search, 
+        QueryLimit { limit: Some(per_page), skip: Some(search.page * per_page)})?;
+    let users = capi::get_users(&context, pages.iter().map(|x| x.create_user_id).collect())?;
+    let users = view::map_users2(users);
     let categories = get_submission_categories(&context)?; //map_categories(categories);
+
+    // let request = get_search_request(&search, per_page);
+
+    // let result = context.api_context.post_request(&request).await?;
+    // //println!("RESULT: {:#?}", &result);
+    // let pages = conversion::cast_result_safe::<Content>(&result, "content")?;
+    // let users = conversion::cast_result_safe::<User>(&result, "user")?;
+    // //let categories = conversion::cast_result_safe::<Content>(&result, "categories")?;
+    // let users = map_users(users);
+
 
     //Manually parse the search, because of the tag magic (no javascript)
     Ok(Response::Render(render(context.layout_data, pages,  users, search, categories)))

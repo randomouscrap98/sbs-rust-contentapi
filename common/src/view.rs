@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::capi;
 use crate::{capi::DocTreeContent, constants::*};
 use contentapi::*;
 
@@ -224,6 +225,13 @@ pub fn map_users(users: Vec<User>) -> HashMap<i64, User> {
         .into_iter()
         .map(|u| (u.id, u))
         .collect::<HashMap<i64, User>>()
+}
+
+pub fn map_users2(users: Vec<capi::User2>) -> HashMap<i64, capi::User2> {
+    users
+        .into_iter()
+        .map(|u| (u.id, u))
+        .collect::<HashMap<i64, capi::User2>>()
 }
 
 /// Convert a vector of content into a hashmap (id is key)
