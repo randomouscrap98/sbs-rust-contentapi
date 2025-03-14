@@ -108,7 +108,7 @@ async fn render_threads(
     per_page: i32,
     page: Option<i32>,
 ) -> Result<Response, Error> {
-    let category = get_categories(&context, idhash.clone())?
+    let category = get_forum_categories(&context, idhash.clone())?
         .pop()
         .ok_or(Error::NotFound(String::from(
             "Couldn't find that category (direct)",

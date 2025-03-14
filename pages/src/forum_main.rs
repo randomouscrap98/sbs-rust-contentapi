@@ -28,7 +28,7 @@ pub fn render(data: MainLayoutData, categories: Vec<ForumCategory2>) -> String {
 }
 
 pub async fn get_render(context: PageContext, order: &Vec<String>) -> Result<Response, Error> {
-    let mut categories = get_categories(&context, None)?;
+    let mut categories = get_forum_categories(&context, None)?;
 
     //Sort the categories by their name AGAINST the default list in the config. So, it should sort the categories
     //by the order defined in the config, with stuff not present going at the end. Tiebreakers are resolved alphabetically

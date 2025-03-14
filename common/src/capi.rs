@@ -144,7 +144,7 @@ pub struct ForumCategory2 {
     pub threads_count: i32,
 }
 
-pub fn get_categories(
+pub fn get_forum_categories(
     ctx: &PageContext,
     cq: Option<IdOrHash>,
 ) -> Result<Vec<ForumCategory2>, Error> {

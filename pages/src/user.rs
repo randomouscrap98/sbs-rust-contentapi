@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use bbscope::BBCode;
-use common::prefab::get_documentation_group;
 use contentapi::*;
 
 use common::forms::*;
@@ -19,7 +18,7 @@ pub struct UserPackage {
     pub users: HashMap<i64, User>,
     pub submissions: Vec<Content>,
     pub badges: Vec<Content>,
-    pub docsgroup: User, //docparent: Content,
+    //pub docsgroup: User, //docparent: Content,
 }
 
 pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackage) -> String {
@@ -45,9 +44,6 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackag
                         // Some info about the user 
                         div { "Member since: " time { (user.createDate.to_rfc3339()) } }
                         div { "ID: "(user.id) }
-                        @if user.groups.contains(&user_package.docsgroup.id) {
-                            div #"docwritericon" title="Documentation group" { "🕮" }
-                        }
                         @if user.admin {
                             div #"adminicon" title="Administrator / Moderator" { "🌟" }
                         }
@@ -87,7 +83,7 @@ pub fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackag
 }
 
 pub async fn get_render_internal(
-    mut context: PageContext,
+    context: PageContext,
     username: String,
 ) -> Result<Response, Error> {
     //Go get the user and their userpage
@@ -142,7 +138,7 @@ pub async fn get_render_internal(
         let request = get_search_request(&search, 0); //Just ask for as much as possible
 
         let result = context.api_context.post_request(&request).await?;
-        let docsgroup = get_documentation_group(&mut context.api_context).await?;
+        //let docsgroup = get_documentation_group(&mut context.api_context).await?;
         //let docparent = get_documentation_parent(&mut context.api_context, DOCPARENTMINIMALFIELDS).await?;
 
         let package = UserPackage {
@@ -151,7 +147,7 @@ pub async fn get_render_internal(
             badges: badges_raw,
             submissions: conversion::cast_result_safe::<Content>(&result, "content")?,
             users: common::view::map_users(conversion::cast_result_safe::<User>(&result, "user")?),
-            docsgroup, //docparent
+            //docsgroup, //docparent
         };
 
         Ok(Response::Render(render(
