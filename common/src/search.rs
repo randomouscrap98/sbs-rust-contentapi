@@ -1,7 +1,6 @@
 use contentapi::*;
 use crate::constants::*;
 use crate::forms::*;
-use crate::prefab::*;
 
 /// Generate the complicated FullRequest for the given search. Could be a "From" if 
 /// the search included a per-page I guess...
@@ -84,16 +83,6 @@ pub fn get_search_request(search: &PageSearch, per_page: i32) -> FullRequest
         String::from("id in @content.createUserId")
     );
     request.requests.push(user_request);
-
-    //add_value!(request, "categorytype", SBSPageType::CATEGORY);
-    let mut category_request = build_request!(
-        RequestType::content,
-        String::from(CATEGORYFIELDS),
-        get_allcategory_query()
-        //format!("{} and literalType = @categorytype", CATEGORYSEARCHBASE) 
-    );
-    category_request.name = Some(String::from("categories"));
-    request.requests.push(category_request);
 
     request
 }

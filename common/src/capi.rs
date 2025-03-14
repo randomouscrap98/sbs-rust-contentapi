@@ -106,8 +106,9 @@ pub struct User2 {
 }
 
 pub fn get_users(ctx: &PageContext, ids: Vec<i64>) -> Result<Vec<User2>, Error> {
-    let query = format!("SELECT id,`type`,username,avatar,special,super,createDate FROM users WHERE deleted=0 AND id IN ({})",
-        params_list(ids.len())
+    let query = format!("SELECT id,`type`,username,avatar,special,super,createDate FROM users WHERE {} AND id IN ({})",
+        COMMONUSER,
+        params_list(ids.len()),
         );
     let mut params: Vec<&dyn rusqlite::types::ToSql> = vec![];
     for t in ids.iter() {
@@ -461,4 +462,43 @@ pub fn get_searchall(ctx: &PageContext, search: &str) -> Result<Vec<SearchAllRes
     println!("Query: {:?}", &query);
 
     Ok(result)
+}
+
+#[derive(Debug)]
+pub struct SubmissionCategory {
+    pub id: i64,
+    pub name: String,
+    pub forcontent: String,
+}
+
+pub fn get_submission_categories(ctx: &PageContext) -> Result<Vec<SubmissionCategory>, Error> {
+    let query = format!("SELECT id,name,(SELECT `value` FROM content_values WHERE contentId=c.id AND `key`=?) FROM content AS c WHERE {} AND contentType = ? AND literalType = ?",
+        COMMONCONTENT,
+    );
+
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let cat_iter = stmt.query_map(
+        rusqlite::params![
+            SBSValue::FORCONTENT,
+            &ContentType::SYSTEM,
+            &SBSPageType::CATEGORY
+        ],
+        |row| {
+            let cval: Option<String> = row.get(2)?;
+            Ok(SubmissionCategory {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                forcontent: if let Some(cval) = cval {
+                    serde_json::from_str(&cval).unwrap_or_default()
+                } else {
+                    String::new()
+                },
+            })
+        },
+    )?;
+
+    #[cfg(feature = "querydump")]
+    println!("Query: {:?}", &query);
+
+    Ok(cat_iter.collect::<Result<Vec<SubmissionCategory>, rusqlite::Error>>()?)
 }

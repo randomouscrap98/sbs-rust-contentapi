@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use common::capi::get_submission_categories;
+use common::capi::SubmissionCategory;
 use contentapi::*;
 
 use common::*;
@@ -13,7 +15,7 @@ use common::render::submissions::*;
 use maud::*;
 
 pub fn render(data: MainLayoutData, pages: Vec<Content>, users: HashMap<i64, User>, search: PageSearch,
-    categories: Vec<Category>) -> String 
+    categories: Vec<SubmissionCategory>) -> String 
 {
     //Need to split category search into parts 
     layout(&data, html!{
@@ -125,10 +127,10 @@ pub async fn get_render(context: PageContext, search: PageSearch, per_page: i32)
     //println!("RESULT: {:#?}", &result);
     let pages = conversion::cast_result_safe::<Content>(&result, "content")?;
     let users = conversion::cast_result_safe::<User>(&result, "user")?;
-    let categories = conversion::cast_result_safe::<Content>(&result, "categories")?;
+    //let categories = conversion::cast_result_safe::<Content>(&result, "categories")?;
     let users = map_users(users);
 
-    let categories = map_categories(categories);
+    let categories = get_submission_categories(&context)?; //map_categories(categories);
 
     //Manually parse the search, because of the tag magic (no javascript)
     Ok(Response::Render(render(context.layout_data, pages,  users, search, categories)))

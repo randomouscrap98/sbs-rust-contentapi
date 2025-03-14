@@ -138,8 +138,6 @@ pub async fn get_render_internal(
         let request = get_search_request(&search, 0); //Just ask for as much as possible
 
         let result = context.api_context.post_request(&request).await?;
-        //let docsgroup = get_documentation_group(&mut context.api_context).await?;
-        //let docparent = get_documentation_parent(&mut context.api_context, DOCPARENTMINIMALFIELDS).await?;
 
         let package = UserPackage {
             user,
@@ -147,7 +145,6 @@ pub async fn get_render_internal(
             badges: badges_raw,
             submissions: conversion::cast_result_safe::<Content>(&result, "content")?,
             users: common::view::map_users(conversion::cast_result_safe::<User>(&result, "user")?),
-            //docsgroup, //docparent
         };
 
         Ok(Response::Render(render(
