@@ -16,6 +16,9 @@ impl LinkConfig {
     pub fn user(&self, user: &User) -> String {
         format!("{}/user/{}", self.http_root, user.username)
     }
+    pub fn user_unsafe(&self, username: &str) -> String {
+        format!("{}/user/{}", self.http_root, username)
+    }
 
     pub fn image_default(&self, hash: &str) -> String {
         self.image(hash, QueryImage::Original)

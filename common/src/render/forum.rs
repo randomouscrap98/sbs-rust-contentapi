@@ -81,7 +81,7 @@ pub fn threadicon(config: &LinkConfig, thread: &ForumThread) -> Markup {
 pub fn threadicon2(config: &LinkConfig, thread: &ForumThread2) -> Markup {
     html! {
         div."threadicon smallseparate" {
-            (render::submissions::pageicon2(config, &thread.values, &thread.literal_type))
+            (render::submissions::pageicon2(config, &thread.values, &thread.literal_type, 99))
         }
     }
 }

@@ -12,6 +12,7 @@ pub fn pageicon2(
     links: &LinkConfig,
     values: &HashMap<String, String>,
     literal_type: &str,
+    max_icons: i32,
 ) -> Markup {
     let systems = get_systems2(values);
     let mut count = 0;
@@ -23,7 +24,7 @@ pub fn pageicon2(
                     img title=(title) class="sysicon" src={(links.resource_root)"/"(system)".svg"};
                     ({
                         count = count + 1;
-                        if count >= 99 { break; }
+                        if count >= max_icons { break; }
                         ""
                     })
                 }

@@ -4,12 +4,15 @@ use super::*;
 use crate::constants::*;
 use crate::response::*;
 
-pub static CATEGORYFIELDS2: &str = "id,hash,name,COALESCE(description,'') AS description,COALESCE(literalType,'') AS literalType,contentType";
+pub static CATEGORYFIELDS2: &str = "id,hash,name,COALESCE(description,'') AS description,COALESCE(literalType,'') AS lt,contentType";
 pub static THREADFIELDS2: &str =
     "id,hash,name,COALESCE(literalType,''),contentType,parentId,createDate,createUserId";
 pub static COMMONCONTENT: &str =
     " deleted = 0 AND id IN (SELECT contentId FROM content_permissions WHERE read=1 AND userId=0) ";
-pub static VALUESELECT: &str = "SELECT key,value FROM content_values WHERE contentId=?";
+pub static COMMONUSER: &str =
+    " deleted = 0 AND `type`= 1 AND (registrationKey IS NULL OR registrationKey = '') ";
+pub static VALUESELECT: &str = "SELECT `key`,`value` FROM content_values WHERE contentId=?";
+pub static KEYWORDSELECT: &str = "SELECT `value` FROM content_keywords WHERE contentId=?";
 
 pub fn select_childcount(idname: &str) -> String {
     return format!("SELECT COUNT(*) FROM content WHERE parentId = {}", idname);
@@ -41,6 +44,13 @@ pub fn gather_values(
         result.insert(rkv.0, rkv.1);
     }
     Ok(result)
+}
+pub fn gather_keywords(
+    kstmt: &mut rusqlite::Statement,
+    id: i64,
+) -> Result<Vec<String>, rusqlite::Error> {
+    let key_iter = kstmt.query_map([&id], |row| Ok(row.get::<usize, String>(0)?))?;
+    Ok(key_iter.collect::<Result<Vec<String>, rusqlite::Error>>()?)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -360,4 +370,95 @@ pub fn get_all_documentation(ctx: &PageContext) -> Result<Vec<DocTreeContent>, E
     println!("Query: {:?}", &query);
 
     Ok(doc_iter.collect::<Result<Vec<DocTreeContent>, rusqlite::Error>>()?)
+}
+
+#[derive(Clone, Debug)]
+pub struct SearchAllUser {
+    pub id: i64,
+    pub username: String,
+    pub avatar: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct SearchAllContent {
+    pub id: i64,
+    pub hash: String,
+    pub name: String,
+    pub literal_type: String,
+    pub values: HashMap<String, String>,
+    pub keywords: Vec<String>,
+}
+
+pub enum SearchAllResult {
+    User(SearchAllUser),
+    Content(SearchAllContent),
+}
+
+pub fn get_searchall(ctx: &PageContext, search: &str) -> Result<Vec<SearchAllResult>, Error> {
+    let mut result: Vec<SearchAllResult> = Vec::new();
+    let rsearch = if search.len() < 2 {
+        format!("{}%", search) // Short search length means more optimized "begins with"
+    } else {
+        format!("%{}%", search)
+    };
+
+    // First, search users
+    let query = format!(
+        "SELECT id,username,avatar FROM users WHERE {} AND username LIKE ?",
+        COMMONUSER
+    );
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let user_iter = stmt.query_map([&rsearch], |row| {
+        Ok(SearchAllResult::User(SearchAllUser {
+            id: row.get(0)?,
+            username: row.get(1)?,
+            avatar: row.get(2)?,
+        }))
+    })?;
+    for u in user_iter {
+        result.push(u?);
+    }
+
+    #[cfg(feature = "querydump")]
+    println!("Query: {:?}", &query);
+
+    // And then, content. It's a bit silly, but for I think slightly better performance,
+    // we query the set of all content that matches the keywords separately from querying
+    // the actual keyword list. There are better ways to do this, but I'm lazy, sorry
+    // future self?
+    let query = format!(
+        "SELECT id,hash,name,COALESCE(literalType, '') AS lt FROM content WHERE {} AND literalType IN ({}) AND (name LIKE ? OR id IN (SELECT contentId FROM content_keywords WHERE `value` LIKE ?))",
+        COMMONCONTENT,
+        params_list(THREADTYPES.len())
+    );
+
+    let mut params: Vec<&dyn rusqlite::types::ToSql> = Vec::new();
+    for tt in THREADTYPES.iter() {
+        params.push(tt);
+    }
+    params.push(&rsearch);
+    params.push(&rsearch);
+
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let mut vstmt = ctx.dbcon.prepare(VALUESELECT)?;
+    let mut kstmt = ctx.dbcon.prepare(KEYWORDSELECT)?;
+    let content_iter = stmt.query_map(params.as_slice(), |row| {
+        let id: i64 = row.get(0)?;
+        Ok(SearchAllResult::Content(SearchAllContent {
+            id,
+            hash: row.get(1)?,
+            name: row.get(2)?,
+            literal_type: row.get(3)?,
+            values: gather_values(&mut vstmt, id)?,
+            keywords: gather_keywords(&mut kstmt, id)?,
+        }))
+    })?;
+    for c in content_iter {
+        result.push(c?);
+    }
+
+    #[cfg(feature = "querydump")]
+    println!("Query: {:?}", &query);
+
+    Ok(result)
 }
