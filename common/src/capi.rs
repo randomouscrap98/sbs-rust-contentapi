@@ -4,6 +4,7 @@ use super::*;
 use crate::constants::*;
 use crate::response::*;
 
+pub static USER2FIELDS: &str = "id,`type`,username,avatar,special,super,createDate";
 pub static CATEGORYFIELDS2: &str = "id,hash,name,COALESCE(description,'') AS description,COALESCE(literalType,'') AS lt,contentType";
 pub static THREADFIELDS2: &str =
     "id,hash,name,COALESCE(literalType,''),contentType,parentId,createDate,createUserId";
@@ -106,18 +107,11 @@ pub struct User2 {
     //pub groups: Vec<i64>,
 }
 
-pub fn get_users(ctx: &PageContext, ids: Vec<i64>) -> Result<Vec<User2>, Error> {
-    let query = format!("SELECT id,`type`,username,avatar,special,super,createDate FROM users WHERE {} AND id IN ({})",
-        COMMONUSER,
-        params_list(ids.len()),
-        );
-    let mut params: Vec<&dyn rusqlite::types::ToSql> = vec![];
-    for t in ids.iter() {
-        params.push(t);
-    }
-
-    let mut stmt = ctx.dbcon.prepare(&query)?;
-    let user_iter = stmt.query_map(params.as_slice(), |row| {
+pub fn gather_users(
+    stmt: &mut rusqlite::Statement,
+    params: &[&dyn rusqlite::ToSql],
+) -> Result<Vec<User2>, Error> {
+    let user_iter = stmt.query_map(params, |row| {
         Ok(User2 {
             id: row.get(0)?,
             user_type: row.get(1)?,
@@ -129,10 +123,43 @@ pub fn get_users(ctx: &PageContext, ids: Vec<i64>) -> Result<Vec<User2>, Error> 
         })
     })?;
 
+    Ok(user_iter.collect::<Result<Vec<User2>, rusqlite::Error>>()?)
+}
+
+pub fn get_users(ctx: &PageContext, ids: Vec<i64>) -> Result<Vec<User2>, Error> {
+    let query = format!(
+        "SELECT {} FROM users WHERE {} AND id IN ({})",
+        USER2FIELDS,
+        COMMONUSER,
+        params_list(ids.len()),
+    );
+    let mut params: Vec<&dyn rusqlite::types::ToSql> = vec![];
+    for t in ids.iter() {
+        params.push(t);
+    }
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+
     #[cfg(feature = "querydump")]
     println!("Query: {:?}", &query);
 
-    Ok(user_iter.collect::<Result<Vec<User2>, rusqlite::Error>>()?)
+    gather_users(&mut stmt, params.as_slice())
+}
+
+// Find user by name
+pub fn get_user_by_name(ctx: &PageContext, name: &str) -> Result<Option<User2>, Error> {
+    let query = format!(
+        "SELECT {} FROM users WHERE {} AND username = ?",
+        USER2FIELDS, COMMONUSER,
+    );
+    let params: Vec<&dyn rusqlite::types::ToSql> = vec![&name];
+
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+
+    #[cfg(feature = "querydump")]
+    println!("Query: {:?}", &query);
+
+    let mut users = gather_users(&mut stmt, params.as_slice())?;
+    Ok(users.pop())
 }
 
 #[derive(Clone, Debug)]
@@ -307,7 +334,7 @@ pub fn get_engagements(ctx: &PageContext, content: i64) -> Result<HashMap<String
 // }
 
 #[derive(Clone, Debug)]
-pub struct SystemPage {
+pub struct BasicContent {
     pub id: i64,
     pub hash: String,
     pub name: String,
@@ -315,7 +342,7 @@ pub struct SystemPage {
 }
 
 // Get any system content with given literaltype
-pub fn get_systempage(ctx: &PageContext, literal_type: String) -> Result<Vec<SystemPage>, Error> {
+pub fn get_systempage(ctx: &PageContext, literal_type: String) -> Result<Vec<BasicContent>, Error> {
     let query = format!(
         "SELECT id,hash,name,text FROM content WHERE {} AND contentType = ? AND literalType = ?",
         COMMONCONTENT
@@ -324,7 +351,7 @@ pub fn get_systempage(ctx: &PageContext, literal_type: String) -> Result<Vec<Sys
     let system_iter = stmt.query_map(
         rusqlite::params![ContentType::SYSTEM, &literal_type],
         |row| {
-            Ok(SystemPage {
+            Ok(BasicContent {
                 id: row.get(0)?,
                 hash: row.get(1)?,
                 name: row.get(2)?,
@@ -336,8 +363,37 @@ pub fn get_systempage(ctx: &PageContext, literal_type: String) -> Result<Vec<Sys
     #[cfg(feature = "querydump")]
     println!("Query: {:?}", &query);
 
-    Ok(system_iter.collect::<Result<Vec<SystemPage>, rusqlite::Error>>()?)
+    Ok(system_iter.collect::<Result<Vec<BasicContent>, rusqlite::Error>>()?)
 }
+
+pub fn get_userpage(ctx: &PageContext, user: i64) -> Result<Option<BasicContent>, Error> {
+    let query = format!(
+        "SELECT id,hash,name,text FROM content WHERE id IN (SELECT MIN(id) FROM content WHERE {} AND contentType = ? AND createUserId = ?)",
+        COMMONCONTENT
+    );
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let system_iter = stmt.query_map(rusqlite::params![ContentType::USERPAGE, &user], |row| {
+        Ok(BasicContent {
+            id: row.get(0)?,
+            hash: row.get(1)?,
+            name: row.get(2)?,
+            text: row.get(3)?,
+        })
+    })?;
+
+    #[cfg(feature = "querydump")]
+    println!("Query: {:?}", &query);
+
+    Ok(system_iter
+        .collect::<Result<Vec<BasicContent>, rusqlite::Error>>()?
+        .pop())
+}
+// (select min({nameof(Content.id)})
+//  from {typeInfo.selfDbInfo?.modelTable}
+//  where {nameof(Content.contentType)} = {(long)InternalContentType.userpage}
+//  and {nameof(Content.createUserId)} = {userIdValue}
+//  and deleted = 0
+// )
 
 #[derive(Clone, Debug)]
 pub struct DocTreeContent {
