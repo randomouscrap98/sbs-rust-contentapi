@@ -1,7 +1,8 @@
+use common::capi::get_submission_categories;
 use common::constants::SBSPageType;
 use common::forum::*;
 use common::pagination::*;
-use common::prefab::*;
+//use common::prefab::*;
 use common::render::forum::*;
 use common::render::layout::*;
 use common::render::*;
@@ -132,8 +133,10 @@ async fn render_thread(
     ];
     let thread_tags_ids = get_tagged_categories(&thread);
     let mut full_thread = ForumThread::from_content(thread, &messages_raw)?;
-    full_thread.categories =
-        Some(get_all_categories(&mut context.api_context, Some(thread_tags_ids)).await?);
+    full_thread.categories = Some(get_submission_categories(
+        &mut context,
+        Some(thread_tags_ids),
+    )?);
     let post_config = PostsConfig::thread_mode(
         full_thread,
         map_messages(related_raw),

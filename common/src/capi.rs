@@ -31,6 +31,16 @@ pub fn select_maxpost(idname: &str) -> String {
     );
 }
 
+macro_rules! box_to_ref {
+    ($params:expr) => {{
+        $params
+            .iter()
+            .map(|x| x.as_ref())
+            .collect::<Vec<_>>()
+            .as_slice()
+    }};
+}
+
 pub fn params_list(count: usize) -> String {
     (0..count).map(|_| "?").collect::<Vec<_>>().join(",")
 }
@@ -205,24 +215,17 @@ pub fn get_forum_categories(
         params.push(cq.mod_query(&mut query));
     }
     let mut stmt = ctx.dbcon.prepare(&query)?;
-    let category_iter = stmt.query_map(
-        params
-            .iter()
-            .map(|x| x.as_ref())
-            .collect::<Vec<_>>()
-            .as_slice(),
-        |row| {
-            Ok(ForumCategory2 {
-                id: row.get(0)?,
-                hash: row.get(1)?,
-                name: row.get(2)?,
-                description: row.get(3)?,
-                literal_type: row.get(4)?,
-                content_type: row.get(5)?,
-                threads_count: row.get(6)?,
-            })
-        },
-    )?;
+    let category_iter = stmt.query_map(box_to_ref!(params), |row| {
+        Ok(ForumCategory2 {
+            id: row.get(0)?,
+            hash: row.get(1)?,
+            name: row.get(2)?,
+            description: row.get(3)?,
+            literal_type: row.get(4)?,
+            content_type: row.get(5)?,
+            threads_count: row.get(6)?,
+        })
+    })?;
 
     #[cfg(feature = "querydump")]
     println!("Query: {:?}", &query);
@@ -274,29 +277,22 @@ pub fn get_threads(
     limits.mod_query(&mut query, &mut params);
     let mut stmt = ctx.dbcon.prepare(&query)?;
     let mut vstmt = ctx.dbcon.prepare(VALUESELECT)?;
-    let thread_iter = stmt.query_map(
-        params
-            .iter()
-            .map(|x| x.as_ref())
-            .collect::<Vec<_>>()
-            .as_slice(),
-        |row| {
-            let id = row.get(0)?;
-            Ok(ForumThread2 {
-                id,
-                hash: row.get(1)?,
-                name: row.get(2)?,
-                literal_type: row.get(3)?,
-                content_type: row.get(4)?,
-                parent_id: row.get(5)?,
-                create_date: row.get(6)?,
-                create_user_id: row.get(7)?,
-                posts_count: row.get(8)?,
-                max_post_id: row.get(9)?,
-                values: gather_values(&mut vstmt, id)?,
-            })
-        },
-    )?;
+    let thread_iter = stmt.query_map(box_to_ref!(params), |row| {
+        let id = row.get(0)?;
+        Ok(ForumThread2 {
+            id,
+            hash: row.get(1)?,
+            name: row.get(2)?,
+            literal_type: row.get(3)?,
+            content_type: row.get(4)?,
+            parent_id: row.get(5)?,
+            create_date: row.get(6)?,
+            create_user_id: row.get(7)?,
+            posts_count: row.get(8)?,
+            max_post_id: row.get(9)?,
+            values: gather_values(&mut vstmt, id)?,
+        })
+    })?;
 
     #[cfg(feature = "querydump")]
     println!("Query: {:?}", &query);
@@ -534,38 +530,49 @@ pub fn get_searchall(ctx: &PageContext, search: &str) -> Result<Vec<SearchAllRes
     Ok(result)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SubmissionCategory {
     pub id: i64,
     pub name: String,
+    pub hash: String,
     pub forcontent: String,
 }
 
-pub fn get_submission_categories(ctx: &PageContext) -> Result<Vec<SubmissionCategory>, Error> {
-    let query = format!("SELECT id,name,(SELECT `value` FROM content_values WHERE contentId=c.id AND `key`=?) FROM content AS c WHERE {} AND contentType = ? AND literalType = ?",
+pub fn get_submission_categories(
+    ctx: &PageContext,
+    ids: Option<Vec<i64>>,
+) -> Result<Vec<SubmissionCategory>, Error> {
+    let mut query = format!("SELECT id,name,hash,(SELECT `value` FROM content_values WHERE contentId=c.id AND `key`=?) FROM content AS c WHERE {} AND contentType = ? AND literalType = ?",
         COMMONCONTENT,
     );
 
+    let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![
+        Box::new(SBSValue::FORCONTENT),
+        Box::new(ContentType::SYSTEM),
+        Box::new(SBSPageType::CATEGORY),
+    ];
+
+    if let Some(ids) = ids {
+        query.push_str(&format!(" AND id IN ({})", params_list(ids.len())));
+        for id in ids {
+            params.push(Box::new(id));
+        }
+    }
+
     let mut stmt = ctx.dbcon.prepare(&query)?;
-    let cat_iter = stmt.query_map(
-        rusqlite::params![
-            SBSValue::FORCONTENT,
-            &ContentType::SYSTEM,
-            &SBSPageType::CATEGORY
-        ],
-        |row| {
-            let cval: Option<String> = row.get(2)?;
-            Ok(SubmissionCategory {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                forcontent: if let Some(cval) = cval {
-                    serde_json::from_str(&cval).unwrap_or_default()
-                } else {
-                    String::new()
-                },
-            })
-        },
-    )?;
+    let cat_iter = stmt.query_map(box_to_ref!(params), |row| {
+        let cval: Option<String> = row.get(3)?;
+        Ok(SubmissionCategory {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            hash: row.get(2)?,
+            forcontent: if let Some(cval) = cval {
+                serde_json::from_str(&cval).unwrap_or_default()
+            } else {
+                String::new()
+            },
+        })
+    })?;
 
     #[cfg(feature = "querydump")]
     println!("Query: {:?}", &query);
@@ -601,11 +608,6 @@ pub fn gather_browsecontent(
             create_date: row.get(5)?,
             create_user_id: row.get(6)?,
             values: maybe_gather_values(vstmt, id)?,
-            //if let Some(mut vstmt) = &vstmt {
-            //    gather_values(&mut vstmt, id)?
-            //} else {
-            //    HashMap::default()
-            //},
         })
     })?;
 
@@ -705,15 +707,7 @@ pub fn get_browse(
     #[cfg(feature = "querydump")]
     println!("Query: {:?}", &query);
 
-    gather_browsecontent(
-        &mut stmt,
-        &mut Some(vstmt),
-        params
-            .iter()
-            .map(|x| x.as_ref())
-            .collect::<Vec<_>>()
-            .as_slice(),
-    )
+    gather_browsecontent(&mut stmt, &mut Some(vstmt), box_to_ref!(params))
 }
 
 pub fn get_badges(ctx: &PageContext, uid: i64) -> Result<Vec<BrowseContent>, Error> {

@@ -127,7 +127,7 @@ pub async fn get_render(context: PageContext, search: PageSearch, per_page: i32)
         QueryLimit { limit: Some(per_page), skip: Some(search.page * per_page)})?;
     let users = capi::get_users(&context, pages.iter().map(|x| x.create_user_id).collect())?;
     let users = view::map_users2(users);
-    let categories = get_submission_categories(&context)?; //map_categories(categories);
+    let categories = get_submission_categories(&context, None)?;
 
     //Manually parse the search, because of the tag magic (no javascript)
     Ok(Response::Render(render(context.layout_data, pages,  users, search, categories)))

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use super::*;
+use crate::capi::SubmissionCategory;
 use crate::constants::*;
 use crate::response::*;
 use crate::view::*;
@@ -39,7 +40,7 @@ pub struct ForumThread {
     pub thread: Content,
     pub id: i64,
     pub posts: Vec<Message>,
-    pub categories: Option<Vec<Content>>,
+    pub categories: Option<Vec<SubmissionCategory>>,
 }
 
 impl ForumThread {

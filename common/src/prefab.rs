@@ -11,41 +11,41 @@ use serde_json::Value;
 //     CATEGORIES (FOR PAGES)
 // ------------------------------
 
-pub const CATEGORYFIELDS: &str = "id,literalType,contentType,values,name";
-
-pub fn get_allcategory_query() -> String {
-    format!(
-        "contentType = {{{{{}}}}} and !notdeleted() and literalType = {{{{{}}}}}",
-        ContentType::SYSTEM,
-        SBSPageType::CATEGORY
-    )
-}
-
-pub async fn get_all_categories(
-    context: &mut ApiContext,
-    limit: Option<Vec<i64>>,
-) -> Result<Vec<Content>, ApiError> {
-    let mut request = FullRequest::new();
-
-    request.requests.push(build_request!(
-        RequestType::content,
-        String::from(CATEGORYFIELDS),
-        format!(
-            "{} {}",
-            get_allcategory_query(),
-            if let Some(limit) = limit {
-                add_value!(request, "limit", limit);
-                " and id in @limit"
-            } else {
-                ""
-            }
-        )
-    ));
-
-    let result = context.post_request(&request).await?;
-    conversion::cast_result_required::<Content>(&result, &RequestType::content.to_string())
-        .map_err(|e| e.into())
-}
+// pub const CATEGORYFIELDS: &str = "id,literalType,contentType,values,name";
+//
+// pub fn get_allcategory_query() -> String {
+//     format!(
+//         "contentType = {{{{{}}}}} and !notdeleted() and literalType = {{{{{}}}}}",
+//         ContentType::SYSTEM,
+//         SBSPageType::CATEGORY
+//     )
+// }
+//
+// pub async fn get_all_categories(
+//     context: &mut ApiContext,
+//     limit: Option<Vec<i64>>,
+// ) -> Result<Vec<Content>, ApiError> {
+//     let mut request = FullRequest::new();
+//
+//     request.requests.push(build_request!(
+//         RequestType::content,
+//         String::from(CATEGORYFIELDS),
+//         format!(
+//             "{} {}",
+//             get_allcategory_query(),
+//             if let Some(limit) = limit {
+//                 add_value!(request, "limit", limit);
+//                 " and id in @limit"
+//             } else {
+//                 ""
+//             }
+//         )
+//     ));
+//
+//     let result = context.post_request(&request).await?;
+//     conversion::cast_result_required::<Content>(&result, &RequestType::content.to_string())
+//         .map_err(|e| e.into())
+// }
 
 // ----------------------
 //    GENERAL CONTENT

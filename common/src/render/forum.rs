@@ -436,7 +436,7 @@ pub fn render_page(
                     hr."smaller";
                     div."categorylist smallseparate" {
                         @for category in categories {
-                            a."flatlink" href=(data.links.search_category(category.id.unwrap_or_default())) { (opt_s!(category.name)) }
+                            a."flatlink" href=(data.links.search_category(category.id)) { (category.name) }
                         }
                     }
                 }
