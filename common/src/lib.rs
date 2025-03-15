@@ -4,7 +4,6 @@ pub mod forms;
 pub mod forum;
 pub mod links;
 pub mod pagination;
-pub mod prefab;
 pub mod render;
 pub mod response;
 pub mod search;

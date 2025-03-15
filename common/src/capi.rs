@@ -199,7 +199,6 @@ pub struct ForumCategory2 {
 pub fn get_forum_categories(
     ctx: &PageContext,
     cq: Option<IdOrHash>,
-    //parent_of: Option<i64>,
 ) -> Result<Vec<ForumCategory2>, Error> {
     let mut query = format!(
         "SELECT {},({}) AS thread_count FROM content c WHERE {} AND literalType IN ({})",
@@ -215,10 +214,6 @@ pub fn get_forum_categories(
     if let Some(cq) = cq {
         params.push(cq.mod_query(&mut query));
     }
-    // if let Some(parent_of) = parent_of {
-    //     query.push_str(" AND c.id = (SELECT cc.parentId FROM content cc WHERE cc.id = ? && )");
-    //     params.push(Box::new(parent_of));
-    // }
     let mut stmt = ctx.dbcon.prepare(&query)?;
     let category_iter = stmt.query_map(box_to_ref!(params), |row| {
         Ok(ForumCategory2 {
@@ -402,12 +397,6 @@ pub fn get_userpage(ctx: &PageContext, user: i64) -> Result<Option<BasicContent>
         .collect::<Result<Vec<BasicContent>, rusqlite::Error>>()?
         .pop())
 }
-// (select min({nameof(Content.id)})
-//  from {typeInfo.selfDbInfo?.modelTable}
-//  where {nameof(Content.contentType)} = {(long)InternalContentType.userpage}
-//  and {nameof(Content.createUserId)} = {userIdValue}
-//  and deleted = 0
-// )
 
 #[derive(Clone, Debug)]
 pub struct DocTreeContent {
@@ -667,7 +656,6 @@ pub fn get_browse(
                     params.push(Box::new(SBSValue::DOWNLOADKEY));
                     params.push(Box::new(SBSValue::SYSTEMS));
                     params.push(Box::new(format!("%{}%", PTCSYSTEM)));
-                    //add_value!(request, "dlkeylist", vec![SBSValue::DOWNLOADKEY]);
                     query.push_str(
                         " AND c.id IN (SELECT contentId FROM content_values WHERE `key`= ? OR (`key` = ? AND `value` LIKE ?))" //(!valuekeyin(@dlkeylist) or !valuelike(@systemkey, @ptcsystem))",
                     );
@@ -676,14 +664,8 @@ pub fn get_browse(
                     params.push(Box::new(SBSValue::SYSTEMS));
                     params.push(Box::new(format!("%{}%", search.system)));
                     query.push_str(" AND c.id IN (SELECT contentId FROM content_values WHERE `key`=? AND `value` LIKE ?)");
-                    //) !valuelike(@systemkey, @system)");
-                    //add_value!(request, "system", format!("%{}%", search.system)); //Systems is actually a json list but this should be fine
                 }
             }
-
-            //add_value!(request, "systemkey", SBSValue::SYSTEMS);
-            //add_value!(request, "ptcsystem", format!("%{}%", PTCSYSTEM));
-            //Ignore certain search criteria
         }
     }
 
@@ -721,9 +703,6 @@ pub fn get_badges(ctx: &PageContext, uid: i64) -> Result<Vec<BrowseContent>, Err
         BROWSEFIELDS,
         COMMONCONTENT,
     );
-    //String::from("userId = @user.id AND type = @relationtype") //Unfortunately, we don't do anything else with assigned content in sbs
-    //String::from("id in @userrelation.relatedId and contentType = @file") //Unfortunately, we don't do anything else with assigned content in sbs
-    //(SELECT id FROM content WHERE contentType = ? AND literalType = ?)"##,
 
     let mut stmt = ctx.dbcon.prepare(&query)?;
 
@@ -743,11 +722,6 @@ pub struct QrPageData {
     pub hash: String,
     pub name: String,
     pub qr_raw: Option<String>,
-    // pub description: String,
-    // pub literal_type: String,
-    // pub create_date: DateTime<Utc>,
-    // pub create_user_id: i64,
-    // pub values: HashMap<String, String>,
 }
 
 pub fn get_qrpage(ctx: &PageContext, hash: &str) -> Result<QrPageData, Error> {
