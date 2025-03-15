@@ -4,36 +4,23 @@ use super::*;
 use crate::capi::SubmissionCategory;
 use crate::constants::*;
 use crate::response::*;
-use crate::view::*;
 
-use contentapi::conversion::*;
 use contentapi::*;
 
 //Not sure if we need values, but I NEED permissions to know if the thread is locked
 pub static THREADFIELDS : &str = "id,name,lastCommentId,literalType,contentType,hash,parentId,commentCount,createDate,createUserId,values,permissions,lastRevisionId,lastActionDate";
 //Need values to know the stickies
-pub static CATEGORYFIELDS: &str = "id,hash,name,description,literalType,contentType";
+// pub static CATEGORYFIELDS: &str = "id,hash,name,description,literalType,contentType";
 
 //Note: these are keys for the REQUESTS, not anything else!
 pub static THREADKEY: &str = "thread";
-pub static CATEGORYKEY: &str = "category";
+//pub static CATEGORYKEY: &str = "category";
 pub static PREMESSAGEKEY: &str = "premessage";
 pub static PREMESSAGEINDEXKEY: &str = "premessage_index";
 
 // ---------------------------------------------
 //  DIRECT CONNECT NEW
 // ---------------------------------------------
-
-struct Keygen();
-
-impl Keygen {
-    fn threadcount(id: i64) -> String {
-        format!("threadcount_{id}")
-    }
-    fn threads(id: i64) -> String {
-        format!("threads_{id}")
-    }
-}
 
 #[derive(Clone, Debug)]
 pub struct ForumThread {
@@ -57,81 +44,6 @@ impl ForumThread {
                 .collect(),
             categories: None,
         })
-    }
-}
-
-//Structs JUST for building data for the forum templates (so no need to be public)
-#[derive(Clone, Debug)]
-pub struct ForumCategory {
-    pub category: Content,
-    pub id: i64,
-    pub threads: Vec<ForumThread>,
-    pub threads_count: i32,
-    pub users: HashMap<i64, User>,
-}
-
-impl ForumCategory {
-    pub fn from_result(
-        category: CleanedPreCategory,
-        thread_result: &RequestResult,
-        messages_raw: &Vec<Message>,
-    ) -> Result<Self, Error> {
-        let threadcount_name = Keygen::threadcount(category.id);
-        let threads_name = Keygen::threads(category.id);
-
-        let special_counts =
-            cast_result_required::<SpecialCount>(&thread_result, &threadcount_name)?;
-        let threads_raw = cast_result_required::<Content>(&thread_result, &threads_name)?;
-        let users_raw = cast_result_required::<User>(&thread_result, "user")?;
-
-        Ok(ForumCategory {
-            id: category.id,
-            category: category.category, //partial move
-            threads: threads_raw
-                .into_iter()
-                .map(|thread| ForumThread::from_content(thread, messages_raw))
-                .collect::<Result<Vec<_>, _>>()?,
-            users: map_users(users_raw),
-            threads_count: special_counts
-                .get(0)
-                .ok_or(Error::Data(
-                    format!("Didn't get specialCount for category {}", category.id),
-                    format!("{:?}", thread_result),
-                ))?
-                .specialCount,
-        })
-    }
-}
-
-//Content is very lax with the fields, so we need something that will solidify SOME of them
-//for use in other computations
-pub struct CleanedPreCategory {
-    pub category: Content,
-    pub id: i64,
-    pub name: String,
-}
-
-impl CleanedPreCategory {
-    pub fn from_content(category: Content) -> Result<CleanedPreCategory, Error> {
-        let name = match category.name {
-            Some(ref n) => Ok(n.clone()),
-            None => Err(Error::Other(String::from(
-                "Category search didn't have name!",
-            ))),
-        }?;
-        let id = category
-            .id
-            .ok_or(Error::Other(String::from("Categories didn't have ids!")))?;
-        //Need to get the list of stickies
-        //let stickies = category.get_stickies()?;
-        Ok(CleanedPreCategory { category, id, name })
-    }
-
-    pub fn from_many(categories: Vec<Content>) -> Result<Vec<CleanedPreCategory>, Error> {
-        categories
-            .into_iter()
-            .map(|c| Self::from_content(c))
-            .collect()
     }
 }
 
@@ -242,115 +154,6 @@ pub fn posts_to_replytree(posts: &Vec<Message>) -> Vec<ReplyTree> {
 // *   REQUEST GENERATION   *
 // --------------------------
 
-// Build a request for JUST forum categories
-pub fn get_category_request(hash: Option<String>, fcid: Option<i64>) -> FullRequest {
-    //The request which we will spend the entire function building
-    let mut request = FullRequest::new();
-
-    let mut real_query = String::from("!notdeleted()");
-
-    if let Some(hash) = hash {
-        // NOTE: I don't remember why I don't check for the category type when doing this
-        // query. It might not be important and maybe you could always check for type, just be careful
-        add_value!(request, "hash", hash);
-        real_query.push_str(" and hash = @hash");
-    } else {
-        //This is the "general" case, where yes, we actually do want to limit to categories. Otherwise,
-        //if you pass a hash... it'll just work, regardless if it's a category or not.
-        add_value!(request, "category_literals", FORUMCATEGORYTYPES);
-        real_query.push_str(" and literalType in @category_literals");
-
-        if let Some(fcid) = fcid {
-            add_value!(request, "fcid_key", vec!["fcid"]);
-            add_value!(request, "fcid", vec![fcid]);
-            real_query.push_str(" and !valuein(@fcid_key, @fcid)");
-        }
-    }
-
-    let mut category_request = build_request!(
-        RequestType::content,
-        String::from(CATEGORYFIELDS),
-        real_query
-    );
-    category_request.name = Some(String::from(CATEGORYKEY));
-    request.requests.push(category_request);
-
-    request
-}
-
-pub fn get_thread_request(
-    categories: &Vec<CleanedPreCategory>,
-    limit: i32,
-    skip: i32,
-) -> FullRequest {
-    let mut request = FullRequest::new();
-    add_value!(request, "page_type", ContentType::PAGE);
-    add_value!(request, "allowed_types", THREADTYPES);
-
-    let mut keys = Vec::new();
-
-    for ref category in categories.iter() {
-        let category_id = category.id;
-
-        //Standard threads get (for latest N threads)
-        let base_query = format!("parentId = {{{{{category_id}}}}} and contentType = @page_type and literalType in @allowed_types and !notdeleted()");
-
-        //Regular thread request. Needs to specifically NOT be the stickies
-        let mut threads_request = build_request!(
-            RequestType::content,
-            String::from(THREADFIELDS),
-            format!("{}", base_query),
-            String::from("lastActionDate_desc"),
-            limit,
-            skip
-        );
-
-        let key = Keygen::threads(category_id);
-        threads_request.name = Some(key.clone());
-        request.requests.push(threads_request);
-        keys.push(key);
-
-        //Thread count get (if the previous is too expensive, consider just doing this)
-        let mut count_request = build_request!(
-            RequestType::content,
-            String::from("specialCount,parentId,literalType,contentType,id"),
-            base_query.clone()
-        );
-        count_request.name = Some(Keygen::threadcount(category_id));
-        request.requests.push(count_request);
-    }
-
-    //How many string allocations is this? I mean it shouldn't matter but ugh
-    let comment_query = format!(
-        "!basiccomments() and ({})",
-        keys.iter()
-            .map(|k| format!("id in @{}.lastCommentId", k))
-            .collect::<Vec<String>>()
-            .join(" or ")
-    );
-    let user_query = format!(
-        "!notdeleted() and (id in @message.createUserId or {})",
-        keys.iter()
-            .map(|k| format!("id in @{}.createUserId", k))
-            .collect::<Vec<String>>()
-            .join(" or ")
-    );
-
-    let comment_request = build_request!(
-        RequestType::message,
-        String::from("id,createDate,contentId,createUserId"),
-        comment_query
-    );
-    request.requests.push(comment_request);
-
-    let user_request = build_request!(RequestType::user, String::from("*"), user_query);
-    request.requests.push(user_request);
-
-    //println!("Threads request: {:?}", &request);
-
-    request
-}
-
 //"prepost" means the main query before finding the main data before gathering the posts. The post offset
 //often depends on the prepost
 pub fn get_prepost_request(
@@ -419,13 +222,13 @@ pub fn get_prepost_request(
     request.requests.push(thread_request);
 
     //And one last thing: you still need the category of course
-    let mut category_request = build_request!(
-        RequestType::content,
-        String::from(CATEGORYFIELDS),
-        format!("!notdeleted() and id in @{}.parentId", THREADKEY) //format!("literalType = @category_literal and !notdeleted() and id in @{}.parentId", THREADKEY)
-    );
-    category_request.name = Some(String::from(CATEGORYKEY));
-    request.requests.push(category_request);
+    // let mut category_request = build_request!(
+    //     RequestType::content,
+    //     String::from(CATEGORYFIELDS),
+    //     format!("!notdeleted() and id in @{}.parentId", THREADKEY) //format!("literalType = @category_literal and !notdeleted() and id in @{}.parentId", THREADKEY)
+    // );
+    // category_request.name = Some(String::from(CATEGORYKEY));
+    // request.requests.push(category_request);
 
     //OK one last ACTUAL thing: need to get the premessage index if it was there
     if post_limited {

@@ -16,8 +16,8 @@ pub fn render(context: &mut PageContext, config: PostsConfig) -> String {
     basic_skeleton(
         &context.layout_data,
         html! {
-            title { "SmileBASIC Source Image Browser" }
-            meta name="description" content="Simple image browser widget";
+            title { "SmileBASIC Source Thread Widget" }
+            meta name="description" content="Simple view into a thread";
             (context.layout_data.links.style("/forpage/forum.css"))
             style { r#"
             body { 

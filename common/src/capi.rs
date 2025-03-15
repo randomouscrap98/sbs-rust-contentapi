@@ -199,6 +199,7 @@ pub struct ForumCategory2 {
 pub fn get_forum_categories(
     ctx: &PageContext,
     cq: Option<IdOrHash>,
+    //parent_of: Option<i64>,
 ) -> Result<Vec<ForumCategory2>, Error> {
     let mut query = format!(
         "SELECT {},({}) AS thread_count FROM content c WHERE {} AND literalType IN ({})",
@@ -214,6 +215,10 @@ pub fn get_forum_categories(
     if let Some(cq) = cq {
         params.push(cq.mod_query(&mut query));
     }
+    // if let Some(parent_of) = parent_of {
+    //     query.push_str(" AND c.id = (SELECT cc.parentId FROM content cc WHERE cc.id = ? && )");
+    //     params.push(Box::new(parent_of));
+    // }
     let mut stmt = ctx.dbcon.prepare(&query)?;
     let category_iter = stmt.query_map(box_to_ref!(params), |row| {
         Ok(ForumCategory2 {

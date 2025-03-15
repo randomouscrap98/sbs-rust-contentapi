@@ -26,7 +26,7 @@ pub struct ForumPathItem {
 }
 
 impl ForumPathItem {
-    pub fn from_category_c(category: &ForumCategory2) -> Self {
+    pub fn from_category2(category: &ForumCategory2) -> Self {
         Self {
             link: format!("/forum/category/{}", &category.hash),
             title: category.name.clone(),

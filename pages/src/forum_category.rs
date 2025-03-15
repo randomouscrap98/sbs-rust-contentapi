@@ -149,7 +149,7 @@ async fn render_threads(
 
     let path = vec![
         ForumPathItem::root(),
-        ForumPathItem::from_category_c(&category),
+        ForumPathItem::from_category2(&category),
     ];
     Ok(Response::Render(render(
         context.layout_data,
