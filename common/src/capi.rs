@@ -1,13 +1,14 @@
 use chrono::{DateTime, Utc};
+use std::time::Instant;
 
 use super::*;
 use crate::constants::*;
 use crate::response::*;
 
+pub static BASICCONTENTFIELDS: &str = "id,hash,name,text";
 pub static BROWSEFIELDS: &str =
     "id,hash,name,COALESCE(description,''),COALESCE(literalType,''),createDate,createUserId";
 pub static USER2FIELDS: &str = "id,`type`,username,avatar,special,super,createDate";
-pub static CATEGORYFIELDS2: &str = "id,hash,name,COALESCE(description,'') AS description,COALESCE(literalType,'') AS lt,contentType";
 pub static THREADFIELDS2: &str =
     "id,hash,name,COALESCE(literalType,''),contentType,parentId,createDate,createUserId";
 pub static COMMONCONTENT: &str =
@@ -18,9 +19,15 @@ pub static VALUESELECT: &str = "SELECT `key`,`value` FROM content_values WHERE c
 pub static KEYWORDSELECT: &str = "SELECT `value` FROM content_keywords WHERE contentId=?";
 //pub static SUBMISSIONPARENT: &str = "SELECT id FROM content WHERE contentId=?";
 
-pub fn select_childcount(idname: &str) -> String {
-    return format!("SELECT COUNT(*) FROM content WHERE parentId = {}", idname);
+pub fn join_common_content(idname: &str) -> String {
+    return format!(
+        "JOIN content_permissions _cp_ ON _cp_.contentId = {} AND _cp_.read=1 AND _cp_.userId=0",
+        idname
+    );
 }
+// pub fn select_childcount(idname: &str) -> String {
+//     return format!("SELECT COUNT(*) FROM content WHERE parentId = {}", idname);
+// }
 pub fn select_postcount(idname: &str) -> String {
     return format!("SELECT COUNT(*) FROM messages WHERE contentId = {}", idname);
 }
@@ -29,6 +36,28 @@ pub fn select_maxpost(idname: &str) -> String {
         "SELECT COALESCE(MAX(id),0) FROM messages WHERE contentId = {}",
         idname
     );
+}
+
+pub fn easy_query<T, F>(
+    stmt: (&mut rusqlite::Statement, &str),
+    params: &[&dyn rusqlite::ToSql],
+    rowmap: F,
+) -> Result<Vec<T>, Error>
+where
+    F: FnMut(&rusqlite::Row<'_>) -> Result<T, rusqlite::Error>,
+{
+    #[cfg(feature = "querydump")]
+    let start = Instant::now();
+    let (stmt, query) = stmt;
+    let row_iter = stmt.query_map(params, rowmap)?;
+    let result = row_iter.collect::<Result<Vec<T>, rusqlite::Error>>()?;
+
+    #[cfg(feature = "querydump")]
+    {
+        let duration = start.elapsed();
+        println!("Query ({} ms): {:?}", duration.as_millis(), query);
+    }
+    Ok(result)
 }
 
 macro_rules! box_to_ref {
@@ -104,14 +133,18 @@ pub enum IdOrHash {
 }
 
 impl IdOrHash {
-    pub fn mod_query(&self, query: &mut String) -> Box<dyn rusqlite::types::ToSql> {
+    pub fn mod_query(
+        &self,
+        table_name: &str,
+        query: &mut String,
+    ) -> Box<dyn rusqlite::types::ToSql> {
         match self {
             IdOrHash::Id(fcid) => {
-                query.push_str(" AND id = ?");
+                query.push_str(&format!(" AND {}.id = ?", table_name));
                 Box::new(*fcid)
             }
             IdOrHash::Hash(hash) => {
-                query.push_str(" AND hash = ?");
+                query.push_str(&format!(" AND {}.hash = ?", table_name));
                 Box::new(hash.clone())
             }
         }
@@ -131,10 +164,10 @@ pub struct User2 {
 }
 
 pub fn gather_users(
-    stmt: &mut rusqlite::Statement,
+    stmt: (&mut rusqlite::Statement, &str),
     params: &[&dyn rusqlite::ToSql],
 ) -> Result<Vec<User2>, Error> {
-    let user_iter = stmt.query_map(params, |row| {
+    easy_query(stmt, params, |row| {
         Ok(User2 {
             id: row.get(0)?,
             user_type: row.get(1)?,
@@ -144,9 +177,7 @@ pub fn gather_users(
             admin: row.get(5)?,
             create_date: row.get(6)?,
         })
-    })?;
-
-    Ok(user_iter.collect::<Result<Vec<User2>, rusqlite::Error>>()?)
+    })
 }
 
 pub fn get_users(ctx: &PageContext, ids: Vec<i64>) -> Result<Vec<User2>, Error> {
@@ -162,10 +193,7 @@ pub fn get_users(ctx: &PageContext, ids: Vec<i64>) -> Result<Vec<User2>, Error> 
     }
     let mut stmt = ctx.dbcon.prepare(&query)?;
 
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
-
-    gather_users(&mut stmt, params.as_slice())
+    gather_users((&mut stmt, &query), params.as_slice())
 }
 
 // Find user by name
@@ -175,13 +203,9 @@ pub fn get_user_by_name(ctx: &PageContext, name: &str) -> Result<Option<User2>, 
         USER2FIELDS, COMMONUSER,
     );
     let params: Vec<&dyn rusqlite::types::ToSql> = vec![&name];
-
     let mut stmt = ctx.dbcon.prepare(&query)?;
 
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
-
-    let mut users = gather_users(&mut stmt, params.as_slice())?;
+    let mut users = gather_users((&mut stmt, &query), params.as_slice())?;
     Ok(users.pop())
 }
 
@@ -201,10 +225,9 @@ pub fn get_forum_categories(
     cq: Option<IdOrHash>,
 ) -> Result<Vec<ForumCategory2>, Error> {
     let mut query = format!(
-        "SELECT {},({}) AS thread_count FROM content c WHERE {} AND literalType IN ({})",
-        CATEGORYFIELDS2,
-        select_childcount("c.id"),
-        COMMONCONTENT,
+        "SELECT {} FROM content c JOIN content t ON c.id=t.parentId {} WHERE c.literalType IN ({}) GROUP BY c.id",
+        "c.id,c.hash,c.name,COALESCE(c.description,''),COALESCE(c.literalType,''),c.contentType,count(t.id)",
+        join_common_content("c.id"),
         params_list(FORUMCATEGORYTYPES.len())
     );
     let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![];
@@ -212,10 +235,10 @@ pub fn get_forum_categories(
         params.push(Box::new(*t));
     }
     if let Some(cq) = cq {
-        params.push(cq.mod_query(&mut query));
+        params.push(cq.mod_query("c", &mut query));
     }
     let mut stmt = ctx.dbcon.prepare(&query)?;
-    let category_iter = stmt.query_map(box_to_ref!(params), |row| {
+    easy_query((&mut stmt, &query), box_to_ref!(params), |row| {
         Ok(ForumCategory2 {
             id: row.get(0)?,
             hash: row.get(1)?,
@@ -225,12 +248,7 @@ pub fn get_forum_categories(
             content_type: row.get(5)?,
             threads_count: row.get(6)?,
         })
-    })?;
-
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
-
-    Ok(category_iter.collect::<Result<Vec<ForumCategory2>, rusqlite::Error>>()?)
+    })
 }
 
 #[derive(Clone, Debug)]
@@ -267,7 +285,7 @@ pub fn get_threads(
         params.push(Box::new(*t));
     }
     if let Some(tq) = tquery {
-        params.push(tq.mod_query(&mut query));
+        params.push(tq.mod_query("t", &mut query));
     }
     if let Some(cid) = category_id {
         query.push_str(" AND parentId = ?");
@@ -277,7 +295,7 @@ pub fn get_threads(
     limits.mod_query(&mut query, &mut params);
     let mut stmt = ctx.dbcon.prepare(&query)?;
     let mut vstmt = ctx.dbcon.prepare(VALUESELECT)?;
-    let thread_iter = stmt.query_map(box_to_ref!(params), |row| {
+    easy_query((&mut stmt, &query), box_to_ref!(params), |row| {
         let id = row.get(0)?;
         Ok(ForumThread2 {
             id,
@@ -292,12 +310,7 @@ pub fn get_threads(
             max_post_id: row.get(9)?,
             values: gather_values(&mut vstmt, id)?,
         })
-    })?;
-
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
-
-    Ok(thread_iter.collect::<Result<Vec<ForumThread2>, rusqlite::Error>>()?)
+    })
 }
 
 // Get engagement for a particular content
@@ -350,51 +363,84 @@ pub struct BasicContent {
     pub text: String,
 }
 
-// Get any system content with given literaltype
-pub fn get_systempage(ctx: &PageContext, literal_type: String) -> Result<Vec<BasicContent>, Error> {
-    let query = format!(
-        "SELECT id,hash,name,text FROM content WHERE {} AND contentType = ? AND literalType = ?",
-        COMMONCONTENT
-    );
-    let mut stmt = ctx.dbcon.prepare(&query)?;
-    let system_iter = stmt.query_map(
-        rusqlite::params![ContentType::SYSTEM, &literal_type],
-        |row| {
-            Ok(BasicContent {
-                id: row.get(0)?,
-                hash: row.get(1)?,
-                name: row.get(2)?,
-                text: row.get(3)?,
-            })
-        },
-    )?;
-
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
-
-    Ok(system_iter.collect::<Result<Vec<BasicContent>, rusqlite::Error>>()?)
-}
-
-pub fn get_userpage(ctx: &PageContext, user: i64) -> Result<Option<BasicContent>, Error> {
-    let query = format!(
-        "SELECT id,hash,name,text FROM content WHERE id IN (SELECT MIN(id) FROM content WHERE {} AND contentType = ? AND createUserId = ?)",
-        COMMONCONTENT
-    );
-    let mut stmt = ctx.dbcon.prepare(&query)?;
-    let system_iter = stmt.query_map(rusqlite::params![ContentType::USERPAGE, &user], |row| {
+pub fn gather_basiccontent(
+    stmt: &mut rusqlite::Statement,
+    params: &[&dyn rusqlite::ToSql],
+) -> Result<Vec<BasicContent>, Error> {
+    let basic_iter = stmt.query_map(params, |row| {
+        let id: i64 = row.get(0)?;
         Ok(BasicContent {
-            id: row.get(0)?,
+            id,
             hash: row.get(1)?,
             name: row.get(2)?,
             text: row.get(3)?,
         })
     })?;
 
+    return Ok(basic_iter.collect::<Result<Vec<BasicContent>, rusqlite::Error>>()?);
+}
+
+// Get any system content with given literaltype
+pub fn get_systempage(ctx: &PageContext, literal_type: String) -> Result<Vec<BasicContent>, Error> {
+    let query = format!(
+        "SELECT {} FROM content WHERE {} AND contentType = ? AND literalType = ?",
+        BASICCONTENTFIELDS, COMMONCONTENT
+    );
+    let mut stmt = ctx.dbcon.prepare(&query)?;
     #[cfg(feature = "querydump")]
     println!("Query: {:?}", &query);
 
-    Ok(system_iter
-        .collect::<Result<Vec<BasicContent>, rusqlite::Error>>()?
+    gather_basiccontent(
+        &mut stmt,
+        rusqlite::params![ContentType::SYSTEM, &literal_type],
+    )
+}
+
+pub fn get_userpage(ctx: &PageContext, user: i64) -> Result<Option<BasicContent>, Error> {
+    let query = format!(
+        "SELECT {} FROM content WHERE id IN (SELECT MIN(id) FROM content WHERE {} AND contentType = ? AND createUserId = ?)",
+        BASICCONTENTFIELDS,
+        COMMONCONTENT
+    );
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    #[cfg(feature = "querydump")]
+    println!("Query: {:?}", &query);
+
+    Ok(gather_basiccontent(&mut stmt, rusqlite::params![ContentType::USERPAGE, &user])?.pop())
+}
+
+pub fn get_basic_by_pid(ctx: &PageContext, pid: i64) -> Result<Option<BasicContent>, Error> {
+    let query = format!(
+        "SELECT {} FROM content WHERE {} AND id IN (SELECT contentId FROM content_values WHERE `key`=? AND value=?)",
+        BASICCONTENTFIELDS, COMMONCONTENT
+    );
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    #[cfg(feature = "querydump")]
+    println!("Query: {:?}", &query);
+    let spid = format!("{}", pid);
+    Ok(gather_basiccontent(&mut stmt, rusqlite::params!["pid", &spid])?.pop())
+}
+
+pub fn get_msgid_by_cid(
+    ctx: &PageContext,
+    content_id: i64,
+    cid: i64,
+) -> Result<Option<i64>, Error> {
+    let query = format!(
+        "SELECT messageId FROM message_values WHERE `key`=? AND `value`=? AND messageId IN (SELECT id FROM messages WHERE contentId = ?)",
+    );
+    let scid = format!("{}", cid);
+    let scontent_id = format!("{}", content_id);
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let msgid_iter = stmt.query_map(rusqlite::params!["cid", &scid, &scontent_id], |row| {
+        row.get::<usize, i64>(0)
+    })?;
+
+    #[cfg(feature = "querydump")]
+    println!("Query: {:?}", &query);
+
+    Ok(msgid_iter
+        .collect::<Result<Vec<i64>, rusqlite::Error>>()?
         .pop())
 }
 
@@ -748,3 +794,46 @@ pub fn get_qrpage(ctx: &PageContext, hash: &str) -> Result<QrPageData, Error> {
         .pop()
         .ok_or(Error::NotFound(String::from(hash)))
 }
+
+//pub fn get_
+
+// pub async fn get_pid_redirect(context: PageContext) -> Result<String, Error> {
+//     let mut request = FullRequest::new();
+//     add_value!(request, "pidkey", vec!["pid"]);
+//     add_value!(request, "pid", vec![query.pid]);
+//
+//     //Basically: go look for the content that has the given pid
+//     let pid_request = build_request!(
+//         RequestType::content,
+//         String::from("id,hash,values"),
+//         format!("!valuein(@pidkey, @pid)")
+//     );
+//     request.requests.push(pid_request);
+//
+//     if let Some(cid) = query.cid {
+//         add_value!(request, "cidkey", vec!["cid"]);
+//         add_value!(request, "cid", vec![cid]);
+//         let cid_request = build_request!(
+//             RequestType::message,
+//             String::from("id,values,contentId"),
+//             format!("!valuein(@cidkey, @cid)")
+//         );
+//         request.requests.push(cid_request);
+//     }
+//
+//     let result = context.api_context.post_request(&request).await?;
+//     let mut pages = cast_result_required::<Content>(&result, "content")?;
+//     let mut messages = cast_result_safe::<Message>(&result, "message")?;
+//
+//     let page = pages
+//         .pop()
+//         .ok_or(Error::NotFound(String::from("Could not find page!")))?;
+//
+//     let mut url = context.layout_data.links.forum_thread(&page);
+//
+//     if let Some(message) = messages.pop() {
+//         url = context.layout_data.links.forum_post(&message, &page);
+//     }
+//
+//     Ok(Response::Redirect(url))
+// }
