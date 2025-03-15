@@ -31,7 +31,7 @@ pub struct PtcData {
 pub async fn get_render(context: PageContext, hash: &str, high_density: bool) -> Result<Response, Error>
 {
     //First, go lookup the page
-    let page = capi::get_qrpage(&context, hash)?;
+    let page = capi::get_qrpage(&context, hash)?.ok_or(Error::NotFound(format!("Invalid hash {}", hash)))?;
         //get_fullpage(&mut context.api_context, "hash", hash.into()).await?;
     let qrlink = context.layout_data.links.qr_generator_unsafe(&page.hash);
 

@@ -5,7 +5,7 @@ use super::*;
 use crate::constants::*;
 use crate::response::*;
 
-pub static BASICCONTENTFIELDS: &str = "id,hash,name,text";
+pub static BASICCONTENTFIELDS: &str = "c.id,c.hash,c.name,c.text";
 pub static BROWSEFIELDS: &str =
     "id,hash,name,COALESCE(description,''),COALESCE(literalType,''),createDate,createUserId";
 pub static USER2FIELDS: &str = "id,`type`,username,avatar,special,super,createDate";
@@ -25,9 +25,6 @@ pub fn join_common_content(idname: &str) -> String {
         idname
     );
 }
-// pub fn select_childcount(idname: &str) -> String {
-//     return format!("SELECT COUNT(*) FROM content WHERE parentId = {}", idname);
-// }
 pub fn select_postcount(idname: &str) -> String {
     return format!("SELECT COUNT(*) FROM messages WHERE contentId = {}", idname);
 }
@@ -364,10 +361,10 @@ pub struct BasicContent {
 }
 
 pub fn gather_basiccontent(
-    stmt: &mut rusqlite::Statement,
+    stmt: (&mut rusqlite::Statement, &str),
     params: &[&dyn rusqlite::ToSql],
 ) -> Result<Vec<BasicContent>, Error> {
-    let basic_iter = stmt.query_map(params, |row| {
+    easy_query(stmt, params, |row| {
         let id: i64 = row.get(0)?;
         Ok(BasicContent {
             id,
@@ -375,50 +372,45 @@ pub fn gather_basiccontent(
             name: row.get(2)?,
             text: row.get(3)?,
         })
-    })?;
-
-    return Ok(basic_iter.collect::<Result<Vec<BasicContent>, rusqlite::Error>>()?);
+    })
 }
 
 // Get any system content with given literaltype
 pub fn get_systempage(ctx: &PageContext, literal_type: String) -> Result<Vec<BasicContent>, Error> {
     let query = format!(
-        "SELECT {} FROM content WHERE {} AND contentType = ? AND literalType = ?",
-        BASICCONTENTFIELDS, COMMONCONTENT
+        "SELECT {} FROM content c {} WHERE c.contentType = ? AND c.literalType = ?",
+        BASICCONTENTFIELDS,
+        join_common_content("c.id")
     );
     let mut stmt = ctx.dbcon.prepare(&query)?;
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
-
     gather_basiccontent(
-        &mut stmt,
+        (&mut stmt, &query),
         rusqlite::params![ContentType::SYSTEM, &literal_type],
     )
 }
 
 pub fn get_userpage(ctx: &PageContext, user: i64) -> Result<Option<BasicContent>, Error> {
     let query = format!(
-        "SELECT {} FROM content WHERE id IN (SELECT MIN(id) FROM content WHERE {} AND contentType = ? AND createUserId = ?)",
+        "SELECT {} FROM content c {} WHERE c.contentType = ? AND c.createUserId = ? ORDER BY c.id DESC LIMIT 1",
         BASICCONTENTFIELDS,
-        COMMONCONTENT
+        join_common_content("c.id")
     );
     let mut stmt = ctx.dbcon.prepare(&query)?;
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
-
-    Ok(gather_basiccontent(&mut stmt, rusqlite::params![ContentType::USERPAGE, &user])?.pop())
+    Ok(gather_basiccontent(
+        (&mut stmt, &query),
+        rusqlite::params![ContentType::USERPAGE, &user],
+    )?
+    .pop())
 }
 
 pub fn get_basic_by_pid(ctx: &PageContext, pid: i64) -> Result<Option<BasicContent>, Error> {
     let query = format!(
-        "SELECT {} FROM content WHERE {} AND id IN (SELECT contentId FROM content_values WHERE `key`=? AND value=?)",
-        BASICCONTENTFIELDS, COMMONCONTENT
+        "SELECT {} FROM content c {} JOIN content_values v ON v.contentId=c.id WHERE  v.`key`=? AND v.value=? GROUP BY c.id",
+        BASICCONTENTFIELDS, join_common_content("c.id")
     );
     let mut stmt = ctx.dbcon.prepare(&query)?;
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
     let spid = format!("{}", pid);
-    Ok(gather_basiccontent(&mut stmt, rusqlite::params!["pid", &spid])?.pop())
+    Ok(gather_basiccontent((&mut stmt, &query), rusqlite::params!["pid", &spid])?.pop())
 }
 
 pub fn get_msgid_by_cid(
@@ -432,16 +424,12 @@ pub fn get_msgid_by_cid(
     let scid = format!("{}", cid);
     let scontent_id = format!("{}", content_id);
     let mut stmt = ctx.dbcon.prepare(&query)?;
-    let msgid_iter = stmt.query_map(rusqlite::params!["cid", &scid, &scontent_id], |row| {
-        row.get::<usize, i64>(0)
-    })?;
-
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
-
-    Ok(msgid_iter
-        .collect::<Result<Vec<i64>, rusqlite::Error>>()?
-        .pop())
+    Ok(easy_query(
+        (&mut stmt, &query),
+        rusqlite::params!["cid", &scid, &scontent_id],
+        |row| row.get::<usize, i64>(0),
+    )?
+    .pop())
 }
 
 #[derive(Clone, Debug)]
@@ -460,7 +448,8 @@ pub fn get_all_documentation(ctx: &PageContext) -> Result<Vec<DocTreeContent>, E
     );
     let mut stmt = ctx.dbcon.prepare(&query)?;
     let mut vstmt = ctx.dbcon.prepare(VALUESELECT)?;
-    let doc_iter = stmt.query_map(
+    easy_query(
+        (&mut stmt, &query),
         rusqlite::params![ContentType::PAGE, SBSPageType::DOCUMENTATION],
         |row| {
             let id = row.get(0)?;
@@ -471,12 +460,7 @@ pub fn get_all_documentation(ctx: &PageContext) -> Result<Vec<DocTreeContent>, E
                 values: gather_values(&mut vstmt, id)?,
             })
         },
-    )?;
-
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
-
-    Ok(doc_iter.collect::<Result<Vec<DocTreeContent>, rusqlite::Error>>()?)
+    )
 }
 
 #[derive(Clone, Debug)]
@@ -515,26 +499,24 @@ pub fn get_searchall(ctx: &PageContext, search: &str) -> Result<Vec<SearchAllRes
         COMMONUSER
     );
     let mut stmt = ctx.dbcon.prepare(&query)?;
-    let user_iter = stmt.query_map([&rsearch], |row| {
-        Ok(SearchAllResult::User(SearchAllUser {
-            id: row.get(0)?,
-            username: row.get(1)?,
-            avatar: row.get(2)?,
-        }))
-    })?;
-    for u in user_iter {
-        result.push(u?);
-    }
-
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
+    result.extend(easy_query(
+        (&mut stmt, &query),
+        rusqlite::params![&rsearch],
+        |row| {
+            Ok(SearchAllResult::User(SearchAllUser {
+                id: row.get(0)?,
+                username: row.get(1)?,
+                avatar: row.get(2)?,
+            }))
+        },
+    )?);
 
     // And then, content. It's a bit silly, but for I think slightly better performance,
     // we query the set of all content that matches the keywords separately from querying
     // the actual keyword list. There are better ways to do this, but I'm lazy, sorry
     // future self?
     let query = format!(
-        "SELECT id,hash,name,COALESCE(literalType, '') AS lt FROM content WHERE {} AND literalType IN ({}) AND (name LIKE ? OR id IN (SELECT contentId FROM content_keywords WHERE `value` LIKE ?))",
+        "SELECT id,hash,name,COALESCE(literalType, '') FROM content WHERE {} AND literalType IN ({}) AND (name LIKE ? OR id IN (SELECT contentId FROM content_keywords WHERE `value` LIKE ?))",
         COMMONCONTENT,
         params_list(THREADTYPES.len())
     );
@@ -549,7 +531,7 @@ pub fn get_searchall(ctx: &PageContext, search: &str) -> Result<Vec<SearchAllRes
     let mut stmt = ctx.dbcon.prepare(&query)?;
     let mut vstmt = ctx.dbcon.prepare(VALUESELECT)?;
     let mut kstmt = ctx.dbcon.prepare(KEYWORDSELECT)?;
-    let content_iter = stmt.query_map(params.as_slice(), |row| {
+    result.extend(easy_query((&mut stmt, &query), params.as_slice(), |row| {
         let id: i64 = row.get(0)?;
         Ok(SearchAllResult::Content(SearchAllContent {
             id,
@@ -559,13 +541,7 @@ pub fn get_searchall(ctx: &PageContext, search: &str) -> Result<Vec<SearchAllRes
             values: gather_values(&mut vstmt, id)?,
             keywords: gather_keywords(&mut kstmt, id)?,
         }))
-    })?;
-    for c in content_iter {
-        result.push(c?);
-    }
-
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
+    })?);
 
     Ok(result)
 }
@@ -600,7 +576,7 @@ pub fn get_submission_categories(
     }
 
     let mut stmt = ctx.dbcon.prepare(&query)?;
-    let cat_iter = stmt.query_map(box_to_ref!(params), |row| {
+    easy_query((&mut stmt, &query), box_to_ref!(params), |row| {
         let cval: Option<String> = row.get(3)?;
         Ok(SubmissionCategory {
             id: row.get(0)?,
@@ -612,12 +588,7 @@ pub fn get_submission_categories(
                 String::new()
             },
         })
-    })?;
-
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
-
-    Ok(cat_iter.collect::<Result<Vec<SubmissionCategory>, rusqlite::Error>>()?)
+    })
 }
 
 #[derive(Clone, Debug)]
@@ -633,11 +604,11 @@ pub struct BrowseContent {
 }
 
 pub fn gather_browsecontent(
-    stmt: &mut rusqlite::Statement,
+    stmt: (&mut rusqlite::Statement, &str),
     vstmt: &mut Option<rusqlite::Statement>,
     params: &[&dyn rusqlite::ToSql],
 ) -> Result<Vec<BrowseContent>, Error> {
-    let browse_iter = stmt.query_map(params, |row| {
+    easy_query(stmt, params, |row| {
         let id: i64 = row.get(0)?;
         Ok(BrowseContent {
             id,
@@ -649,9 +620,7 @@ pub fn gather_browsecontent(
             create_user_id: row.get(6)?,
             values: maybe_gather_values(vstmt, id)?,
         })
-    })?;
-
-    return Ok(browse_iter.collect::<Result<Vec<BrowseContent>, rusqlite::Error>>()?);
+    })
 }
 
 pub fn get_browse(
@@ -737,10 +706,7 @@ pub fn get_browse(
     let mut stmt = ctx.dbcon.prepare(&query)?;
     let vstmt = ctx.dbcon.prepare(VALUESELECT)?;
 
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
-
-    gather_browsecontent(&mut stmt, &mut Some(vstmt), box_to_ref!(params))
+    gather_browsecontent((&mut stmt, &query), &mut Some(vstmt), box_to_ref!(params))
 }
 
 pub fn get_badges(ctx: &PageContext, uid: i64) -> Result<Vec<BrowseContent>, Error> {
@@ -751,12 +717,8 @@ pub fn get_badges(ctx: &PageContext, uid: i64) -> Result<Vec<BrowseContent>, Err
     );
 
     let mut stmt = ctx.dbcon.prepare(&query)?;
-
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
-
     gather_browsecontent(
-        &mut stmt,
+        (&mut stmt, &query),
         &mut None,
         rusqlite::params![&ContentType::FILE, &uid, &UserRelationType::ASSIGNCONTENT],
     )
@@ -770,29 +732,26 @@ pub struct QrPageData {
     pub qr_raw: Option<String>,
 }
 
-pub fn get_qrpage(ctx: &PageContext, hash: &str) -> Result<QrPageData, Error> {
+pub fn get_qrpage(ctx: &PageContext, hash: &str) -> Result<Option<QrPageData>, Error> {
     let query = format!("SELECT id,hash,name,(SELECT `text` FROM content cc WHERE {} AND cc.parentId=c.id AND cc.literalType = ?) FROM content AS c WHERE {} AND c.hash = ?",
         COMMONCONTENT,
         COMMONCONTENT,
     );
     let mut stmt = ctx.dbcon.prepare(&query)?;
-    let qr_iter = stmt.query_map(rusqlite::params![&PTCSYSTEM, &hash], |row| {
-        //let id: i64 = row.get(0)?;
-        Ok(QrPageData {
-            id: row.get(0)?,
-            hash: row.get(1)?,
-            name: row.get(2)?,
-            qr_raw: row.get(3)?,
-        })
-    })?;
-
-    #[cfg(feature = "querydump")]
-    println!("Query: {:?}", &query);
-
-    qr_iter
-        .collect::<Result<Vec<QrPageData>, rusqlite::Error>>()?
-        .pop()
-        .ok_or(Error::NotFound(String::from(hash)))
+    Ok(easy_query(
+        (&mut stmt, &query),
+        rusqlite::params![&PTCSYSTEM, &hash],
+        |row| {
+            //let id: i64 = row.get(0)?;
+            Ok(QrPageData {
+                id: row.get(0)?,
+                hash: row.get(1)?,
+                name: row.get(2)?,
+                qr_raw: row.get(3)?,
+            })
+        },
+    )?
+    .pop())
 }
 
 //pub fn get_
