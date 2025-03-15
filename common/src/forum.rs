@@ -9,12 +9,9 @@ use contentapi::*;
 
 //Not sure if we need values, but I NEED permissions to know if the thread is locked
 pub static THREADFIELDS : &str = "id,name,lastCommentId,literalType,contentType,hash,parentId,commentCount,createDate,createUserId,values,permissions,lastRevisionId,lastActionDate";
-//Need values to know the stickies
-// pub static CATEGORYFIELDS: &str = "id,hash,name,description,literalType,contentType";
 
 //Note: these are keys for the REQUESTS, not anything else!
 pub static THREADKEY: &str = "thread";
-//pub static CATEGORYKEY: &str = "category";
 pub static PREMESSAGEKEY: &str = "premessage";
 pub static PREMESSAGEINDEXKEY: &str = "premessage_index";
 

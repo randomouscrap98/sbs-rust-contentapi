@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use common::*;
-use common::prefab::get_fullpage_by_hash;
+//use common::prefab::get_fullpage_by_hash;
 use common::render::layout::*;
 use common::response::*;
 use flate2::write::ZlibEncoder;
@@ -28,11 +28,12 @@ pub struct PtcData {
     pub description: Option<String>
 }
 
-pub async fn get_render(mut context: PageContext, hash: &str, high_density: bool) -> Result<Response, Error>
+pub async fn get_render(context: PageContext, hash: &str, high_density: bool) -> Result<Response, Error>
 {
     //First, go lookup the page
-    let page = get_fullpage_by_hash(&mut context.api_context, hash).await?;
-    let qrlink = context.layout_data.links.qr_generator(&page.main);
+    let page = capi::get_qrpage(&context, hash)?;
+        //get_fullpage(&mut context.api_context, "hash", hash.into()).await?;
+    let qrlink = context.layout_data.links.qr_generator_unsafe(&page.hash);
 
     Ok(Response::Render(
         //Eventually, this'll be a real widget. Until then, render normal page
@@ -45,7 +46,7 @@ pub async fn get_render(mut context: PageContext, hash: &str, high_density: bool
             (context.layout_data.links.style("/forpage/qrwidget.css"))
             (context.layout_data.links.script("/forpage/qrwidget.js"))
             section {
-                h1 { a."flatlink" href=(context.layout_data.links.forum_thread(&page.main)) { (opt_s!(page.main.name)) } }
+                h1 { a."flatlink" href=(context.layout_data.links.forum_thread_unsafe(&page.hash)) { (page.name) } }
                 div."controls mediumseparate" {
                     @if high_density {
                         a href=(qrlink) { "Normal density" }
@@ -56,31 +57,26 @@ pub async fn get_render(mut context: PageContext, hash: &str, high_density: bool
                         a href={(qrlink)"?high_density=true"} { "High density" }
                     }
                 }
-                @if let Some(ptc_files) = page.ptc {
-                    @if let Some(ptc_data) = ptc_files.text {
-                        @let parsed_data = serde_json::de::from_str::<Vec<PtcData>>(&ptc_data)?;
-                        @for ptc_file in parsed_data {
-                            hr;
-                            h3 { (ptc_file.name) }
-                            @if let Some(ref description) = ptc_file.description {
-                                p { (description)}
-                            }
-                            @let qr_codes = generate_qr_svgs(ptc_file, if high_density { QrConfig::high_density() } else { QrConfig::default() })?; 
-                            div."qrcodes" {
-                                @for (i, qr) in qr_codes.iter().enumerate()
-                                {
-                                    div."qr" {
-                                        (PreEscaped(qr))
-                                        div."tracking" {
-                                            span { ({i + 1}) } " / " span { (qr_codes.len())}
-                                        }
+                @if let Some(ptc_data) = page.qr_raw {
+                    @let parsed_data = serde_json::de::from_str::<Vec<PtcData>>(&ptc_data)?;
+                    @for ptc_file in parsed_data {
+                        hr;
+                        h3 { (ptc_file.name) }
+                        @if let Some(ref description) = ptc_file.description {
+                            p { (description)}
+                        }
+                        @let qr_codes = generate_qr_svgs(ptc_file, if high_density { QrConfig::high_density() } else { QrConfig::default() })?; 
+                        div."qrcodes" {
+                            @for (i, qr) in qr_codes.iter().enumerate()
+                            {
+                                div."qr" {
+                                    (PreEscaped(qr))
+                                    div."tracking" {
+                                        span { ({i + 1}) } " / " span { (qr_codes.len())}
                                     }
                                 }
                             }
                         }
-                    }
-                    @else {
-                        p."error" { "Something went seriously wrong! No text in ptc content!" }
                     }
                 }
                 @else {

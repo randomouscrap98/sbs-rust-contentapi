@@ -736,3 +736,41 @@ pub fn get_badges(ctx: &PageContext, uid: i64) -> Result<Vec<BrowseContent>, Err
         rusqlite::params![&ContentType::FILE, &uid, &UserRelationType::ASSIGNCONTENT],
     )
 }
+
+#[derive(Clone, Debug)]
+pub struct QrPageData {
+    pub id: i64,
+    pub hash: String,
+    pub name: String,
+    pub qr_raw: Option<String>,
+    // pub description: String,
+    // pub literal_type: String,
+    // pub create_date: DateTime<Utc>,
+    // pub create_user_id: i64,
+    // pub values: HashMap<String, String>,
+}
+
+pub fn get_qrpage(ctx: &PageContext, hash: &str) -> Result<QrPageData, Error> {
+    let query = format!("SELECT id,hash,name,(SELECT `text` FROM content cc WHERE {} AND cc.parentId=c.id AND cc.literalType = ?) FROM content AS c WHERE {} AND c.hash = ?",
+        COMMONCONTENT,
+        COMMONCONTENT,
+    );
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let qr_iter = stmt.query_map(rusqlite::params![&PTCSYSTEM, &hash], |row| {
+        //let id: i64 = row.get(0)?;
+        Ok(QrPageData {
+            id: row.get(0)?,
+            hash: row.get(1)?,
+            name: row.get(2)?,
+            qr_raw: row.get(3)?,
+        })
+    })?;
+
+    #[cfg(feature = "querydump")]
+    println!("Query: {:?}", &query);
+
+    qr_iter
+        .collect::<Result<Vec<QrPageData>, rusqlite::Error>>()?
+        .pop()
+        .ok_or(Error::NotFound(String::from(hash)))
+}
