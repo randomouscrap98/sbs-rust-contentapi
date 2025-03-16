@@ -118,7 +118,6 @@ async fn render_threads(
 
     let threads = get_threads(
         &context,
-        None,
         Some(category.id),
         QueryLimit {
             limit: Some(per_page),

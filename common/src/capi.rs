@@ -304,36 +304,16 @@ pub struct ForumThread2 {
     pub values: HashMap<String, String>,
 }
 
-pub fn get_threads(
+pub fn gather_forum_threads(
+    query: &str,
     ctx: &PageContext,
-    tquery: Option<OldIdOrHash>,
-    category_id: Option<i64>,
-    limits: QueryLimit,
+    //stmt: (&mut rusqlite::Statement, &str),
+    //context:
+    params: &[&dyn rusqlite::ToSql],
 ) -> Result<Vec<ForumThread2>, Error> {
-    let mut query = format!(
-        "SELECT {},({}),({}) AS max_post FROM content t {} WHERE t.contentType = ? AND t.literalType IN ({})",
-        "t.id,t.hash,t.name,COALESCE(t.literalType,''),t.contentType,t.parentId,t.createDate,t.createUserId",
-        select_postcount("t.id"),
-        select_maxpost("t.id"),
-        join_common_content("t.id"),
-        params_list(THREADTYPES.len())
-    );
-    let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![Box::new(ContentType::PAGE)];
-    for t in THREADTYPES.iter() {
-        params.push(Box::new(*t));
-    }
-    if let Some(tq) = tquery {
-        tq.mod_query("t", "ftid", &mut query, &mut params);
-    }
-    if let Some(cid) = category_id {
-        query.push_str(" AND t.parentId = ?");
-        params.push(Box::new(cid));
-    }
-    query.push_str(" GROUP BY t.id ORDER BY max_post DESC");
-    limits.mod_query(&mut query, &mut params);
-    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let mut stmt = ctx.dbcon.prepare(query)?;
     let mut vstmt = ctx.dbcon.prepare(VALUESELECT)?;
-    easy_query((&mut stmt, &query), box_to_ref!(params), |row| {
+    easy_query((&mut stmt, query), params, |row| {
         let id = row.get(0)?;
         Ok(ForumThread2 {
             id,
@@ -349,6 +329,44 @@ pub fn get_threads(
             values: gather_values(&mut vstmt, id)?,
         })
     })
+}
+
+pub fn forum_theads_base_query() -> (String, Vec<Box<dyn rusqlite::ToSql>>) {
+    let query = format!(
+        "SELECT {},({}),({}) AS max_post FROM content t WHERE {} AND t.contentType = ? AND t.literalType IN ({})",
+        "t.id,t.hash,t.name,COALESCE(t.literalType,''),t.contentType,t.parentId,t.createDate,t.createUserId",
+        select_postcount("t.id"),
+        select_maxpost("t.id"),
+        COMMONCONTENT,
+        params_list(THREADTYPES.len())
+    );
+    let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![Box::new(ContentType::PAGE)];
+    for t in THREADTYPES.iter() {
+        params.push(Box::new(*t));
+    }
+    (query, params)
+}
+
+pub fn get_threads(
+    ctx: &PageContext,
+    category_id: Option<i64>,
+    limits: QueryLimit,
+) -> Result<Vec<ForumThread2>, Error> {
+    let (mut query, mut params) = forum_theads_base_query();
+    if let Some(cid) = category_id {
+        query.push_str(" AND t.parentId = ?");
+        params.push(Box::new(cid));
+    }
+    query.push_str(" ORDER BY max_post DESC");
+    limits.mod_query(&mut query, &mut params);
+    gather_forum_threads(&query, ctx, box_to_ref!(params))
+}
+
+pub fn get_thread_by_hash(ctx: &PageContext, hash: &str) -> Result<Option<ForumThread2>, Error> {
+    let (mut query, mut params) = forum_theads_base_query();
+    query.push_str(" AND t.hash = ?");
+    params.push(Box::new(hash));
+    Ok(gather_forum_threads(&query, ctx, box_to_ref!(params))?.pop())
 }
 
 // Get engagement for a particular content
