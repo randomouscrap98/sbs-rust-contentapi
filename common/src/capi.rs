@@ -7,10 +7,9 @@ use crate::response::*;
 
 pub static BASICCONTENTFIELDS: &str = "c.id,c.hash,c.name,c.text";
 pub static BROWSEFIELDS: &str =
-    "id,hash,name,COALESCE(description,''),COALESCE(literalType,''),createDate,createUserId";
+    "c.id,c.hash,c.name,COALESCE(c.description,''),COALESCE(c.literalType,''),c.createDate,c.createUserId";
 pub static USER2FIELDS: &str = "id,`type`,username,avatar,special,super,createDate";
-pub static THREADFIELDS2: &str =
-    "id,hash,name,COALESCE(literalType,''),contentType,parentId,createDate,createUserId";
+//pub static THREADFIELDS2: &str =
 pub static COMMONCONTENT: &str =
     " deleted = 0 AND id IN (SELECT contentId FROM content_permissions WHERE read=1 AND userId=0) ";
 pub static COMMONUSER: &str =
@@ -25,15 +24,15 @@ pub fn join_common_content(idname: &str) -> String {
         idname
     );
 }
-pub fn select_postcount(idname: &str) -> String {
-    return format!("SELECT COUNT(*) FROM messages WHERE contentId = {}", idname);
-}
-pub fn select_maxpost(idname: &str) -> String {
-    return format!(
-        "SELECT COALESCE(MAX(id),0) FROM messages WHERE contentId = {}",
-        idname
-    );
-}
+// pub fn select_postcount(idname: &str) -> String {
+//     return format!("SELECT COUNT(*) FROM messages WHERE contentId = {}", idname);
+// }
+// pub fn select_maxpost(idname: &str) -> String {
+//     return format!(
+//         "SELECT COALESCE(MAX(id),0) FROM messages WHERE contentId = {}",
+//         idname
+//     );
+// }
 
 pub fn easy_query<T, F>(
     stmt: (&mut rusqlite::Statement, &str),
@@ -222,7 +221,7 @@ pub fn get_forum_categories(
     cq: Option<IdOrHash>,
 ) -> Result<Vec<ForumCategory2>, Error> {
     let mut query = format!(
-        "SELECT {} FROM content c JOIN content t ON c.id=t.parentId {} WHERE c.literalType IN ({}) GROUP BY c.id",
+        "SELECT {} FROM content c JOIN content t ON c.id=t.parentId AND t.deleted = 0 {} WHERE c.literalType IN ({}) GROUP BY c.id",
         "c.id,c.hash,c.name,COALESCE(c.description,''),COALESCE(c.literalType,''),c.contentType,count(t.id)",
         join_common_content("c.id"),
         params_list(FORUMCATEGORYTYPES.len())
@@ -270,11 +269,9 @@ pub fn get_threads(
     limits: QueryLimit,
 ) -> Result<Vec<ForumThread2>, Error> {
     let mut query = format!(
-        "SELECT {},({}) AS post_count,({}) AS max_post FROM content t WHERE {} AND contentType = ? AND literalType IN ({})",
-        THREADFIELDS2,
-        select_postcount("t.id"),
-        select_maxpost("t.id"),
-        COMMONCONTENT,
+        "SELECT {} FROM content t JOIN messages m ON m.contentId=t.id {} WHERE t.contentType = ? AND t.literalType IN ({})",
+        "t.id,t.hash,t.name,COALESCE(t.literalType,''),t.contentType,t.parentId,t.createDate,t.createUserId,COUNT(m.id),COALESCE(MAX(m.id),0) AS max_post",
+        join_common_content("t.id"),
         params_list(THREADTYPES.len())
     );
     let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![Box::new(ContentType::PAGE)];
@@ -285,10 +282,10 @@ pub fn get_threads(
         params.push(tq.mod_query("t", &mut query));
     }
     if let Some(cid) = category_id {
-        query.push_str(" AND parentId = ?");
+        query.push_str(" AND t.parentId = ?");
         params.push(Box::new(cid));
     }
-    query.push_str(" ORDER BY max_post DESC");
+    query.push_str(" GROUP BY t.id ORDER BY max_post DESC");
     limits.mod_query(&mut query, &mut params);
     let mut stmt = ctx.dbcon.prepare(&query)?;
     let mut vstmt = ctx.dbcon.prepare(VALUESELECT)?;
@@ -558,8 +555,12 @@ pub fn get_submission_categories(
     ctx: &PageContext,
     ids: Option<Vec<i64>>,
 ) -> Result<Vec<SubmissionCategory>, Error> {
-    let mut query = format!("SELECT id,name,hash,(SELECT `value` FROM content_values WHERE contentId=c.id AND `key`=?) FROM content AS c WHERE {} AND contentType = ? AND literalType = ?",
-        COMMONCONTENT,
+    let mut query = format!(
+        r##"SELECT c.id,c.name,c.hash,v.`value`
+        FROM content c JOIN content_values v ON c.id=v.contentId {}
+        WHERE v.`key`=? AND c.contentType = ? AND c.literalType = ?"##,
+        //(SELECT `value` FROM content_values WHERE contentId=c.id AND `key`=?) FROM content AS c WHERE {} AND contentType = ? AND literalType = ?",
+        join_common_content("c.id"),
     );
 
     let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![
@@ -569,7 +570,7 @@ pub fn get_submission_categories(
     ];
 
     if let Some(ids) = ids {
-        query.push_str(&format!(" AND id IN ({})", params_list(ids.len())));
+        query.push_str(&format!(" AND c.id IN ({})", params_list(ids.len())));
         for id in ids {
             params.push(Box::new(id));
         }
@@ -630,9 +631,11 @@ pub fn get_browse(
 ) -> Result<Vec<BrowseContent>, Error> {
     let mut query = format!(
         r##"SELECT {}, (SELECT COUNT(*) FROM content_engagement WHERE contentId=c.id AND `type`=? AND engagement = ?) AS upvotes 
-        FROM content AS c WHERE {} AND contentType=? AND parentId IN
-            (SELECT id FROM content WHERE contentType = ? AND literalType = ?)"##,
-        BROWSEFIELDS, COMMONCONTENT,
+        FROM content c JOIN content p ON c.parentId=p.id {}
+        WHERE c.contentType=? AND p.contentType = ? AND p.literalType = ?"##,
+        //(SELECT id FROM content WHERE contentType = ? AND literalType = ?)"##,
+        BROWSEFIELDS,
+        join_common_content("c.id"),
     );
     let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![
         Box::new(VOTETYPE),
@@ -644,7 +647,7 @@ pub fn get_browse(
     if let Some(stext) = &search.search {
         params.push(Box::new(format!("%{}%", stext)));
         params.push(Box::new(format!("%{}%", stext)));
-        query.push_str(" AND (name LIKE ? OR c.id IN (SELECT contentId FROM content_keywords WHERE `value` LIKE ?))");
+        query.push_str(" AND (c.name LIKE ? OR c.id IN (SELECT contentId FROM content_keywords WHERE `value` LIKE ?))");
     }
 
     if let Some(category) = search.category {
@@ -657,14 +660,14 @@ pub fn get_browse(
     if let Some(user_id) = search.user_id {
         if user_id != 0 {
             params.push(Box::new(user_id));
-            query.push_str(" AND createUserId = ?");
+            query.push_str(" AND c.createUserId = ?");
         }
     }
 
     if let Some(subtype) = &search.subtype {
         if !subtype.is_empty() {
             params.push(Box::new(subtype.clone()));
-            query.push_str(" AND literalType = ?");
+            query.push_str(" AND c.literalType = ?");
             if subtype == SBSPageType::PROGRAM {
                 //MUST have a key unless the user specifies otherwise
                 if !search.removed {
@@ -684,10 +687,12 @@ pub fn get_browse(
         }
     }
 
+    query.push_str(" GROUP BY c.id");
+
     if search.order == "id" {
-        query.push_str(" ORDER BY id");
+        query.push_str(" ORDER BY c.id");
     } else if search.order == "id_desc" {
-        query.push_str(" ORDER BY id DESC");
+        query.push_str(" ORDER BY c.id DESC");
     } else if search.order == "upvotes" {
         query.push_str(" ORDER BY upvotes DESC");
     } else if search.order == "name" {
