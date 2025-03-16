@@ -19,17 +19,12 @@ pub async fn forum_get(
 ) -> StdResponse {
     //Order goes from most precise to least
     if let Some(fpid) = query.fpid {
-        pages::forum_thread::get_fpid_render(
-            context.page_context,
-            fpid,
-            context.global_state.config.default_display_posts,
-        )
-        .await
+        pages::forum_thread::get_fpid_render(context.page_context, fpid).await
     } else if let Some(ftid) = query.ftid {
         pages::forum_thread::get_ftid_render(
             context.page_context,
             ftid,
-            context.global_state.config.default_display_posts,
+            //context.global_state.config.default_display_posts,
             query.page,
         )
         .await

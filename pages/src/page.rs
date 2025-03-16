@@ -19,7 +19,7 @@ pub async fn get_pid_redirect(context: PageContext, query: PageQuery) -> Result<
 
     if let Some(cid) = query.cid {
         if let Some(msgid) = get_msgid_by_cid(&context, page_data.id, cid)? {
-            println!("FOUND MSGID: {}", msgid);
+            //println!("FOUND MSGID: {}", msgid);
             let url = context
                 .layout_data
                 .links

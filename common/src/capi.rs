@@ -473,6 +473,39 @@ pub fn get_msgid_by_cid(
     .pop())
 }
 
+pub fn get_msgid_contenthash_by_fpid(
+    ctx: &PageContext,
+    fpid: i64,
+) -> Result<Option<(i64, String)>, Error> {
+    let query = format!(
+        "SELECT m.id,(SELECT c.hash FROM content c {} WHERE m.contentId = c.id) FROM messages m JOIN message_values v ON m.id=v.messageId WHERE v.`key`=? AND v.`value`=?",
+        join_common_content("c.id")
+    );
+    let sfpid = format!("{}", fpid);
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    Ok(easy_query(
+        (&mut stmt, &query),
+        rusqlite::params!["fpid", &sfpid],
+        |row| Ok((row.get::<usize, i64>(0)?, row.get::<usize, String>(1)?)),
+    )?
+    .pop())
+}
+
+pub fn get_contenthash_by_ftid(ctx: &PageContext, ftid: i64) -> Result<Option<String>, Error> {
+    let query = format!(
+        "SELECT c.hash FROM content c {} JOIN content_values v ON v.contentId = c.id WHERE v.`key`=? AND v.`value`=?",
+        join_common_content("c.id")
+    );
+    let sftid = format!("{}", ftid);
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    Ok(easy_query(
+        (&mut stmt, &query),
+        rusqlite::params!["ftid", &sftid],
+        |row| row.get::<usize, String>(0),
+    )?
+    .pop())
+}
+
 #[derive(Clone, Debug)]
 pub struct DocTreeContent {
     pub id: i64,

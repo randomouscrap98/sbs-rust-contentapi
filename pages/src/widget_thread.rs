@@ -40,7 +40,7 @@ pub fn render(context: &mut PageContext, config: PostsConfig) -> String {
 pub async fn get_render(mut context: PageContext, query: ThreadQuery) -> Result<Response, Error> {
     if let Some(post_id) = query.reply {
         //This is a WASTEFUL query for rendering this simple widget, at some point make this better!
-        let pre_request = get_prepost_request(None, Some(post_id), None, None);
+        let pre_request = get_prepost_request(Some(post_id), None);
 
         //Go lookup all the 'initial' data, which everything except posts and users
         let pre_result = context.api_context.post_request(&pre_request).await?;

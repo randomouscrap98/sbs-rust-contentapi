@@ -126,26 +126,8 @@ async fn render_threads(
         },
     )?;
 
-    //let category_result = context.api_context.post_request(&category_request).await?;
-    // let categories_cleaned = CleanedPreCategory::from_many(cast_result_required::<Content>(
-    //     &category_result,
-    //     CATEGORYKEY,
-    // )?)?;
-    // let mut categories = build_categories_with_threads(
-    //     &mut context.api_context,
-    //     categories_cleaned,
-    //     per_page,
-    //     page * per_page,
-    // )
-    // .await?;
-
     // //TODO: Might want to add data to these RouteErrors?
-    // let category = categories
-    //     .pop()
-    //     .ok_or(Error::NotFound(String::from("Couldn't find that category")))?;
     let pagelist = get_pagelist(category.threads_count, per_page, page);
-
-    //let mut real_category = get_categories(&context, Some(category.id))?;
 
     let path = vec![
         ForumPathItem::root(),

@@ -154,9 +154,9 @@ pub fn posts_to_replytree(posts: &Vec<Message>) -> Vec<ReplyTree> {
 //"prepost" means the main query before finding the main data before gathering the posts. The post offset
 //often depends on the prepost
 pub fn get_prepost_request(
-    fpid: Option<i64>,
+    //fpid: Option<i64>,
     post_id: Option<i64>,
-    ftid: Option<i64>,
+    //ftid: Option<i64>,
     thread_hash: Option<String>,
 ) -> FullRequest {
     let mut request = FullRequest::new();
@@ -165,13 +165,13 @@ pub fn get_prepost_request(
     let mut post_query = String::from("!basiccomments()");
 
     //If you call it with both, it will limit to both (chances are that's not what you want)
-    if let Some(fpid) = fpid {
-        add_value!(request, "fpidkey", vec!["fpid"]);
-        add_value!(request, "fpid", vec![fpid]);
-        //Remember: valuein way faster! eventually add "valueis"
-        post_query.push_str(" and !valuein(@fpidkey, @fpid)");
-        post_limited = true;
-    }
+    // if let Some(fpid) = fpid {
+    //     add_value!(request, "fpidkey", vec!["fpid"]);
+    //     add_value!(request, "fpid", vec![fpid]);
+    //     //Remember: valuein way faster! eventually add "valueis"
+    //     post_query.push_str(" and !valuein(@fpidkey, @fpid)");
+    //     post_limited = true;
+    // }
     if let Some(post_id) = post_id {
         add_value!(request, "postId", post_id);
         post_query.push_str(" and id = @postId");
@@ -197,16 +197,16 @@ pub fn get_prepost_request(
     }
 
     //Take hashes over ftid if you gave both. Fail if neither are given
-    if let Some(ftid) = ftid {
-        add_value!(request, "ftidkey", vec!["ftid"]);
-        add_value!(request, "ftid", vec![ftid]);
-        thread_query = format!("{} and !valuein(@ftidkey, @ftid)", thread_query);
-    } else if let Some(thread_hash) = thread_hash {
+    // if let Some(ftid) = ftid {
+    //     add_value!(request, "ftidkey", vec!["ftid"]);
+    //     add_value!(request, "ftid", vec![ftid]);
+    //     thread_query = format!("{} and !valuein(@ftidkey, @ftid)", thread_query);
+    if let Some(thread_hash) = thread_hash {
         add_value!(request, "hash", thread_hash);
         thread_query = format!("{} and hash = @hash", thread_query);
     } else if !post_limited {
         //Is this acceptable? I mean you called it wrong...
-        panic!("You must pass at least one of either 'ftid' or 'thread_hash' or 'post_id' to get_prepost_request()!");
+        panic!("You must pass at least one of either 'thread_hash' or 'post_id' to get_prepost_request()!");
     }
 
     let mut thread_request = build_request!(

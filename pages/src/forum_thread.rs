@@ -1,5 +1,6 @@
 //use common::capi::get_forum_categories;
 use common::capi::get_forum_category_by_id;
+//use common::capi::get_msgid_contentid_by_fpid;
 use common::capi::get_submission_categories;
 //use common::capi::IdOrHash;
 use common::constants::SBSPageType;
@@ -162,7 +163,7 @@ pub async fn get_hash_render(
 ) -> Result<Response, Error> {
     render_thread(
         context,
-        get_prepost_request(None, None, None, Some(hash)),
+        get_prepost_request(None, Some(hash)),
         per_page,
         page,
     )
@@ -178,7 +179,7 @@ pub async fn get_hash_postid_render(
 ) -> Result<Response, Error> {
     render_thread(
         context,
-        get_prepost_request(None, Some(post_id), None, Some(hash)),
+        get_prepost_request(Some(post_id), Some(hash)),
         per_page,
         None,
     )
@@ -188,29 +189,46 @@ pub async fn get_hash_postid_render(
 pub async fn get_ftid_render(
     context: PageContext,
     ftid: i64,
-    per_page: i32,
+    //per_page: i32,
     page: Option<i32>,
 ) -> Result<Response, Error> {
-    render_thread(
-        context,
-        get_prepost_request(None, None, Some(ftid), None),
-        per_page,
-        page,
-    )
-    .await
+    if let Some(hash) = capi::get_contenthash_by_ftid(&context, ftid)? {
+        let mut url = context.layout_data.links.forum_thread_unsafe(&hash);
+        if let Some(page) = page {
+            url.push_str(&format!("?page={}", page))
+        }
+        Ok(Response::Redirect(url))
+    } else {
+        Err(Error::NotFound(format!("Can't find thread {}", ftid)))
+    }
+    // render_thread(
+    //     context,
+    //     get_prepost_request(None, Some(ftid), None),
+    //     per_page,
+    //     page,
+    // )
+    // .await
 }
 
 //Most old links may be to posts directly? idk
 pub async fn get_fpid_render(
     context: PageContext,
     fpid: i64,
-    per_page: i32,
+    //per_page: i32,
 ) -> Result<Response, Error> {
-    render_thread(
-        context,
-        get_prepost_request(Some(fpid), None, None, None),
-        per_page,
-        None,
-    )
-    .await
+    // These are redirects now, 2025
+    if let Some((msgid, hash)) = capi::get_msgid_contenthash_by_fpid(&context, fpid)? {
+        let url = context.layout_data.links.forum_post_unsafe(msgid, &hash);
+        Ok(Response::Redirect(url))
+    } else {
+        Err(Error::NotFound(format!("Can't find post {}", fpid)))
+    }
+
+    // render_thread(
+    //     context,
+    //     get_prepost_request(Some(fpid), None, None, None),
+    //     per_page,
+    //     None,
+    // )
+    // .await
 }
