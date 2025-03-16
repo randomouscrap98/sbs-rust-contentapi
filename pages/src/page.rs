@@ -1,7 +1,8 @@
-use common::response::*;
+use common::capi::get_msgid_by_cid;
 use common::*;
-use contentapi::conversion::*;
-use contentapi::*;
+use common::{capi::get_basic_by_pid, response::*};
+//use contentapi::conversion::*;
+//use contentapi::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, Default)]
@@ -13,42 +14,23 @@ pub struct PageQuery {
 
 //https://old.smilebasicsource.com/page?pid=1497&cid=16922#comment_16922
 pub async fn get_pid_redirect(context: PageContext, query: PageQuery) -> Result<Response, Error> {
-    let mut request = FullRequest::new();
-    add_value!(request, "pidkey", vec!["pid"]);
-    add_value!(request, "pid", vec![query.pid]);
-
-    //Basically: go look for the content that has the given pid
-    let pid_request = build_request!(
-        RequestType::content,
-        String::from("id,hash,values"),
-        format!("!valuein(@pidkey, @pid)")
-    );
-    request.requests.push(pid_request);
-
-    if let Some(cid) = query.cid {
-        add_value!(request, "cidkey", vec!["cid"]);
-        add_value!(request, "cid", vec![cid]);
-        let cid_request = build_request!(
-            RequestType::message,
-            String::from("id,values,contentId"),
-            format!("!valuein(@cidkey, @cid)")
-        );
-        request.requests.push(cid_request);
-    }
-
-    let result = context.api_context.post_request(&request).await?;
-    let mut pages = cast_result_required::<Content>(&result, "content")?;
-    let mut messages = cast_result_safe::<Message>(&result, "message")?;
-
-    let page = pages
-        .pop()
+    let page_data = get_basic_by_pid(&context, query.pid)?
         .ok_or(Error::NotFound(String::from("Could not find page!")))?;
 
-    let mut url = context.layout_data.links.forum_thread(&page);
-
-    if let Some(message) = messages.pop() {
-        url = context.layout_data.links.forum_post(&message, &page);
+    if let Some(cid) = query.cid {
+        if let Some(msgid) = get_msgid_by_cid(&context, page_data.id, cid)? {
+            println!("FOUND MSGID: {}", msgid);
+            let url = context
+                .layout_data
+                .links
+                .forum_post_unsafe(msgid, &page_data.hash);
+            return Ok(Response::Redirect(url));
+        }
     }
 
-    Ok(Response::Redirect(url))
+    let url = context
+        .layout_data
+        .links
+        .forum_thread_unsafe(&page_data.hash);
+    return Ok(Response::Redirect(url));
 }

@@ -104,7 +104,7 @@ pub fn thread_item(links: &LinkConfig, thread: &ForumThread2) -> Markup {
 
 async fn render_threads(
     context: PageContext,
-    idhash: Option<IdOrHash>,
+    idhash: Option<OldIdOrHash>,
     per_page: i32,
     page: Option<i32>,
 ) -> Result<Response, Error> {
@@ -166,7 +166,7 @@ pub async fn get_hash_render(
     per_page: i32,
     page: Option<i32>,
 ) -> Result<Response, Error> {
-    render_threads(context, Some(IdOrHash::Hash(hash)), per_page, page).await
+    render_threads(context, Some(OldIdOrHash::Hash(hash)), per_page, page).await
 }
 
 pub async fn get_fcid_render(
@@ -175,5 +175,5 @@ pub async fn get_fcid_render(
     per_page: i32,
     page: Option<i32>,
 ) -> Result<Response, Error> {
-    render_threads(context, Some(IdOrHash::Id(fcid)), per_page, page).await
+    render_threads(context, Some(OldIdOrHash::Id(fcid)), per_page, page).await
 }

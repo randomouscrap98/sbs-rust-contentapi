@@ -32,5 +32,8 @@ contentapi = { path = "contentapi", features = [ "postdump" ] }
 common = { path = "common"}
 pages = { path = "pages" }
 
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = "0.5.4"
+
 [features]
 perf = ["bbscope/perf"]

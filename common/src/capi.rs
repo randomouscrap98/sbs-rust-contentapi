@@ -5,6 +5,8 @@ use super::*;
 use crate::constants::*;
 use crate::response::*;
 
+pub static FORUMCATEGORYFIELDS: &str =
+    "c.id,c.hash,c.name,COALESCE(c.description,''),COALESCE(c.literalType,''),c.contentType";
 pub static BASICCONTENTFIELDS: &str = "c.id,c.hash,c.name,c.text";
 pub static BROWSEFIELDS: &str =
     "c.id,c.hash,c.name,COALESCE(c.description,''),COALESCE(c.literalType,''),c.createDate,c.createUserId";
@@ -132,25 +134,31 @@ impl QueryLimit {
 }
 
 #[derive(Debug, Clone)]
-pub enum IdOrHash {
+/// For SPECIFICALLY the old id system, used for ftid, fcid, fpid, etc
+pub enum OldIdOrHash {
     Id(i64),
     Hash(String),
 }
 
-impl IdOrHash {
+impl OldIdOrHash {
     pub fn mod_query(
         &self,
         table_name: &str,
+        key_name: &'static str,
         query: &mut String,
-    ) -> Box<dyn rusqlite::types::ToSql> {
+        params: &mut Vec<Box<dyn rusqlite::ToSql>>,
+    ) {
         match self {
-            IdOrHash::Id(fcid) => {
-                query.push_str(&format!(" AND {}.id = ?", table_name));
-                Box::new(*fcid)
+            OldIdOrHash::Id(id) => {
+                // I'm NOT SURE why exists is faster, since the inner query should only return one
+                // value but the outer query has loads of values... hmmm
+                query.push_str(&format!(" AND EXISTS (SELECT id FROM content_values WHERE `key`=? AND `value`=? AND contentId={}.id)", table_name));
+                params.push(Box::new(key_name));
+                params.push(Box::new(*id));
             }
-            IdOrHash::Hash(hash) => {
+            OldIdOrHash::Hash(hash) => {
                 query.push_str(&format!(" AND {}.hash = ?", table_name));
-                Box::new(hash.clone())
+                params.push(Box::new(hash.clone()));
             }
         }
     }
@@ -225,26 +233,11 @@ pub struct ForumCategory2 {
     pub threads_count: i32,
 }
 
-pub fn get_forum_categories(
-    ctx: &PageContext,
-    cq: Option<IdOrHash>,
+pub fn gather_forum_categories(
+    stmt: (&mut rusqlite::Statement, &str),
+    params: &[&dyn rusqlite::ToSql],
 ) -> Result<Vec<ForumCategory2>, Error> {
-    let mut query = format!(
-        "SELECT {},({}) FROM content c {} WHERE c.literalType IN ({}) GROUP BY c.id",
-        "c.id,c.hash,c.name,COALESCE(c.description,''),COALESCE(c.literalType,''),c.contentType",
-        select_childcount("c.id"),
-        join_common_content("c.id"),
-        params_list(FORUMCATEGORYTYPES.len())
-    );
-    let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![];
-    for t in FORUMCATEGORYTYPES.iter() {
-        params.push(Box::new(*t));
-    }
-    if let Some(cq) = cq {
-        params.push(cq.mod_query("c", &mut query));
-    }
-    let mut stmt = ctx.dbcon.prepare(&query)?;
-    easy_query((&mut stmt, &query), box_to_ref!(params), |row| {
+    easy_query(stmt, params, |row| {
         Ok(ForumCategory2 {
             id: row.get(0)?,
             hash: row.get(1)?,
@@ -255,6 +248,45 @@ pub fn get_forum_categories(
             threads_count: row.get(6)?,
         })
     })
+}
+
+pub fn forum_categories_base_query() -> (String, Vec<Box<dyn rusqlite::ToSql>>) {
+    let query = format!(
+        "SELECT {},({}) FROM content c WHERE {} AND c.literalType IN ({})",
+        FORUMCATEGORYFIELDS,
+        select_childcount("c.id"),
+        COMMONCONTENT,
+        params_list(FORUMCATEGORYTYPES.len())
+    );
+    let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![];
+    for t in FORUMCATEGORYTYPES.iter() {
+        params.push(Box::new(*t));
+    }
+    (query, params)
+}
+
+pub fn get_forum_categories(
+    ctx: &PageContext,
+    cq: Option<OldIdOrHash>,
+) -> Result<Vec<ForumCategory2>, Error> {
+    let (mut query, mut params) = forum_categories_base_query();
+    if let Some(cq) = cq {
+        cq.mod_query("c", "fcid", &mut query, &mut params);
+    }
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    gather_forum_categories((&mut stmt, &query), box_to_ref!(params))
+}
+
+pub fn get_forum_category_by_id(
+    ctx: &PageContext,
+    id: i64,
+) -> Result<Option<ForumCategory2>, Error> {
+    let (mut query, mut params) = forum_categories_base_query();
+    query.push_str(" AND c.id = ?");
+    params.push(Box::new(id));
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let mut result = gather_forum_categories((&mut stmt, &query), box_to_ref!(params))?;
+    Ok(result.pop())
 }
 
 #[derive(Clone, Debug)]
@@ -274,7 +306,7 @@ pub struct ForumThread2 {
 
 pub fn get_threads(
     ctx: &PageContext,
-    tquery: Option<IdOrHash>,
+    tquery: Option<OldIdOrHash>,
     category_id: Option<i64>,
     limits: QueryLimit,
 ) -> Result<Vec<ForumThread2>, Error> {
@@ -291,7 +323,7 @@ pub fn get_threads(
         params.push(Box::new(*t));
     }
     if let Some(tq) = tquery {
-        params.push(tq.mod_query("t", &mut query));
+        tq.mod_query("t", "ftid", &mut query, &mut params);
     }
     if let Some(cid) = category_id {
         query.push_str(" AND t.parentId = ?");
@@ -428,7 +460,7 @@ pub fn get_msgid_by_cid(
     cid: i64,
 ) -> Result<Option<i64>, Error> {
     let query = format!(
-        "SELECT messageId FROM message_values WHERE `key`=? AND `value`=? AND messageId IN (SELECT id FROM messages WHERE contentId = ?)",
+        "SELECT m.id FROM messages m JOIN message_values v ON m.id=v.messageId WHERE v.`key`=? AND v.`value`=? AND m.contentId = ?",
     );
     let scid = format!("{}", cid);
     let scontent_id = format!("{}", content_id);
@@ -582,6 +614,12 @@ pub fn get_submission_categories(
     ];
 
     if let Some(ids) = ids {
+        // Bypass if no ids
+        if ids.len() == 0 {
+            #[cfg(feature = "querydump")]
+            println!("Skipping category query: no ids");
+            return Ok(Vec::new());
+        }
         query.push_str(&format!(" AND c.id IN ({})", params_list(ids.len())));
         for id in ids {
             params.push(Box::new(id));
@@ -589,7 +627,7 @@ pub fn get_submission_categories(
     }
 
     let mut stmt = ctx.dbcon.prepare(&query)?;
-    easy_query((&mut stmt, &query), box_to_ref!(params), |row| {
+    return easy_query((&mut stmt, &query), box_to_ref!(params), |row| {
         let cval: Option<String> = row.get(3)?;
         Ok(SubmissionCategory {
             id: row.get(0)?,
@@ -601,7 +639,7 @@ pub fn get_submission_categories(
                 String::new()
             },
         })
-    })
+    });
 }
 
 #[derive(Clone, Debug)]

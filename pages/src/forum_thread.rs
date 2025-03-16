@@ -1,6 +1,7 @@
-use common::capi::get_forum_categories;
+//use common::capi::get_forum_categories;
+use common::capi::get_forum_category_by_id;
 use common::capi::get_submission_categories;
-use common::capi::IdOrHash;
+//use common::capi::IdOrHash;
 use common::constants::SBSPageType;
 use common::forum::*;
 use common::pagination::*;
@@ -79,7 +80,6 @@ async fn render_thread(
     let pre_result = context.api_context.post_request(&pre_request).await?;
 
     //Pull out and parse all that stupid data. It's fun using strongly typed languages!! maybe...
-    // let mut categories_cleaned = CleanedPreCategory::from_many(cast_result_required::<Content>(&pre_result, CATEGORYKEY)?)?;
     let mut threads_raw = cast_result_required::<Content>(&pre_result, THREADKEY)?;
     let selected_post = cast_result_safe::<Message>(&pre_result, PREMESSAGEKEY)?.pop();
     if let Some(message_index) =
@@ -100,12 +100,8 @@ async fn render_thread(
         .pop()
         .ok_or(Error::NotFound(String::from("Could not find thread!")))?;
 
-    let category = get_forum_categories(
-        &context,
-        Some(IdOrHash::Id(thread.parentId.unwrap_or_default())),
-    )?
-    .pop()
-    .ok_or(Error::NotFound(String::from("Could not find category!")))?;
+    let category = get_forum_category_by_id(&context, thread.parentId.unwrap_or_default())?
+        .ok_or(Error::NotFound(String::from("Could not find category!")))?;
 
     //Also I need some fields to exist.
     let thread_id = thread.id.ok_or(Error::Other(String::from(
