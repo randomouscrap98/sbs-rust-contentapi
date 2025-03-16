@@ -24,15 +24,24 @@ pub fn join_common_content(idname: &str) -> String {
         idname
     );
 }
-// pub fn select_postcount(idname: &str) -> String {
-//     return format!("SELECT COUNT(*) FROM messages WHERE contentId = {}", idname);
-// }
-// pub fn select_maxpost(idname: &str) -> String {
-//     return format!(
-//         "SELECT COALESCE(MAX(id),0) FROM messages WHERE contentId = {}",
-//         idname
-//     );
-// }
+pub fn select_childcount(idname: &str) -> String {
+    return format!(
+        "SELECT COUNT(*) FROM content WHERE {} AND parentId = {}",
+        COMMONCONTENT, idname
+    );
+}
+pub fn select_postcount(idname: &str) -> String {
+    return format!(
+        "SELECT COUNT(*) FROM messages WHERE contentId = {} AND deleted=0",
+        idname
+    );
+}
+pub fn select_maxpost(idname: &str) -> String {
+    return format!(
+        "SELECT COALESCE(MAX(id),0) FROM messages WHERE contentId = {} AND deleted=0",
+        idname
+    );
+}
 
 pub fn easy_query<T, F>(
     stmt: (&mut rusqlite::Statement, &str),
@@ -221,8 +230,9 @@ pub fn get_forum_categories(
     cq: Option<IdOrHash>,
 ) -> Result<Vec<ForumCategory2>, Error> {
     let mut query = format!(
-        "SELECT {} FROM content c JOIN content t ON c.id=t.parentId AND t.deleted = 0 {} WHERE c.literalType IN ({}) GROUP BY c.id",
-        "c.id,c.hash,c.name,COALESCE(c.description,''),COALESCE(c.literalType,''),c.contentType,count(t.id)",
+        "SELECT {},({}) FROM content c {} WHERE c.literalType IN ({}) GROUP BY c.id",
+        "c.id,c.hash,c.name,COALESCE(c.description,''),COALESCE(c.literalType,''),c.contentType",
+        select_childcount("c.id"),
         join_common_content("c.id"),
         params_list(FORUMCATEGORYTYPES.len())
     );
@@ -269,8 +279,10 @@ pub fn get_threads(
     limits: QueryLimit,
 ) -> Result<Vec<ForumThread2>, Error> {
     let mut query = format!(
-        "SELECT {} FROM content t JOIN messages m ON m.contentId=t.id {} WHERE t.contentType = ? AND t.literalType IN ({})",
-        "t.id,t.hash,t.name,COALESCE(t.literalType,''),t.contentType,t.parentId,t.createDate,t.createUserId,COUNT(m.id),COALESCE(MAX(m.id),0) AS max_post",
+        "SELECT {},({}),({}) AS max_post FROM content t {} WHERE t.contentType = ? AND t.literalType IN ({})",
+        "t.id,t.hash,t.name,COALESCE(t.literalType,''),t.contentType,t.parentId,t.createDate,t.createUserId",
+        select_postcount("t.id"),
+        select_maxpost("t.id"),
         join_common_content("t.id"),
         params_list(THREADTYPES.len())
     );
@@ -630,10 +642,9 @@ pub fn get_browse(
     limits: QueryLimit,
 ) -> Result<Vec<BrowseContent>, Error> {
     let mut query = format!(
-        r##"SELECT {}, (SELECT COUNT(*) FROM content_engagement WHERE contentId=c.id AND `type`=? AND engagement = ?) AS upvotes 
+        r##"SELECT {},(SELECT COUNT(*) FROM content_engagement e WHERE contentId=c.id AND e.`type`=? AND e.`engagement`=?) AS upvotes
         FROM content c JOIN content p ON c.parentId=p.id {}
         WHERE c.contentType=? AND p.contentType = ? AND p.literalType = ?"##,
-        //(SELECT id FROM content WHERE contentType = ? AND literalType = ?)"##,
         BROWSEFIELDS,
         join_common_content("c.id"),
     );
