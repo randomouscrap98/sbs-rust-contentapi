@@ -1,10 +1,10 @@
-pub mod layout;
 pub mod forum;
+pub mod layout;
 pub mod submissions;
 
 use chrono::*;
 
-use crate::constants::SBSMARKUPS;
+use crate::{capi::ForumThread2, constants::SBSMARKUPS};
 
 use super::*;
 
@@ -15,9 +15,7 @@ use super::*;
 pub fn timeago_future(time: &chrono::DateTime<chrono::Utc>) -> String {
     let duration = time.signed_duration_since(chrono::Utc::now());
     match duration.to_std() {
-        Ok(stdur) => {
-            timeago::format(stdur, timeago::Style::HUMAN).replace(" ago", "")
-        },
+        Ok(stdur) => timeago::format(stdur, timeago::Style::HUMAN).replace(" ago", ""),
         Err(error) => {
             format!("PARSE-ERR({}):{}", duration, error)
         }
@@ -27,9 +25,7 @@ pub fn timeago_future(time: &chrono::DateTime<chrono::Utc>) -> String {
 pub fn timeago(time: &chrono::DateTime<chrono::Utc>) -> String {
     let duration = chrono::Utc::now().signed_duration_since(*time);
     match duration.to_std() {
-        Ok(stdur) => {
-            timeago::format(stdur, timeago::Style::HUMAN)
-        },
+        Ok(stdur) => timeago::format(stdur, timeago::Style::HUMAN),
         Err(error) => {
             format!("PARSE-ERR({}):{}", duration, error)
         }
@@ -39,20 +35,25 @@ pub fn timeago(time: &chrono::DateTime<chrono::Utc>) -> String {
 pub fn timeago_o(time: &Option<chrono::DateTime<chrono::Utc>>) -> String {
     if let Some(time) = time {
         timeago(time)
-    }
-    else {
+    } else {
         String::from("???")
     }
 }
 
 pub fn b(boolean: bool) -> &'static str {
-    if boolean { "true" }
-    else { "false" }
+    if boolean {
+        "true"
+    } else {
+        "false"
+    }
 }
 
 pub fn d(date: &Option<DateTime<Utc>>) -> String {
-    if let Some(date) = date { dd(date) }
-    else { String::from("NODATE") }
+    if let Some(date) = date {
+        dd(date)
+    } else {
+        String::from("NODATE")
+    }
 }
 
 pub fn dd(date: &DateTime<Utc>) -> String {
@@ -60,22 +61,23 @@ pub fn dd(date: &DateTime<Utc>) -> String {
 }
 
 pub fn i(int: &Option<i64>) -> String {
-    if let Some(int) = int { format!("{}", int) }
-    else { String::from("??") }
+    if let Some(int) = int {
+        format!("{}", int)
+    } else {
+        String::from("??")
+    }
 }
-
 
 // ------------------
 // - SPECIAL FORMAT -
 // ------------------
 
-pub const SHORTDESCRIPTION : usize = 200;
+pub const SHORTDESCRIPTION: usize = 200;
 
 pub fn short_post(message: &Message) -> String {
     if let Some(ref text) = message.text {
         text.chars().take(SHORTDESCRIPTION).collect::<String>()
-    }
-    else {
+    } else {
         String::from("")
     }
 }
@@ -94,12 +96,27 @@ pub fn short_description(thread: &Content) -> String {
     }
     return String::from("");
 }
+pub fn short_description2(thread: &ForumThread2) -> String {
+    if !thread.description.is_empty() {
+        return thread.description.clone();
+    }
+    if thread.literal_type != constants::SBSPageType::FORUMTHREAD {
+        //Get some short portion of the body, even if it's bad? We'll fix bbcode stuff later
+        if !thread.text.is_empty() {
+            return thread
+                .text
+                .chars()
+                .take(SHORTDESCRIPTION)
+                .collect::<String>();
+        }
+    }
+    return String::from("");
+}
 
 pub fn short_description_opt(thread: Option<&Content>) -> String {
     if let Some(thread) = thread {
         short_description(thread)
-    }
-    else {
+    } else {
         String::from("")
     }
 }
@@ -108,8 +125,7 @@ pub fn short_description_opt(thread: Option<&Content>) -> String {
 // *    FRAGMENTS      *
 // ---------------------
 
-impl LinkConfig 
-{
+impl LinkConfig {
     pub fn style(&self, link: &str) -> Markup {
         html! {
             link rel="stylesheet" href={(self.static_root) (link) "?" (self.cache_bust) };
@@ -123,7 +139,7 @@ impl LinkConfig
     }
 
     // Produce some metadata for the header that any page can use (even widgets)
-    pub fn basic_meta(&self) -> Markup{
+    pub fn basic_meta(&self) -> Markup {
         html! {
             //Can I have comments in html markup?
             meta charset="UTF-8";
@@ -131,7 +147,7 @@ impl LinkConfig
             meta name="viewport" content="width=device-width";
             //[] is for optional, {} is for concatenate values
             link rel="icon" type="image/svg+xml" sizes="any" href={(self.resource_root) "/favicon.svg"};
-        } 
+        }
     }
 }
 
@@ -147,14 +163,13 @@ pub fn errorlist(errors: Option<Vec<String>>) -> Markup {
     }
 }
 
-
 #[derive(Default)]
 pub struct PostTextboxConfig {
     pub textbox_id: Option<String>,
     pub textbox_name: Option<String>,
     pub textbox_value: Option<String>,
     pub textbox_label: Option<String>,
-    pub markup_options: Option<Vec<(String,String)>>,
+    pub markup_options: Option<Vec<(String, String)>>,
     pub markup_id: Option<String>,
     pub markup_name: Option<String>,
     pub markup_value: Option<String>,
@@ -174,9 +189,20 @@ impl PostTextboxConfig {
         result
     }
     /// Create a config for a basic textbox with auto-generated ids WITH a markup selector (using all available markup)
-    pub fn basic_with_markup(label: Option<&str>, name: &str, value: &str, mname: &str, mvalue: Option<&str>) -> Self {
+    pub fn basic_with_markup(
+        label: Option<&str>,
+        name: &str,
+        value: &str,
+        mname: &str,
+        mvalue: Option<&str>,
+    ) -> Self {
         let mut result = Self::basic(label, name, value);
-        result.markup_options = Some(SBSMARKUPS.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect());
+        result.markup_options = Some(
+            SBSMARKUPS
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
+        );
         result.markup_id = Some(random_id("markupselect"));
         result.markup_name = Some(mname.to_string());
         result.markup_value = mvalue.and_then(|v| Some(v.to_string())); //Some(mvalue.to_string());
@@ -198,8 +224,8 @@ pub fn post_textbox(config: PostTextboxConfig) -> Markup //id: Option<&str>, nam
             @if let Some(ref tlabel) = config.textbox_label {
                 label for=[&config.textbox_id] { (tlabel) }
             }
-            textarea id=[&config.textbox_id] type="text" name=(opt_s!(config.textbox_name)) required 
-                data-text placeholder=r##"[b]bold[/b], [i]italic[/i], 
+            textarea id=[&config.textbox_id] type="text" name=(opt_s!(config.textbox_name)) required
+                data-text placeholder=r##"[b]bold[/b], [i]italic[/i],
 [u]underline[/u], [s]strikethrough[/s], 
 [spoiler=text]hidden[/spoiler], [quote=user]text[/quote]
     "##         { (opt_s!(config.textbox_value)) }
@@ -224,3 +250,4 @@ pub fn post_textbox(config: PostTextboxConfig) -> Markup //id: Option<&str>, nam
         }
     }
 }
+

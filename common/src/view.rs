@@ -1,12 +1,31 @@
 use std::collections::HashMap;
 
 use crate::capi;
+//use crate::common::view::*;
 use crate::{capi::DocTreeContent, constants::*};
 use contentapi::*;
 
+// use serde::Deserialize;
 use serde_json;
 
 // This is for NON-API basic data conversion / organization related to views.
+//
+#[macro_export]
+macro_rules! get_value_safe {
+    ($values:expr, $key:expr, $T:ty) => {{
+        if let Some(v) = $values.get($key) {
+            match serde_json::from_str::<$T>(v) {
+                Ok(v) => Some(v),
+                Err(error) => {
+                    println!("Couldn't parse '{}' from content values: {}", $key, error);
+                    None
+                }
+            }
+        } else {
+            None
+        }
+    }};
+}
 
 /// Get the list of category ids this content is tagged under
 pub fn get_tagged_categories(content: &Content) -> Vec<i64> {
@@ -18,6 +37,19 @@ pub fn get_tagged_categories(content: &Content) -> Vec<i64> {
                 if let Ok(category) = (&key[CATEGORYPREFIX.len()..]).parse::<i64>() {
                     result.push(category)
                 }
+            }
+        }
+    }
+
+    result
+}
+pub fn get_tagged_categories2(values: &HashMap<String, String>) -> Vec<i64> {
+    let mut result: Vec<i64> = Vec::new();
+
+    for (key, _value) in values {
+        if key.starts_with(CATEGORYPREFIX) {
+            if let Ok(category) = (&key[CATEGORYPREFIX.len()..]).parse::<i64>() {
+                result.push(category)
             }
         }
     }
@@ -41,6 +73,16 @@ pub fn get_thumbnail_hash(content: &Content) -> Option<String> {
             if let Some(image) = images.get(0).and_then(|i| i.as_str()) {
                 return Some(image.to_string());
             }
+        }
+    }
+
+    None
+}
+pub fn get_thumbnail_hash2(content: &capi::ForumThread2) -> Option<String> {
+    if let Some(ref images) = get_value_safe!(&content.values, SBSValue::IMAGES, Vec<String>) {
+        //values.get(SBSValue::IMAGES).and_then(|k| k.as_array()) {
+        if let Some(image) = images.get(0) {
+            return Some(image.clone());
         }
     }
 
@@ -77,6 +119,23 @@ pub fn get_systems2(values: &HashMap<String, String>) -> Vec<String> {
         Vec::new()
     }
 }
+
+// pub fn get_value_safe<'a, T>(values: &HashMap<String, String>, key: &str) -> Option<T>
+// where
+//     T: Deserialize<'a>,
+// {
+//     if let Some(v) = values.get(key) {
+//         match serde_json::from_str::<T>(v) {
+//             Ok(v) => Some(v),
+//             Err(error) => {
+//                 println!("Couldn't parse '{}' from content values: {}", key, error);
+//                 None
+//             }
+//         }
+//     } else {
+//         None
+//     }
+// }
 
 #[derive(Debug)]
 pub struct Category {

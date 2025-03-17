@@ -1,3 +1,5 @@
+//use common::capi::get_thread_by_hash;
+use common::capi::get_thread_by_msgid;
 use common::*;
 
 use common::forms::*;
@@ -12,7 +14,7 @@ use maud::*;
 
 /// Rendering for the actual widget. The
 pub fn render(context: &mut PageContext, config: PostsConfig) -> String {
-    let posts = render_posts(context, config);
+    let posts = render_mainview(context, config);
     basic_skeleton(
         &context.layout_data,
         html! {
@@ -39,19 +41,22 @@ pub fn render(context: &mut PageContext, config: PostsConfig) -> String {
 
 pub async fn get_render(mut context: PageContext, query: ThreadQuery) -> Result<Response, Error> {
     if let Some(post_id) = query.reply {
+        let thread = get_thread_by_msgid(&context, post_id)?
+            .ok_or(Error::NotFound(String::from("Could not find thread!")))?;
+
         //This is a WASTEFUL query for rendering this simple widget, at some point make this better!
-        let pre_request = get_prepost_request(Some(post_id), None);
+        //let pre_request = get_prepost_request(Some(post_id), None);
 
         //Go lookup all the 'initial' data, which everything except posts and users
-        let pre_result = context.api_context.post_request(&pre_request).await?;
+        //let pre_result = context.api_context.post_request(&pre_request).await?;
 
         //Pull out and parse all that stupid data. It's fun using strongly typed languages!! maybe...
-        let mut threads_raw = cast_result_required::<Content>(&pre_result, THREADKEY)?;
+        //let mut threads_raw = cast_result_required::<Content>(&pre_result, THREADKEY)?;
 
-        //There must be one category, and one thread, otherwise return 404
-        let thread = threads_raw
-            .pop()
-            .ok_or(Error::NotFound(String::from("Could not find thread!")))?;
+        // //There must be one category, and one thread, otherwise return 404
+        // let thread = threads_raw
+        //     .pop()
+        //     .ok_or(Error::NotFound(String::from("Could not find thread!")))?;
 
         //OK NOW you can go lookup the posts, since we are sure about where in the postlist we want
         let after_request = get_reply_request(post_id);
@@ -65,7 +70,8 @@ pub async fn get_render(mut context: PageContext, query: ThreadQuery) -> Result<
         Ok(Response::Render(render(
             &mut context,
             PostsConfig::reply_mode(
-                ForumThread::from_content(thread, &messages_raw)?,
+                thread,
+                messages_raw,
                 map_messages(related_raw),
                 map_users(users_raw),
                 query.selected,

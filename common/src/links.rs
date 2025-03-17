@@ -27,6 +27,9 @@ impl LinkConfig {
     pub fn votewidget(&self, content: &Content) -> String {
         format!("{}/widget/votes/{}", self.http_root, i(&content.id))
     }
+    pub fn votewidget_unsafe(&self, id: i64) -> String {
+        format!("{}/widget/votes/{}", self.http_root, id)
+    }
 
     pub fn qr_generator(&self, content: &Content) -> String {
         format!("{}/widget/qr/{}", self.http_root, opt_s!(content.hash))

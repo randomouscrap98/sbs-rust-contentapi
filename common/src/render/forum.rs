@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use contentapi::*;
 use maud::*;
-use serde_json::Value;
+// use serde_json::Value;
 
 use crate::capi::DocTreeContent;
 use crate::capi::ForumCategory2;
@@ -12,6 +12,7 @@ use crate::forms::*;
 use crate::forum::*;
 use crate::pagination::*;
 use crate::render::*;
+//use crate::response::Error;
 use crate::view::*;
 use crate::*;
 
@@ -36,6 +37,12 @@ impl ForumPathItem {
         Self {
             link: format!("/forum/category/{}", opt_s!(category.hash)),
             title: String::from(opt_s!(category.name, "NOTFOUND")),
+        }
+    }
+    pub fn from_thread2(thread: &ForumThread2) -> Self {
+        Self {
+            link: format!("/forum/thread/{}", thread.hash),
+            title: thread.name.clone(),
         }
     }
     pub fn from_thread(thread: &Content) -> Self {
@@ -93,7 +100,9 @@ pub fn threadicon2(config: &LinkConfig, thread: &ForumThread2) -> Markup {
 /// Render a single post on a thread.
 pub struct PostsConfig {
     /// The thread that holds all the posts to render
-    pub thread: ForumThread,
+    pub thread: ForumThread2,
+    pub categories: Vec<capi::SubmissionCategory>,
+    pub posts: Vec<Message>,
     pub related: HashMap<i64, Message>,
     pub users: HashMap<i64, User>,
     /// The path to this thread; if not given, path not rendered. Thread must also be given
@@ -112,7 +121,9 @@ pub struct PostsConfig {
 
 impl PostsConfig {
     pub fn thread_mode(
-        thread: ForumThread,
+        thread: ForumThread2,
+        categories: Vec<capi::SubmissionCategory>,
+        posts: Vec<Message>,
         related: HashMap<i64, Message>,
         users: HashMap<i64, User>,
         path: Vec<ForumPathItem>,
@@ -120,10 +131,13 @@ impl PostsConfig {
         start: i32,
         selected_post_id: Option<i64>,
     ) -> Self {
+        //let posts = thread.posts.clone();
         Self {
             thread,
             related,
             users,
+            posts,
+            categories,
             path: Some(path),
             pages: Some(pages),
             start_num: Some(start),
@@ -137,15 +151,19 @@ impl PostsConfig {
         }
     }
     pub fn reply_mode(
-        thread: ForumThread,
+        thread: ForumThread2,
+        posts: Vec<Message>,
         related: HashMap<i64, Message>,
         users: HashMap<i64, User>,
         selected_post_id: Option<i64>,
     ) -> Self {
+        //let posts = thread.posts.clone();
         Self {
             thread,
             related,
             users,
+            posts,
+            categories: Vec::new(),
             path: None,
             pages: None,
             start_num: None,
@@ -188,37 +206,32 @@ fn walk_post_tree(
 /// Render the main sections of a content and message stream (the MAIN view on the website!) but configured
 /// for the particular viewing instance. WARN: THIS ALSO MODIFIES context WITH APPROPRIATE OVERRIDES! A bit
 /// more than rendering, I guess...
-pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup {
+pub fn render_mainview(context: &mut PageContext, config: PostsConfig) -> Markup {
     let thread = &config.thread;
-    let thread_type = thread.thread.literalType.as_deref();
+    let thread_type = &thread.literal_type; //.as_deref();
 
-    let is_pagetype = thread_type == Some(SBSPageType::PROGRAM)
-        || thread_type == Some(SBSPageType::RESOURCE)
-        || thread_type == Some(SBSPageType::DOCUMENTATION);
+    let is_pagetype = thread_type == SBSPageType::PROGRAM
+        || thread_type == SBSPageType::RESOURCE
+        || thread_type == SBSPageType::DOCUMENTATION;
 
     //Here, we choose how the override works
-    if thread_type == Some(SBSPageType::PROGRAM) || thread_type == Some(SBSPageType::RESOURCE) {
+    if thread_type == SBSPageType::PROGRAM || thread_type == SBSPageType::RESOURCE {
         context.layout_data.override_nav_path = Some("/search");
-    } else if thread_type == Some(SBSPageType::DOCUMENTATION) {
+    } else if thread_type == SBSPageType::DOCUMENTATION {
         context.layout_data.override_nav_path = Some("/documentation");
-    } else if thread_type == Some(SBSPageType::DIRECTMESSAGE) {
+    } else if thread_type == SBSPageType::DIRECTMESSAGE {
         context.layout_data.override_nav_path = Some("/userhome");
     }
 
     let data = &context.layout_data;
     let bbcode = &mut context.bbcode;
-    let mut post_count = config.thread.posts.len() as i32;
+    let mut post_count = config.posts.len() as i32;
 
     let reply_tree: Vec<ReplyTree> = if config.render_reply_chain {
-        posts_to_replytree(&thread.posts)
+        posts_to_replytree(&config.posts)
     } else {
         // no reply chain is just a simple list of whatever
-        config
-            .thread
-            .posts
-            .iter()
-            .map(|m| ReplyTree::new(m))
-            .collect()
+        config.posts.iter().map(|m| ReplyTree::new(m)).collect()
     };
 
     let mut pagelist_html: Option<Markup> = None;
@@ -227,7 +240,7 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup {
             pagelist_html = Some(html! {
                 div."smallseparate pagelist" {
                     @for page in pages {
-                        a."current"[page.current] target="_top" href={(data.links.forum_thread(&thread.thread))"?page="(page.page)"#thread-top"} { (page.text) }
+                        a."current"[page.current] target="_top" href={(data.links.forum_thread_unsafe(&thread.hash))"?page="(page.page)"#thread-top"} { (page.text) }
                     }
                 }
             })
@@ -239,30 +252,30 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup {
         (data.links.script("/forpage/forum.js"))
         @if config.render_header {
             section {
-                h1 title=(i(&thread.thread.id)) { (opt_s!(thread.thread.name, "??? (NOTITLE)")) }
+                h1 title=(thread.id) { (thread.name) }
                 @if let Some(path) = &config.path {
                     (forum_path(&data.links, &path))
                 }
                 div."foruminfo smallseparate aside" {
-                    (threadicon(&data.links, &thread))
+                    (threadicon2(&data.links, &thread))
                     //Snail doesn't want the create user displayed on documentation
-                    @if thread_type != Some(SBSPageType::DOCUMENTATION) {
+                    @if thread_type != SBSPageType::DOCUMENTATION {
                         span {
-                            @if let Some(user) = config.users.get(&thread.thread.createUserId.unwrap_or(0)) {
+                            @if let Some(user) = config.users.get(&thread.create_user_id) {
                                 a."flatlink" target="_top" href=(data.links.user(user)){ (user.username) }
                             }
                         }
                     }
                     span {
                         b { "Created: " }
-                        time datetime=(d(&thread.thread.createDate)) { (timeago_o(&thread.thread.createDate)) }
+                        time datetime=(dd(&thread.create_date)) { (timeago(&thread.create_date)) }
                     }
-                    iframe."votes" src={(data.links.votewidget(&thread.thread))}{}
+                    iframe."votes" src={(data.links.votewidget_unsafe(thread.id))}{}
                 }
             }
         }
         @if config.render_page && is_pagetype {
-            (render_page(&data, bbcode, &thread)) //, &config.docs_content))
+            (render_page(&data, bbcode, &thread, &config.categories)) //, &config.docs_content))
         }
         //it says "thread-top" because it is: it's the beginning of the section that displays posts. After the
         //for loop, it then displays pages, which is on the bottom of the thread, so it might seem confusing.
@@ -291,17 +304,11 @@ pub fn render_posts(context: &mut PageContext, config: PostsConfig) -> Markup {
     }
 }
 
-fn images_to_attr(config: &LinkConfig, images: &Vec<serde_json::Value>) -> String {
+fn images_to_attr(config: &LinkConfig, images: &Vec<String>) -> String {
     serde_json::to_string(
         &images
             .iter()
-            .map(|i| match i.as_str() {
-                Some(string) => config.image_default(string),
-                None => {
-                    println!("ERROR: IMAGE HASH NOT STRING: {}", i);
-                    String::new()
-                }
-            })
+            .map(|i| config.image_default(i))
             .collect::<Vec<String>>(),
     )
     .unwrap_or_else(|err| {
@@ -362,51 +369,53 @@ pub fn display_doctree(
 pub fn render_page(
     data: &MainLayoutData,
     bbcode: &mut BBCode,
-    thread: &ForumThread,
+    thread: &ForumThread2,
+    categories: &Vec<capi::SubmissionCategory>,
     //_docs_content: &Option<Vec<Content>>,
 ) -> Markup {
-    let values = match &thread.thread.values {
-        Some(values) => values.clone(),
-        None => HashMap::new(),
-    };
+    let values = &thread.values;
+    let systems = get_systems2(&values);
 
-    let systems = get_systems(&thread.thread);
+    let images: Option<Vec<String>> = get_value_safe!(values, SBSValue::IMAGES, Vec<String>);
+    let dlkey: Option<String> = get_value_safe!(values, SBSValue::DOWNLOADKEY, String);
+    let version: Option<String> = get_value_safe!(values, SBSValue::VERSION, String);
+    let size: Option<String> = get_value_safe!(values, SBSValue::SIZE, String);
 
     html! {
         section {
             //First check is if it's a program, then we float this box to the right
-            @if thread.thread.literalType.as_deref() == Some(SBSPageType::PROGRAM) {
+            @if thread.literal_type == SBSPageType::PROGRAM {
                 div."programinfo" {
-                    @if let Some(images) = values.get(SBSValue::IMAGES).and_then(|k| k.as_array()) {
+                    @if let Some(images) = images {
                         div."gallery" #"page_gallery" /*data-index="0"*/ data-images=(images_to_attr(&data.links, &images)) {
                             //we now have the images: we just need the first one (it's a hash?)
-                            @if let Some(image) = images.get(0).and_then(|i| i.as_str()) {
+                            @if let Some(image) = images.get(0) {
                                 img src=(data.links.image_default(image));
                             }
                         }
                     }
                     div."extras mediumseparate" {
-                        @if let Some(key) = values.get(SBSValue::DOWNLOADKEY).and_then(|k| k.as_str()) {
+                        @if let Some(key) = dlkey {
                             span."smallseparate" {
                                 b { "Download:" }
                                 span."key" { (key) }
-                                (threadicon(&data.links, &thread))
+                                (threadicon2(&data.links, &thread))
                             }
                         }
                         @if systems.iter().any(|s| s == &PTCSYSTEM) {
                             span."smallseparate" {
                                 b { "Download:" }
-                                a."key" href=(data.links.qr_generator(&thread.thread)) { "QR Codes" }
-                                (threadicon(&data.links, &thread))
+                                a."key" href=(data.links.qr_generator_unsafe(&thread.hash)) { "QR Codes" }
+                                (threadicon2(&data.links, &thread))
                             }
                         }
-                        @if let Some(version) = values.get(SBSValue::VERSION).and_then(|k| k.as_str()) {
+                        @if let Some(version) = version {
                             span."smallseparate" {
                                 b { "Version:" }
                                 span."version" { (version) }
                             }
                         }
-                        @if let Some(size) = values.get(SBSValue::SIZE).and_then(|k| k.as_str()) {
+                        @if let Some(size) = size {
                             span."smallseparate" {
                                 b { "Size:" }
                                 span."size" { (size) }
@@ -429,15 +438,13 @@ pub fn render_page(
             //        }
             //    }
             //}
-            (render_content(&thread.thread, bbcode))
-            @if let Some(categories) = &thread.categories {
-                //Documentation has no categories
-                @if thread.thread.literalType.as_deref() != Some(SBSPageType::DOCUMENTATION) {
-                    hr."smaller";
-                    div."categorylist smallseparate" {
-                        @for category in categories {
-                            a."flatlink" href=(data.links.search_category(category.id)) { (category.name) }
-                        }
+            (render_textcontent(&thread.text, &thread.values, bbcode))
+            //Documentation has no categories
+            @if thread.literal_type != SBSPageType::DOCUMENTATION {
+                hr."smaller";
+                div."categorylist smallseparate" {
+                    @for category in categories {
+                        a."flatlink" href=(data.links.search_category(category.id)) { (category.name) }
                     }
                 }
             }
@@ -446,46 +453,49 @@ pub fn render_page(
 }
 
 //Now that we support multiple markups, rendering content can get a little complex
-pub fn render_content(content: &Content, bbcode: &mut BBCode) -> Markup {
-    if let Some(text) = &content.text {
-        let mut markup: &str = MARKUPBBCODE;
-        if let Some(ref values) = content.values {
-            if let Some(mk) = values.get(SBSValue::MARKUP) {
-                if let Some(mk) = mk.as_str() {
-                    markup = mk;
-                }
+pub fn render_textcontent(
+    text: &str,
+    values: &HashMap<String, String>,
+    bbcode: &mut BBCode,
+) -> Markup {
+    let mut markup: &str = MARKUPBBCODE;
+    if let Some(mkup) = get_value_safe!(values, SBSValue::MARKUP, &str) {
+        markup = mkup;
+    }
+    // if let Some(ref values) = content.values {
+    //     if let Some(mk) = values.get(SBSValue::MARKUP) {
+    //         if let Some(mk) = mk.as_str() {
+    //             markup = mk;
+    //         }
+    //     }
+    // }
+    html!(
+        div."content" data-markup=(markup) data-prerendered[markup == MARKUPBBCODE] {
+            @if markup == MARKUPBBCODE {
+                (PreEscaped(&bbcode.parse(text)))
+            }
+            @else {
+                (text)
             }
         }
-        html!(
-            div."content" data-markup=(markup) data-prerendered[markup == MARKUPBBCODE] {
-                @if markup == MARKUPBBCODE {
-                    (PreEscaped(&bbcode.parse_profiled_opt(text, format!("program-{}", i(&content.id)))))
-                }
-                @else {
-                    (text)
-                }
-            }
-        )
-    } else {
-        html!(div."error" { "No content found? That's not supposed to happen!" })
-    }
+    )
 }
 
 /// Render content WITHOUT a full content. This is more expensive than just rendering with content (sorry?)
-pub fn render_content_nocontent(
-    text: String,
-    markup: Option<String>,
-    bbcode: &mut BBCode,
-) -> Markup {
-    let mut content = Content::default();
-    content.text = Some(text);
-    if let Some(markup) = markup {
-        let mut values: HashMap<String, Value> = HashMap::new();
-        values.insert(SBSValue::MARKUP.to_string(), markup.into());
-        content.values = Some(values);
-    }
-    render_content(&content, bbcode)
-}
+// pub fn render_content_nocontent(
+//     text: String,
+//     markup: Option<String>,
+//     bbcode: &mut BBCode,
+// ) -> Markup {
+//     let mut content = Content::default();
+//     content.text = Some(text);
+//     if let Some(markup) = markup {
+//         let mut values: HashMap<String, Value> = HashMap::new();
+//         values.insert(SBSValue::MARKUP.to_string(), markup.into());
+//         content.values = Some(values);
+//     }
+//     render_content(&content, bbcode)
+// }
 
 //WAS consuming bbcode, now i'm not sure. leaving for now
 pub fn post_item(
@@ -535,12 +545,12 @@ pub fn post_item(
                 div."postheader" {
                     a."flatlink username" target="_top" href=(layout_data.links.user(&user)) { (&user.username) }
                     @if let Some(sequence) = sequence {
-                        a."sequence" target="_top" title=(i(&post.id)) href=(layout_data.links.forum_post(post, &config.thread.thread)){ "#" (sequence) }
+                        a."sequence" target="_top" title=(i(&post.id)) href=(layout_data.links.forum_post_unsafe(post.id.unwrap_or_default(), &config.thread.hash)){ "#" (sequence) }
                     }
                 }
                 @if let Some(reply_post) = reply_post {
                     //TODO: can't decide between consuming or not. spoilers are the important bit
-                    (post_reply(layout_data, bbcode, reply_post, &config.thread.thread, &config.users))
+                    (post_reply(layout_data, bbcode, reply_post, &config.thread.hash, &config.users))
                 }
                 @if let Some(text) = &post.text {
                     div."content bbcode" data-postid=(i(&post.id)) { (PreEscaped(bbcode.parse_profiled_opt(text, format!("post-{}",i(&post.id))))) }
@@ -573,13 +583,13 @@ pub fn post_reply(
     layout_data: &MainLayoutData,
     bbcode: &mut BBCode,
     post: &Message,
-    thread: &Content,
+    thash: &str,
     users: &HashMap<i64, User>,
 ) -> Markup {
     let user = user_or_default(users.get(&post.createUserId.unwrap_or(0)));
     html! {
         div."reply aside" {
-            a."replylink" target="_top" href=(layout_data.links.forum_post(post, thread)) { "Replying to:" }
+            a."replylink" target="_top" href=(layout_data.links.forum_post_unsafe(post.id.unwrap_or_default(), thash)) { "Replying to:" }
             img src=(layout_data.links.image(&user.avatar, QueryImage::Cropped100 ));
             a."flatlink username" href=(layout_data.links.user(&user)) { (&user.username) }
             @if let Some(text) = &post.text {

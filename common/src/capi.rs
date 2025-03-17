@@ -299,6 +299,8 @@ pub struct ForumThread2 {
     pub parent_id: i64,
     pub create_date: DateTime<Utc>,
     pub create_user_id: i64,
+    pub text: String,
+    pub description: String,
     pub posts_count: i32,
     pub max_post_id: i64,
     pub values: HashMap<String, String>,
@@ -324,8 +326,10 @@ pub fn gather_forum_threads(
             parent_id: row.get(5)?,
             create_date: row.get(6)?,
             create_user_id: row.get(7)?,
-            posts_count: row.get(8)?,
-            max_post_id: row.get(9)?,
+            text: row.get(8)?,
+            description: row.get(9)?,
+            posts_count: row.get(10)?,
+            max_post_id: row.get(11)?,
             values: gather_values(&mut vstmt, id)?,
         })
     })
@@ -334,7 +338,7 @@ pub fn gather_forum_threads(
 pub fn forum_theads_base_query() -> (String, Vec<Box<dyn rusqlite::ToSql>>) {
     let query = format!(
         "SELECT {},({}),({}) AS max_post FROM content t WHERE {} AND t.contentType = ? AND t.literalType IN ({})",
-        "t.id,t.hash,t.name,COALESCE(t.literalType,''),t.contentType,t.parentId,t.createDate,t.createUserId",
+        "t.id,t.hash,t.name,COALESCE(t.literalType,''),t.contentType,t.parentId,t.createDate,t.createUserId,COALESCE(t.text,''),COALESCE(t.description,'')",
         select_postcount("t.id"),
         select_maxpost("t.id"),
         COMMONCONTENT,
@@ -366,6 +370,13 @@ pub fn get_thread_by_hash(ctx: &PageContext, hash: &str) -> Result<Option<ForumT
     let (mut query, mut params) = forum_theads_base_query();
     query.push_str(" AND t.hash = ?");
     params.push(Box::new(hash));
+    Ok(gather_forum_threads(&query, ctx, box_to_ref!(params))?.pop())
+}
+
+pub fn get_thread_by_msgid(ctx: &PageContext, msgid: i64) -> Result<Option<ForumThread2>, Error> {
+    let (mut query, mut params) = forum_theads_base_query();
+    query.push_str(" AND t.id = (SELECT m.contentId FROM messages m WHERE m.id = ?)");
+    params.push(Box::new(msgid));
     Ok(gather_forum_threads(&query, ctx, box_to_ref!(params))?.pop())
 }
 
