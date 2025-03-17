@@ -5,11 +5,10 @@
 use maud::*;
 
 use crate::layout::*;
-use crate::pages::common::*;
+use crate::pages::common::contentapi::*;
 use crate::pages::context::*;
 use crate::response::*;
 
-static FRONTPAGETYPE: &str = "frontpage";
 static SYSTEMTYPE: i8 = 5;
 //(FRONTPAGE:"frontpage"),
 
@@ -48,7 +47,7 @@ fn get_systempage(ctx: &PageContext, literal_type: String) -> Result<Vec<BasicCo
 }
 
 pub async fn get_render(context: PageContext) -> Result<Response, Error> {
-    let mut pages = get_systempage(&context, String::from(FRONTPAGETYPE))?;
+    let mut pages = get_systempage(&context, String::from(SBSPageType::FRONTPAGE))?;
     let mut frontpage: Option<String> = None;
     if let Some(page) = pages.pop() {
         frontpage = Some(page.text);

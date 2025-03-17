@@ -1,5 +1,3 @@
-//use super::super::*;
-
 use crate::links::*;
 use maud::*;
 use serde::*;
@@ -11,7 +9,6 @@ pub struct UserConfig {
     pub compact: bool,
     pub toppagination_posts: bool,
     pub theme: String,
-    //pub shadows: bool
 }
 
 impl Default for UserConfig {
@@ -21,7 +18,6 @@ impl Default for UserConfig {
             compact: false,
             toppagination_posts: false,
             theme: String::from("sbs"),
-            //shadows: false
         }
     }
 }
@@ -193,4 +189,16 @@ pub fn layout_with_meta(main_data: &MainLayoutData, meta: LayoutMeta, page: Mark
             (footer(&main_data))
         },
     )
+}
+
+pub fn errorlist(errors: Option<Vec<String>>) -> Markup {
+    html! {
+        div."errorlist" {
+            @if let Some(errors) = errors {
+                @for error in errors {
+                    div."error" {(error)}
+                }
+            }
+        }
+    }
 }

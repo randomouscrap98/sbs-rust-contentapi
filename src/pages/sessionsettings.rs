@@ -1,14 +1,20 @@
+use crate::layout::*;
+use crate::pages::context::*;
+use crate::response::*;
 
-use common::render::*;
-use common::*;
-use common::render::layout::*;
-use common::response::*;
 use maud::*;
 
-pub fn render(data: MainLayoutData, errors: Option<Vec<String>>) -> String 
-{
+const USERTHEMES: &[(&str, &str)] = &[
+    ("sbs", "SBS (default)"),
+    ("sbs-dark", "SBS Dark"),
+    ("sbs-blue", "SBS Blue"),
+    ("sbs-contrast", "SBS High Contrast"),
+    ("sbs-dark-contrast", "SBS Dark High Contrast"),
+];
+
+pub fn render(data: MainLayoutData, errors: Option<Vec<String>>) -> String {
     let settings = &data.user_config;
-    //Need to split category search into parts 
+    //Need to split category search into parts
     //let search_system = match &search.system { Some(system) => system, None => };
     layout(&data, html!{
         section {
@@ -18,7 +24,7 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>) -> String
                 div."inline smallseparate" {
                     label for="settings-theme" {"Theme:"}
                     select #"settings-theme" name="theme" {
-                        @for (key,value) in constants::USERTHEMES {
+                        @for (key,value) in USERTHEMES {
                             option value=(key) selected[&data.user_config.theme == key] { (value) }
                         }
                     }
@@ -41,3 +47,4 @@ pub fn render(data: MainLayoutData, errors: Option<Vec<String>>) -> String
 pub async fn get_render(context: PageContext) -> Result<Response, Error> {
     Ok(Response::Render(render(context.layout_data, None)))
 }
+

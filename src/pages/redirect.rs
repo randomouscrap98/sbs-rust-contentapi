@@ -5,7 +5,7 @@
 //use contentapi::*;
 use serde::{Deserialize, Serialize};
 
-use crate::pages::common::*;
+use crate::pages::common::contentapi::*;
 use crate::pages::context::*;
 use crate::response::*;
 

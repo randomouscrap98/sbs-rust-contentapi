@@ -39,176 +39,182 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router {
     }
 
     // build our application with a route
-    let app = Router::new()
-        .route(
-            "/",
-            get(|context: RequestContext| {
-                srender!(crate::pages::index::get_render(context.page_context))
-            }),
-        )
-        .route(
-            "/about",
-            get(|context: RequestContext| {
-                srender!(crate::pages::about::get_render(context.page_context))
-            }),
-        )
-        // .route(
-        //     "/documentation",
-        //     get(|context: RequestContext| {
-        //         srender!(pages::documentation::get_render(context.page_context))
-        //     }),
-        // )
-        // .route(
-        //     "/search",
-        //     get(
-        //         |context: RequestContext, Query(search): Query<common::forms::PageSearch>| {
-        //             srender!(pages::search::get_render(
-        //                 context.page_context,
-        //                 search,
-        //                 context.global_state.config.default_display_pages
-        //             ))
-        //         },
-        //     ),
-        // )
-        // .route(
-        //     "/allsearch",
-        //     get(
-        //         |context: RequestContext, Query(search): Query<pages::searchall::SearchAllForm>| {
-        //             srender!(pages::searchall::get_render(context.page_context, search))
-        //         },
-        //     ),
-        // )
-        // .route(
-        //     "/user/:username",
-        //     get(|context: RequestContext, Path(username): Path<String>| {
-        //         srender!(pages::user::get_render(context.page_context, username))
-        //     }),
-        // )
-        // .route(
-        //     "/sessionsettings",
-        //     get(|context: RequestContext| {
-        //         srender!(pages::sessionsettings::get_render(context.page_context))
-        //     })
-        //     .post(
-        //         |mut context: RequestContext,
-        //          cookies: Cookies,
-        //          Form(form): Form<common::UserConfig>| async move {
-        //             cookies.add(get_settings_cookie_convert(
-        //                 &form,
-        //                 &context.global_state.config,
-        //             )?);
-        //             context.page_context.layout_data.user_config = form; //Is this safe? idk
-        //             pages::sessionsettings::get_render(context.page_context).await
-        //         },
-        //     ),
-        // )
-        // .route("/forum", get(forum_get))
-        // .route(
-        //     "/forum/category/:hash",
-        //     get(
-        //         |context: RequestContext,
-        //          Path(hash): Path<String>,
-        //          Query(page): Query<SimplePage>| {
-        //             srender!(pages::forum_category::get_hash_render(
-        //                 context.page_context,
-        //                 hash,
-        //                 context.global_state.config.default_display_threads,
-        //                 page.page
-        //             ))
-        //         },
-        //     ),
-        // )
-        // .route(
-        //     "/forum/thread/:hash",
-        //     get(
-        //         |context: RequestContext,
-        //          Path(hash): Path<String>,
-        //          Query(page): Query<SimplePage>| {
-        //             srender!(pages::forum_thread::get_hash_render(
-        //                 context.page_context,
-        //                 hash,
-        //                 context.global_state.config.default_display_posts,
-        //                 page.page
-        //             ))
-        //         },
-        //     ),
-        // )
-        // .route(
-        //     "/forum/thread/:hash/:post",
-        //     get(
-        //         |context: RequestContext, Path((hash, post)): Path<(String, i64)>| {
-        //             srender!(pages::forum_thread::get_hash_postid_render(
-        //                 context.page_context,
-        //                 hash,
-        //                 post,
-        //                 context.global_state.config.default_display_posts
-        //             ))
-        //         },
-        //     ),
-        // )
-        // .route(
-        //     "/page",
-        //     get(
-        //         |context: RequestContext, Query(query): Query<pages::page::PageQuery>| {
-        //             srender!(crate::pages::redirect::get_pid_redirect(
-        //                 context.page_context,
-        //                 query
-        //             ))
-        //         },
-        //     ),
-        // )
-        // .route(
-        //     "/widget/thread",
-        //     get(
-        //         |context: RequestContext, Query(query): Query<common::forms::ThreadQuery>| {
-        //             srender!(pages::widget_thread::get_render(
-        //                 context.page_context,
-        //                 query
-        //             ))
-        //         },
-        //     ),
-        // )
-        // .route(
-        //     "/widget/votes/:id",
-        //     get(|context: RequestContext, Path(id): Path<i64>| {
-        //         srender!(pages::widget_votes::get_render(context.page_context, id))
-        //     }),
-        // )
-        // .route(
-        //     "/widget/qr/:hash",
-        //     get(
-        //         |context: RequestContext,
-        //          Path(hash): Path<String>,
-        //          Query(query): Query<QrParam>| {
-        //             srender!(pages::widget_qr::get_render(
-        //                 context.page_context,
-        //                 &hash,
-        //                 if let Some(hd) = query.high_density {
-        //                     hd
-        //                 } else {
-        //                     false
-        //                 }
-        //             ))
-        //         },
-        //     ),
-        // )
-        .nest_service("/static", ServeDir::new("static"))
-        .nest_service("/uploads/files", ServeDir::new(&gstate.config.upload_dir))
-        .nest_service(
-            "/uploads/thumbnails",
-            ServeDir::new(&gstate.config.thumbnail_dir),
-        )
-        .nest_service(
-            "/favicon.ico",
-            ServeFile::new("static/resources/favicon.ico"),
-        )
-        .nest_service("/robots.txt", ServeFile::new("static/robots.txt"))
-        .with_state(gstate.clone())
-        .layer(DefaultBodyLimit::disable())
-        .layer(RequestBodyLimitLayer::new(
-            gstate.config.body_maxsize as usize,
-        ))
-        .layer(CookieManagerLayer::new());
+    let app =
+        Router::new()
+            .route(
+                "/",
+                get(|context: RequestContext| {
+                    srender!(crate::pages::index::get_render(context.page_context))
+                }),
+            )
+            .route(
+                "/about",
+                get(|context: RequestContext| {
+                    srender!(crate::pages::about::get_render(context.page_context))
+                }),
+            )
+            .route(
+                "/documentation",
+                get(|context: RequestContext| {
+                    srender!(crate::pages::documentation::get_render(
+                        context.page_context
+                    ))
+                }),
+            )
+            .route(
+                "/search",
+                get(
+                    |context: RequestContext,
+                     Query(search): Query<crate::pages::common::PageSearch>| {
+                        srender!(crate::pages::search::get_render(
+                            context.page_context,
+                            search,
+                            context.global_state.config.default_display_pages
+                        ))
+                    },
+                ),
+            )
+            // .route(
+            //     "/allsearch",
+            //     get(
+            //         |context: RequestContext, Query(search): Query<pages::searchall::SearchAllForm>| {
+            //             srender!(pages::searchall::get_render(context.page_context, search))
+            //         },
+            //     ),
+            // )
+            // .route(
+            //     "/user/:username",
+            //     get(|context: RequestContext, Path(username): Path<String>| {
+            //         srender!(pages::user::get_render(context.page_context, username))
+            //     }),
+            // )
+            .route(
+                "/sessionsettings",
+                get(|context: RequestContext| {
+                    srender!(crate::pages::sessionsettings::get_render(
+                        context.page_context
+                    ))
+                })
+                .post(
+                    |mut context: RequestContext,
+                     cookies: Cookies,
+                     Form(form): Form<UserConfig>| async move {
+                        cookies.add(get_settings_cookie_convert(
+                            &form,
+                            &context.global_state.config,
+                        )?);
+                        context.page_context.layout_data.user_config = form; //Is this safe? idk
+                        crate::pages::sessionsettings::get_render(context.page_context).await
+                    },
+                ),
+            )
+            // .route("/forum", get(forum_get))
+            // .route(
+            //     "/forum/category/:hash",
+            //     get(
+            //         |context: RequestContext,
+            //          Path(hash): Path<String>,
+            //          Query(page): Query<SimplePage>| {
+            //             srender!(pages::forum_category::get_hash_render(
+            //                 context.page_context,
+            //                 hash,
+            //                 context.global_state.config.default_display_threads,
+            //                 page.page
+            //             ))
+            //         },
+            //     ),
+            // )
+            // .route(
+            //     "/forum/thread/:hash",
+            //     get(
+            //         |context: RequestContext,
+            //          Path(hash): Path<String>,
+            //          Query(page): Query<SimplePage>| {
+            //             srender!(pages::forum_thread::get_hash_render(
+            //                 context.page_context,
+            //                 hash,
+            //                 context.global_state.config.default_display_posts,
+            //                 page.page
+            //             ))
+            //         },
+            //     ),
+            // )
+            // .route(
+            //     "/forum/thread/:hash/:post",
+            //     get(
+            //         |context: RequestContext, Path((hash, post)): Path<(String, i64)>| {
+            //             srender!(pages::forum_thread::get_hash_postid_render(
+            //                 context.page_context,
+            //                 hash,
+            //                 post,
+            //                 context.global_state.config.default_display_posts
+            //             ))
+            //         },
+            //     ),
+            // )
+            // .route(
+            //     "/page",
+            //     get(
+            //         |context: RequestContext, Query(query): Query<pages::page::PageQuery>| {
+            //             srender!(crate::pages::redirect::get_pid_redirect(
+            //                 context.page_context,
+            //                 query
+            //             ))
+            //         },
+            //     ),
+            // )
+            // .route(
+            //     "/widget/thread",
+            //     get(
+            //         |context: RequestContext, Query(query): Query<common::forms::ThreadQuery>| {
+            //             srender!(pages::widget_thread::get_render(
+            //                 context.page_context,
+            //                 query
+            //             ))
+            //         },
+            //     ),
+            // )
+            // .route(
+            //     "/widget/votes/:id",
+            //     get(|context: RequestContext, Path(id): Path<i64>| {
+            //         srender!(pages::widget_votes::get_render(context.page_context, id))
+            //     }),
+            // )
+            // .route(
+            //     "/widget/qr/:hash",
+            //     get(
+            //         |context: RequestContext,
+            //          Path(hash): Path<String>,
+            //          Query(query): Query<QrParam>| {
+            //             srender!(pages::widget_qr::get_render(
+            //                 context.page_context,
+            //                 &hash,
+            //                 if let Some(hd) = query.high_density {
+            //                     hd
+            //                 } else {
+            //                     false
+            //                 }
+            //             ))
+            //         },
+            //     ),
+            // )
+            .nest_service("/static", ServeDir::new("static"))
+            .nest_service("/uploads/files", ServeDir::new(&gstate.config.upload_dir))
+            .nest_service(
+                "/uploads/thumbnails",
+                ServeDir::new(&gstate.config.thumbnail_dir),
+            )
+            .nest_service(
+                "/favicon.ico",
+                ServeFile::new("static/resources/favicon.ico"),
+            )
+            .nest_service("/robots.txt", ServeFile::new("static/robots.txt"))
+            .with_state(gstate.clone())
+            .layer(DefaultBodyLimit::disable())
+            .layer(RequestBodyLimitLayer::new(
+                gstate.config.body_maxsize as usize,
+            ))
+            .layer(CookieManagerLayer::new());
 
     app
 }

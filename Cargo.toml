@@ -10,9 +10,10 @@ members = [ "contentapi", "pages", "common" ]
 
 [dependencies]
 maud = "0.24.0"
+timeago = "=0.0.2"  # Says to use this one if you want simple; may upgrade later
 chrono = { version = "0.4", features = ["serde"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
-rusqlite = { version = "0.34.0", features = ["bundled"] }
+rusqlite = { version = "0.34.0", features = ["bundled", "chrono"] }
 # sqlite = "0.36.2"
 
 axum = { version = "0.6.18", features = [

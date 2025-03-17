@@ -1,5 +1,8 @@
 pub mod about;
 pub mod common;
 pub mod context;
+pub mod documentation;
 pub mod index;
 pub mod redirect;
+pub mod search;
+pub mod sessionsettings;

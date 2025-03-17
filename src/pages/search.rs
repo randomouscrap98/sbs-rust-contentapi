@@ -1,22 +1,46 @@
 use std::collections::HashMap;
+use maud::*;
+//use serde::*;
+
+use crate::layout::*;
+use crate::response::*;
+use crate::pages::context::*;
+use crate::pages::common::contentapi::*;
+use crate::pages::common::render::*;
+use crate::pages::common::*;
 
 //use common::capi::get_browse;
-use common::capi::get_submission_categories;
-use common::capi::QueryLimit;
-use common::capi::SubmissionCategory;
+// use common::capi::get_submission_categories;
+// use common::capi::QueryLimit;
+// use common::capi::SubmissionCategory;
 //use contentapi::*;
 
-use common::*;
-//use common::view::*;
-use common::forms::*;
-//use common::search::*;
-use common::constants::*;
-use common::response::*;
-use common::render::layout::*;
-use common::render::submissions::*;
-use maud::*;
+// use common::*;
+// //use common::view::*;
+// use common::forms::*;
+// //use common::search::*;
+// use common::constants::*;
+// use common::response::*;
+// use common::render::layout::*;
+// use common::render::submissions::*;
 
-pub fn render(data: MainLayoutData, pages: Vec<capi::BrowseContent>, users: HashMap<i64, capi::User2>, search: PageSearch,
+const SEARCHPAGETYPES: &[(&str, &str)] = &[
+    ("", "Any"),
+    (SBSPageType::PROGRAM, "Programs"),
+    (SBSPageType::RESOURCE, "Resources"),
+];
+
+const SEARCHPAGEORDERS: &[(&str, &str)] = &[
+    ("upvotes", "Upvotes"),
+    ("id", "Created (oldest)"),
+    ("id_desc", "Created (newest)"),
+    ("name", "Alphabetical (A-Z)"),
+    ("name_desc", "Alphabetical (Z-A)"),
+    //("lastRevisionId_desc", "Edited (newest)"),
+    //("lastRevisionId", "Edited (oldest)"),
+];
+
+fn render(data: MainLayoutData, pages: Vec<BrowseContent>, users: HashMap<i64, User2>, search: PageSearch,
     categories: Vec<SubmissionCategory>) -> String 
 {
     //Need to split category search into parts 
@@ -123,10 +147,10 @@ fn page_navigation(data: &MainLayoutData, search: &PageSearch) -> Markup {
 
 pub async fn get_render(context: PageContext, search: PageSearch, per_page: i32) -> Result<Response, Error> 
 {
-    let pages = capi::get_browse(&context, &search, 
+    let pages = get_browse(&context, &search, 
         QueryLimit { limit: Some(per_page), skip: Some(search.page * per_page)})?;
-    let users = capi::get_users(&context, pages.iter().map(|x| x.create_user_id).collect())?;
-    let users = view::map_users2(users);
+    let users = get_users(&context, pages.iter().map(|x| x.create_user_id).collect())?;
+    let users = map_users2(users);
     let categories = get_submission_categories(&context, None)?;
 
     //Manually parse the search, because of the tag magic (no javascript)
