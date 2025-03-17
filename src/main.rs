@@ -2,8 +2,13 @@ use std::{net::SocketAddr, sync::Arc};
 
 use bbscope::{BBCode, BBCodeLinkTarget, BBCodeTagConfig};
 use chrono::SecondsFormat;
-use common::LinkConfig;
+//use common::LinkConfig;
 
+//mod capi;
+mod layout;
+mod links;
+mod pages;
+mod response;
 mod routing;
 mod state;
 
@@ -66,7 +71,7 @@ async fn main() {
         bbcode,
         link_config: {
             let root = config.http_root.clone();
-            LinkConfig {
+            links::LinkConfig {
                 static_root: format!("{}/static", &root),
                 resource_root: format!("{}/static/resources", &root),
                 file_root: format!("{}/uploads/files", &root),

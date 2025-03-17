@@ -1,10 +1,10 @@
-pub mod about;
+//pub mod about;
 pub mod documentation;
 pub mod forum_category;
 pub mod forum_main;
 pub mod forum_thread;
-pub mod index;
-pub mod page;
+//pub mod index;
+//pub mod page;
 pub mod search;
 pub mod searchall;
 pub mod sessionsettings;

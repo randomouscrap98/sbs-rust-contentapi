@@ -1,11 +1,11 @@
-pub mod capi;
+//pub mod capi;
 pub mod constants;
 pub mod forms;
 pub mod forum;
-pub mod links;
+//pub mod links;
 pub mod pagination;
 pub mod render;
-pub mod response;
+//pub mod response;
 pub mod search;
 pub mod view;
 

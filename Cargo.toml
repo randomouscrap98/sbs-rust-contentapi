@@ -9,6 +9,7 @@ members = [ "contentapi", "pages", "common" ]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+maud = "0.24.0"
 chrono = { version = "0.4", features = ["serde"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 rusqlite = { version = "0.34.0", features = ["bundled"] }
@@ -28,12 +29,14 @@ onestop = { version = "0.0.2", features = ["utils"] }
 bbscope = { version = "0.2" }
 toml = "0.5.9"
 
-contentapi = { path = "contentapi", features = [ "postdump" ] }
-common = { path = "common"}
-pages = { path = "pages" }
+# contentapi = { path = "contentapi", features = [ "postdump" ] }
+# common = { path = "common"}
+# pages = { path = "pages" }
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator = "0.5.4"
 
 [features]
+default = [ "querydump" ]
+querydump = []
 perf = ["bbscope/perf"]

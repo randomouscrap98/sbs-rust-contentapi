@@ -33,24 +33,24 @@ impl ForumPathItem {
             title: category.name.clone(),
         }
     }
-    pub fn from_category(category: &Content) -> Self {
-        Self {
-            link: format!("/forum/category/{}", opt_s!(category.hash)),
-            title: String::from(opt_s!(category.name, "NOTFOUND")),
-        }
-    }
+    // pub fn from_category(category: &Content) -> Self {
+    //     Self {
+    //         link: format!("/forum/category/{}", opt_s!(category.hash)),
+    //         title: String::from(opt_s!(category.name, "NOTFOUND")),
+    //     }
+    // }
     pub fn from_thread2(thread: &ForumThread2) -> Self {
         Self {
             link: format!("/forum/thread/{}", thread.hash),
             title: thread.name.clone(),
         }
     }
-    pub fn from_thread(thread: &Content) -> Self {
-        Self {
-            link: format!("/forum/thread/{}", opt_s!(thread.hash)),
-            title: String::from(opt_s!(thread.name, "NOTFOUND")),
-        }
-    }
+    // pub fn from_thread(thread: &Content) -> Self {
+    //     Self {
+    //         link: format!("/forum/thread/{}", opt_s!(thread.hash)),
+    //         title: String::from(opt_s!(thread.name, "NOTFOUND")),
+    //     }
+    // }
     pub fn root() -> Self {
         Self {
             link: String::from("/forum"),
@@ -77,13 +77,13 @@ pub fn forum_path(config: &LinkConfig, path: &Vec<ForumPathItem>) -> Markup {
 }
 
 //Weird circular dependency... oh well, maybe I'll fix later
-pub fn threadicon(config: &LinkConfig, thread: &ForumThread) -> Markup {
-    html! {
-        div."threadicon smallseparate" {
-            (render::submissions::pageicon(config, &thread.thread))
-        }
-    }
-}
+// pub fn threadicon(config: &LinkConfig, thread: &ForumThread) -> Markup {
+//     html! {
+//         div."threadicon smallseparate" {
+//             (render::submissions::pageicon(config, &thread.thread))
+//         }
+//     }
+// }
 
 pub fn threadicon2(config: &LinkConfig, thread: &ForumThread2) -> Markup {
     html! {

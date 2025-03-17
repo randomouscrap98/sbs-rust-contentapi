@@ -1,6 +1,10 @@
-use common::*;
-use common::render::layout::*;
-use common::response::*;
+//use common::*;
+//use common::render::layout::*;
+//use common::response::*;
+
+use crate::pages::context::*;
+use crate::response::*;
+use crate::layout::*;
 use maud::html;
 
 pub fn render(data: MainLayoutData) -> String {

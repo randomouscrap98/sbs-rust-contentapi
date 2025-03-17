@@ -1,8 +1,13 @@
 use std::sync::Arc;
 
+use crate::layout::*;
+use crate::links::*;
+use crate::pages::context::*;
+use crate::response::*;
+
 use bbscope::BBCode;
-use common::{LinkConfig, MainLayoutData, PageContext, UserConfig};
-use contentapi::endpoints::ApiContext;
+//use common::{LinkConfig, MainLayoutData, PageContext, UserConfig};
+//use contentapi::endpoints::ApiContext;
 
 use crate::Config;
 
@@ -22,12 +27,10 @@ pub struct RequestContext {
     pub page_context: PageContext,
 }
 
-fn open_dbcon(db_path: &str) -> Result<rusqlite::Connection, common::response::Error> {
+fn open_dbcon(db_path: &str) -> Result<rusqlite::Connection, Error> {
     match rusqlite::Connection::open(db_path) {
         Ok(conn) => Ok(conn),
-        Err(_) => Err(common::response::Error::Other(format!(
-            "Failed to open database"
-        ))),
+        Err(_) => Err(Error::Other(format!("Failed to open database"))),
     }
 }
 
@@ -39,8 +42,8 @@ impl RequestContext {
         state: Arc<GlobalState>,
         path: &str,
         config_raw: Option<String>,
-    ) -> Result<Self, common::response::Error> {
-        let context = ApiContext::new(state.config.api_endpoint.clone());
+    ) -> Result<Self, Error> {
+        //let context = ApiContext::new(state.config.api_endpoint.clone());
 
         let user_config = if let Some(config) = config_raw {
             serde_json::from_str::<UserConfig>(&config)?
@@ -60,7 +63,7 @@ impl RequestContext {
         return Ok(RequestContext {
             page_context: PageContext {
                 layout_data,
-                api_context: context,
+                //api_context: context,
                 bbcode: state.bbcode.clone(),
                 dbcon,
             },

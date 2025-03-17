@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use super::*;
-use crate::capi::SubmissionCategory;
+//use crate::capi::SubmissionCategory;
 use crate::constants::*;
-use crate::response::*;
+//use crate::response::*;
 
 use contentapi::*;
 
@@ -19,30 +19,30 @@ pub static PREMESSAGEINDEXKEY: &str = "premessage_index";
 //  DIRECT CONNECT NEW
 // ---------------------------------------------
 
-#[derive(Clone, Debug)]
-pub struct ForumThread {
-    pub thread: Content,
-    pub id: i64,
-    pub posts: Vec<Message>,
-    pub categories: Option<Vec<SubmissionCategory>>,
-}
-
-impl ForumThread {
-    pub fn from_content(thread: Content, messages_raw: &Vec<Message>) -> Result<Self, Error> {
-        let thread_id = thread.id.unwrap_or(0);
-        //"get" luckily already gets the thing as a reference
-        Ok(ForumThread {
-            thread,
-            id: thread_id,
-            posts: messages_raw
-                .iter()
-                .filter(|m| m.contentId == Some(thread_id))
-                .map(|m| m.clone())
-                .collect(),
-            categories: None,
-        })
-    }
-}
+// #[derive(Clone, Debug)]
+// pub struct ForumThread {
+//     pub thread: Content,
+//     pub id: i64,
+//     pub posts: Vec<Message>,
+//     pub categories: Option<Vec<SubmissionCategory>>,
+// }
+//
+// impl ForumThread {
+//     pub fn from_content(thread: Content, messages_raw: &Vec<Message>) -> Result<Self, Error> {
+//         let thread_id = thread.id.unwrap_or(0);
+//         //"get" luckily already gets the thing as a reference
+//         Ok(ForumThread {
+//             thread,
+//             id: thread_id,
+//             posts: messages_raw
+//                 .iter()
+//                 .filter(|m| m.contentId == Some(thread_id))
+//                 .map(|m| m.clone())
+//                 .collect(),
+//             categories: None,
+//         })
+//     }
+// }
 
 #[derive(Clone, Debug)]
 pub struct ReplyData {

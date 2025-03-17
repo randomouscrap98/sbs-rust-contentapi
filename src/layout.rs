@@ -1,4 +1,47 @@
-use super::super::*;
+//use super::super::*;
+
+use crate::links::*;
+use maud::*;
+use serde::*;
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default)]
+pub struct UserConfig {
+    pub language: String,
+    pub compact: bool,
+    pub toppagination_posts: bool,
+    pub theme: String,
+    //pub shadows: bool
+}
+
+impl Default for UserConfig {
+    fn default() -> Self {
+        Self {
+            language: String::from("en"),
+            compact: false,
+            toppagination_posts: false,
+            theme: String::from("sbs"),
+            //shadows: false
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct MainLayoutData {
+    pub links: LinkConfig,
+    pub user_config: UserConfig,
+    /// Should be the path ONLY, no machine or query. If it's not that, it's an error!
+    pub current_path: String,
+    pub override_nav_path: Option<&'static str>,
+}
+
+impl MainLayoutData {
+    /// Get a plain path (no query) pointing to this current request. This SHOULD work anywhere...
+    /// but how often do you REALLY want this one?
+    pub fn current(&self) -> String {
+        format!("{}{}", self.links.http_root, self.current_path)
+    }
+}
 
 //Render basic navigation link with only text as the body
 pub fn main_nav_link(
