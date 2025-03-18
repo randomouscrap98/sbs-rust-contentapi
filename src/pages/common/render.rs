@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use super::contentapi::*;
 use super::*;
-use crate::links::*;
+use crate::{get_value_safe, links::*};
 
 #[macro_export]
 macro_rules! opt_s {
@@ -127,34 +127,9 @@ pub fn page_card2(links: &LinkConfig, page: &BrowseContent, users: &HashMap<i64,
     //very wasteful allocations but whatever
     let link = links.forum_thread_unsafe(&page.hash);
     let values = &page.values;
-    let mut image: Option<String> = None;
-    if let Some(images_raw) = values.get(SBSValue::IMAGES) {
-        match serde_json::from_str::<Vec<String>>(images_raw) {
-            Ok(images) => {
-                if let Some(first_image) = images.get(0) {
-                    image = Some(first_image.clone());
-                }
-            }
-            Err(e) => {
-                println!("WARN: Couldn't parse images json! {}", e);
-            }
-        }
-    }
-    let mut key: Option<String> = None;
-    if let Some(keyvalue) = values.get(SBSValue::DOWNLOADKEY) {
-        match serde_json::from_str::<String>(keyvalue) {
-            Ok(rawkey) => {
-                key = Some(rawkey.clone());
-            }
-            Err(e) => {
-                println!("WARN: Couldn't parse key json! {}", e);
-            }
-        }
-    }
-    // match &page.values {
-    //     Some(values) => values.clone(),
-    //     None => HashMap::new(),
-    // };
+    let image: Option<String> = get_value_safe!(values, SBSValue::IMAGES, Vec<String>)
+        .and_then(|imgs| imgs.get(0).and_then(|iref| Some(iref.clone())));
+    let key: Option<String> = get_value_safe!(values, SBSValue::DOWNLOADKEY, String);
     let systems = get_systems2(values);
     html! {
         div.{"pagecard "(page.literal_type)} {

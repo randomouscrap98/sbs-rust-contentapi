@@ -8,25 +8,14 @@ use crate::layout::*;
 use crate::links::*;
 use crate::response::*;
 
-// fn get_forum_category(ctx: &PageContext, hash: String) -> Result<Option<ForumCategory2>, Error> {
-//     let (mut query, mut params) = forum_categories_base_query();
-//     query.push_str(" AND c.hash = ?");
-//     params.push(Box::new(hash));
-//     let mut stmt = ctx.dbcon.prepare(&query)?;
-//     Ok(gather_forum_categories((&mut stmt, &query), box_to_ref!(params))?.pop())
-// }
-
-pub fn get_forum_category(
-    ctx: &PageContext,
-    cq: OldIdOrHash,
-) -> Result<Option<ForumCategory2>, Error> {
+fn get_forum_category(ctx: &PageContext, cq: OldIdOrHash) -> Result<Option<ForumCategory2>, Error> {
     let (mut query, mut params) = forum_categories_base_query();
     cq.mod_query("c", "fcid", &mut query, &mut params);
     let mut stmt = ctx.dbcon.prepare(&query)?;
     Ok(gather_forum_categories((&mut stmt, &query), box_to_ref!(params))?.pop())
 }
 
-pub fn get_threads(
+fn get_threads(
     ctx: &PageContext,
     category_id: i64,
     limits: QueryLimit,
@@ -38,7 +27,7 @@ pub fn get_threads(
     gather_forum_threads(&query, ctx, box_to_ref!(params))
 }
 
-pub fn render(
+fn render(
     mut data: MainLayoutData,
     category: ForumCategory2,
     threads: Vec<ForumThread2>,
@@ -75,7 +64,7 @@ pub fn render(
     }).into_string()
 }
 
-pub fn thread_item(links: &LinkConfig, thread: &ForumThread2) -> Markup {
+fn thread_item(links: &LinkConfig, thread: &ForumThread2) -> Markup {
     html! {
         div."thread" {
             div."threadinfo" {
@@ -101,31 +90,6 @@ pub fn thread_item(links: &LinkConfig, thread: &ForumThread2) -> Markup {
         }
     }
 }
-
-// async fn build_categories_with_threads(
-//     context: &mut ApiContext,
-//     categories_cleaned: Vec<CleanedPreCategory>,
-//     limit: i32,
-//     skip: i32,
-// ) -> Result<Vec<ForumCategory>, Error> {
-//     //Next request: get the complicated dataset for each category (this somehow includes comments???)
-//     let thread_request = get_thread_request(&categories_cleaned, limit, skip);
-//     let thread_result = context.post_request(&thread_request).await?;
-//
-//     let messages_raw = cast_result_required::<Message>(&thread_result, "message")?;
-//
-//     let mut categories = Vec::new();
-//
-//     for category in categories_cleaned {
-//         categories.push(ForumCategory::from_result(
-//             category,
-//             &thread_result,
-//             &messages_raw,
-//         )?);
-//     }
-//
-//     Ok(categories)
-// }
 
 async fn render_threads(
     context: PageContext,
