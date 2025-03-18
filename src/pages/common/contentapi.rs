@@ -106,10 +106,18 @@ pub const THREADTYPES: &[&str] = &[
     SBSPageType::DOCUMENTATION,
 ];
 
+pub const FORUMCATEGORYTYPES: &[&str] = &[
+    SBSPageType::FORUMCATEGORY,
+    SBSPageType::SUBMISSIONS,
+    SBSPageType::DOCPARENT,
+];
+
 pub static BASICCONTENTFIELDS: &str = "c.id,c.hash,c.name,c.text";
 pub static USER2FIELDS: &str = "id,`type`,username,avatar,special,super,createDate";
 pub static BROWSEFIELDS: &str =
      "c.id,c.hash,c.name,COALESCE(c.description,''),COALESCE(c.literalType,''),c.createDate,c.createUserId";
+pub static FORUMCATEGORYFIELDS: &str =
+    "c.id,c.hash,c.name,COALESCE(c.description,''),COALESCE(c.literalType,''),c.contentType";
 
 pub static VALUESELECT: &str = "SELECT `key`,`value` FROM content_values WHERE contentId=?";
 pub static KEYWORDSELECT: &str = "SELECT `value` FROM content_keywords WHERE contentId=?";
@@ -122,6 +130,12 @@ pub fn join_common_content(idname: &str) -> String {
     return format!(
         "JOIN content_permissions _cp_ ON _cp_.contentId = {} AND _cp_.read=1 AND _cp_.userId=0",
         idname
+    );
+}
+pub fn select_childcount(idname: &str) -> String {
+    return format!(
+        "SELECT COUNT(*) FROM content WHERE {} AND parentId = {}",
+        COMMONCONTENT, idname
     );
 }
 
@@ -541,4 +555,47 @@ pub fn get_browse(
     let vstmt = ctx.dbcon.prepare(VALUESELECT)?;
 
     gather_browsecontent((&mut stmt, &query), &mut Some(vstmt), box_to_ref!(params))
+}
+
+#[derive(Clone, Debug)]
+pub struct ForumCategory2 {
+    pub id: i64,
+    pub hash: String,
+    pub name: String,
+    pub description: String,
+    pub literal_type: String,
+    pub content_type: i64,
+    pub threads_count: i32,
+}
+
+pub fn gather_forum_categories(
+    stmt: (&mut rusqlite::Statement, &str),
+    params: &[&dyn rusqlite::ToSql],
+) -> Result<Vec<ForumCategory2>, Error> {
+    easy_query(stmt, params, |row| {
+        Ok(ForumCategory2 {
+            id: row.get(0)?,
+            hash: row.get(1)?,
+            name: row.get(2)?,
+            description: row.get(3)?,
+            literal_type: row.get(4)?,
+            content_type: row.get(5)?,
+            threads_count: row.get(6)?,
+        })
+    })
+}
+
+pub fn forum_categories_base_query() -> (String, Vec<Box<dyn rusqlite::ToSql>>) {
+    let query = format!(
+        "SELECT {},({}) FROM content c WHERE {} AND c.literalType IN ({})",
+        FORUMCATEGORYFIELDS,
+        select_childcount("c.id"),
+        COMMONCONTENT,
+        params_list(FORUMCATEGORYTYPES.len())
+    );
+    let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![];
+    for t in FORUMCATEGORYTYPES.iter() {
+        params.push(Box::new(*t));
+    }
+    (query, params)
 }

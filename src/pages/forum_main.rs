@@ -1,10 +1,18 @@
-use common::capi::*;
-use common::render::layout::*;
-use common::response::*;
-use common::*;
 use maud::*;
 
-pub fn render(data: MainLayoutData, categories: Vec<ForumCategory2>) -> String {
+use super::common::contentapi::*;
+use super::context::*;
+use crate::box_to_ref;
+use crate::layout::*;
+use crate::response::*;
+
+fn get_forum_categories(ctx: &PageContext) -> Result<Vec<ForumCategory2>, Error> {
+    let (query, params) = forum_categories_base_query();
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    gather_forum_categories((&mut stmt, &query), box_to_ref!(params))
+}
+
+fn render(data: MainLayoutData, categories: Vec<ForumCategory2>) -> String {
     layout(&data, html!{
         (data.links.style("/forpage/forum.css"))
         section { h1 { "Forum Topics" } }
@@ -28,7 +36,7 @@ pub fn render(data: MainLayoutData, categories: Vec<ForumCategory2>) -> String {
 }
 
 pub async fn get_render(context: PageContext, order: &Vec<String>) -> Result<Response, Error> {
-    let mut categories = get_forum_categories(&context, None)?;
+    let mut categories = get_forum_categories(&context)?;
 
     //Sort the categories by their name AGAINST the default list in the config. So, it should sort the categories
     //by the order defined in the config, with stuff not present going at the end. Tiebreakers are resolved alphabetically

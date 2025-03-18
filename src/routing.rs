@@ -115,7 +115,7 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router {
             //         |context: RequestContext,
             //          Path(hash): Path<String>,
             //          Query(page): Query<SimplePage>| {
-            //             srender!(pages::forum_category::get_hash_render(
+            //             srender!(crate::pages::forum_category::get_hash_render(
             //                 context.page_context,
             //                 hash,
             //                 context.global_state.config.default_display_threads,
@@ -327,9 +327,6 @@ pub async fn forum_get(
         crate::pages::redirect::get_fpid_redirect(context.page_context, fpid).await
     } else if let Some(ftid) = query.ftid {
         crate::pages::redirect::get_ftid_redirect(context.page_context, ftid, query.page).await
-    } else {
-        Err(Error::NotFound(format!("NOT YET")))
-    }
     // else if let Some(fcid) = query.fcid {
     //     pages::forum_category::get_fcid_render(
     //         context.page_context,
@@ -338,12 +335,12 @@ pub async fn forum_get(
     //         query.page,
     //     )
     //     .await
-    // } else {
-    //     //This is main forum display, usually what we want (but unfortunately last)
-    //     pages::forum_main::get_render(
-    //         context.page_context,
-    //         &context.global_state.config.forum_category_order,
-    //     )
-    //     .await
-    // }
+    } else {
+        //This is main forum display, usually what we want (but unfortunately last)
+        crate::pages::forum_main::get_render(
+            context.page_context,
+            &context.global_state.config.forum_category_order,
+        )
+        .await
+    }
 }
