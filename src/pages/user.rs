@@ -121,11 +121,8 @@ fn render(data: MainLayoutData, mut bbcode: BBCode, user_package: UserPackage) -
     }).into_string()
 }
 
-pub async fn get_render_internal(
-    context: PageContext,
-    username: String,
-) -> Result<Response, Error> {
-    let user = get_user_by_name(&context, &username)?; //users_raw.pop();
+async fn get_render_internal(context: PageContext, username: String) -> Result<Response, Error> {
+    let user = get_user_by_name(&context, &username)?;
 
     if let Some(user) = user {
         let mut users = HashMap::new();
@@ -140,15 +137,14 @@ pub async fn get_render_internal(
         search.order = "id_desc".to_string(); //not sure...
         let pages = get_browse(&context, &search, QueryLimit::default())?; //get_search_request(&search, 0); //Just ask for as much as possible
 
-        //let result = context.api_context.post_request(&request).await?;
         let user_id = user.id;
 
         let package = UserPackage {
             user,
             userpage: get_userpage(&context, user_id)?, //content_raw.pop(),
             badges,
-            submissions: pages, //conversion::cast_result_safe::<Content>(&result, "content")?,
-            users, //common::view::map_users(conversion::cast_result_safe::<User>(&result, "user")?),
+            submissions: pages,
+            users,
         };
 
         Ok(Response::Render(render(

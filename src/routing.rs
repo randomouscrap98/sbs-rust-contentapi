@@ -181,24 +181,24 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router {
             //         srender!(pages::widget_votes::get_render(context.page_context, id))
             //     }),
             // )
-            // .route(
-            //     "/widget/qr/:hash",
-            //     get(
-            //         |context: RequestContext,
-            //          Path(hash): Path<String>,
-            //          Query(query): Query<QrParam>| {
-            //             srender!(pages::widget_qr::get_render(
-            //                 context.page_context,
-            //                 &hash,
-            //                 if let Some(hd) = query.high_density {
-            //                     hd
-            //                 } else {
-            //                     false
-            //                 }
-            //             ))
-            //         },
-            //     ),
-            // )
+            .route(
+                "/widget/qr/:hash",
+                get(
+                    |context: RequestContext,
+                     Path(hash): Path<String>,
+                     Query(query): Query<QrParam>| {
+                        srender!(crate::pages::widget_qr::get_render(
+                            context.page_context,
+                            &hash,
+                            if let Some(hd) = query.high_density {
+                                hd
+                            } else {
+                                false
+                            }
+                        ))
+                    },
+                ),
+            )
             .nest_service("/static", ServeDir::new("static"))
             .nest_service("/uploads/files", ServeDir::new(&gstate.config.upload_dir))
             .nest_service(

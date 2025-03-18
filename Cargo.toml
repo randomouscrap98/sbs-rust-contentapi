@@ -11,6 +11,10 @@ members = [ "contentapi", "pages", "common" ]
 [dependencies]
 maud = "0.24.0"
 timeago = "=0.0.2"  # Says to use this one if you want simple; may upgrade later
+base64 = "0.21.0"
+qrcode = "0.12.0"
+md5 = "0.7.0"
+flate2 = "1.0.25"
 chrono = { version = "0.4", features = ["serde"] }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 rusqlite = { version = "0.34.0", features = ["bundled", "chrono"] }

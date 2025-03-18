@@ -1,20 +1,17 @@
 use std::io::Write;
-
-use common::*;
-//use common::prefab::get_fullpage_by_hash;
-use common::render::layout::*;
-use common::response::*;
-use flate2::write::ZlibEncoder;
+use base64::{Engine as _, engine::general_purpose};
 use maud::*;
+use serde::{Serialize, Deserialize};
 use qrcode::QrCode;
 use qrcode::render::svg;
 use qrcode::types::QrError;
-use serde::{Serialize, Deserialize};
+use flate2::write::ZlibEncoder;
 
-use base64::{Engine as _, engine::general_purpose};
-
-//use bbscope::BBCode;
-
+use super::context::*;
+use crate::response::*;
+use crate::layout::*;
+use super::common::contentapi::*;
+use super::common::*;
 
 // This widget is special: i'm worried about the memory usage, so I'm ensuring everything is 
 // done in each loop iteration rather than precomputing everything. Or at least, I'm setting it
@@ -22,16 +19,46 @@ use base64::{Engine as _, engine::general_purpose};
 // there's no "render()" like usual)
 
 #[derive(Serialize, Deserialize, Default, Debug)]
-pub struct PtcData {
+struct PtcData {
     pub base64: String,
     pub name: String,
     pub description: Option<String>
 }
 
+#[derive(Clone, Debug)]
+struct QrPageData {
+    //pub id: i64,
+    pub hash: String,
+    pub name: String,
+    pub qr_raw: Option<String>,
+}
+
+fn get_qrpage(ctx: &PageContext, hash: &str) -> Result<Option<QrPageData>, Error> {
+    let query = format!("SELECT id,hash,name,(SELECT `text` FROM content cc WHERE {} AND cc.parentId=c.id AND cc.literalType = ?) FROM content AS c WHERE {} AND c.hash = ?",
+        COMMONCONTENT,
+        COMMONCONTENT,
+    );
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    Ok(easy_query(
+        (&mut stmt, &query),
+        rusqlite::params![&PTCSYSTEM, &hash],
+        |row| {
+            //let id: i64 = row.get(0)?;
+            Ok(QrPageData {
+                //id: row.get(0)?,
+                hash: row.get(1)?,
+                name: row.get(2)?,
+                qr_raw: row.get(3)?,
+            })
+        },
+    )?
+    .pop())
+}
+
 pub async fn get_render(context: PageContext, hash: &str, high_density: bool) -> Result<Response, Error>
 {
     //First, go lookup the page
-    let page = capi::get_qrpage(&context, hash)?.ok_or(Error::NotFound(format!("Invalid hash {}", hash)))?;
+    let page = get_qrpage(&context, hash)?.ok_or(Error::NotFound(format!("Invalid hash {}", hash)))?;
         //get_fullpage(&mut context.api_context, "hash", hash.into()).await?;
     let qrlink = context.layout_data.links.qr_generator_unsafe(&page.hash);
 
@@ -86,7 +113,7 @@ pub async fn get_render(context: PageContext, hash: &str, high_density: bool) ->
         }).into_string()))
 }
 
-pub struct QrConfig {
+struct QrConfig {
     pub bytes_per_qr : i32,
     pub qr_version : i16,
     pub error_level : qrcode::EcLevel,
@@ -109,7 +136,7 @@ impl Default for QrConfig {
 }
 
 impl QrConfig {
-    pub fn high_density() -> Self {
+    fn high_density() -> Self {
         Self {
             bytes_per_qr: 1237, //'spec' says 1273 (minus 36 = 1237)
             qr_version : 25, //This the max from PTCUtilities
@@ -121,7 +148,7 @@ impl QrConfig {
     }
 }
 
-pub fn generate_qr_svgs(ptc_file: PtcData, config : QrConfig) -> Result<Vec<String>, Error>
+fn generate_qr_svgs(ptc_file: PtcData, config : QrConfig) -> Result<Vec<String>, Error>
 {
     let raw = general_purpose::STANDARD.decode(&ptc_file.base64).map_err(|e| Error::Other(e.to_string()))?;
     let rawlength = raw.len() as u32;
@@ -174,7 +201,7 @@ pub fn generate_qr_svgs(ptc_file: PtcData, config : QrConfig) -> Result<Vec<Stri
 
 /// Retrieve a 'qrcode::QrCode' object for the given qrdata. Apparently this takes some setup
 /// because the library can't automatically do it...
-pub fn get_qr_code(qrdata: &[u8], config: &QrConfig) -> Result<QrCode, QrError>
+fn get_qr_code(qrdata: &[u8], config: &QrConfig) -> Result<QrCode, QrError>
 {
     let mut qrbits = qrcode::bits::Bits::new(qrcode::Version::Normal(config.qr_version));
     qrbits.push_byte_data(&qrdata)?;

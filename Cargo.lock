@@ -1015,10 +1015,14 @@ name = "sbs-rust-contentapi"
 version = "1.1.1"
 dependencies = [
  "axum",
+ "base64",
  "bbscope",
  "chrono",
+ "flate2",
  "maud",
+ "md5",
  "onestop",
+ "qrcode",
  "rusqlite",
  "serde",
  "serde_json",
