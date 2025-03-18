@@ -5,4 +5,5 @@ pub mod documentation;
 pub mod index;
 pub mod redirect;
 pub mod search;
+pub mod searchall;
 pub mod sessionsettings;

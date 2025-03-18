@@ -1,3 +1,7 @@
+#![allow(non_snake_case)]
+#![allow(non_camel_case_types)]
+#![allow(dead_code)]
+
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::time::Instant;
@@ -89,12 +93,21 @@ string_const! { SBSPageType => {
     (DOCUMENTATION:"documentation")
 }}
 
+pub const THREADTYPES: &[&str] = &[
+    SBSPageType::FORUMTHREAD,
+    SBSPageType::PROGRAM,
+    SBSPageType::RESOURCE,
+    SBSPageType::DIRECTMESSAGE,
+    SBSPageType::DOCUMENTATION,
+];
+
 pub static BASICCONTENTFIELDS: &str = "c.id,c.hash,c.name,c.text";
 pub static USER2FIELDS: &str = "id,`type`,username,avatar,special,super,createDate";
 pub static BROWSEFIELDS: &str =
      "c.id,c.hash,c.name,COALESCE(c.description,''),COALESCE(c.literalType,''),c.createDate,c.createUserId";
 
 pub static VALUESELECT: &str = "SELECT `key`,`value` FROM content_values WHERE contentId=?";
+pub static KEYWORDSELECT: &str = "SELECT `value` FROM content_keywords WHERE contentId=?";
 pub static COMMONCONTENT: &str =
     " deleted = 0 AND id IN (SELECT contentId FROM content_permissions WHERE read=1 AND userId=0) ";
 pub static COMMONUSER: &str =

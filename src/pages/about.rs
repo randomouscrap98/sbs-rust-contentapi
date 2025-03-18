@@ -1,8 +1,4 @@
-//use common::*;
-//use common::render::layout::*;
-//use common::response::*;
-
-use crate::pages::context::*;
+use super::context::*;
 use crate::response::*;
 use crate::layout::*;
 use maud::html;

@@ -74,14 +74,14 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router {
                     },
                 ),
             )
-            // .route(
-            //     "/allsearch",
-            //     get(
-            //         |context: RequestContext, Query(search): Query<pages::searchall::SearchAllForm>| {
-            //             srender!(pages::searchall::get_render(context.page_context, search))
-            //         },
-            //     ),
-            // )
+            .route(
+                "/allsearch",
+                get(
+                    |context: RequestContext, Query(search): Query<crate::pages::searchall::SearchAllForm>| {
+                        srender!(crate::pages::searchall::get_render(context.page_context, search))
+                    },
+                ),
+            )
             // .route(
             //     "/user/:username",
             //     get(|context: RequestContext, Path(username): Path<String>| {
@@ -108,7 +108,7 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router {
                     },
                 ),
             )
-            // .route("/forum", get(forum_get))
+            .route("/forum", get(forum_get))
             // .route(
             //     "/forum/category/:hash",
             //     get(
@@ -152,17 +152,18 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router {
             //         },
             //     ),
             // )
-            // .route(
-            //     "/page",
-            //     get(
-            //         |context: RequestContext, Query(query): Query<pages::page::PageQuery>| {
-            //             srender!(crate::pages::redirect::get_pid_redirect(
-            //                 context.page_context,
-            //                 query
-            //             ))
-            //         },
-            //     ),
-            // )
+            .route(
+                "/page",
+                get(
+                    |context: RequestContext,
+                     Query(query): Query<crate::pages::redirect::PageQuery>| {
+                        srender!(crate::pages::redirect::get_pid_redirect(
+                            context.page_context,
+                            query
+                        ))
+                    },
+                ),
+            )
             // .route(
             //     "/widget/thread",
             //     get(
@@ -317,35 +318,32 @@ pub struct ForumFullQuery {
     page: Option<i32>,
 }
 
-// pub async fn forum_get(
-//     context: RequestContext,
-//     Query(query): Query<ForumFullQuery>,
-// ) -> StdResponse {
-//     //Order goes from most precise to least
-//     if let Some(fpid) = query.fpid {
-//         crate::pages::redirect::get_fpid_redirect(context.page_context, fpid).await
-//     } else if let Some(ftid) = query.ftid {
-//         crate::pages::redirect::get_ftid_redirect(
-//             context.page_context,
-//             ftid,
-//             //context.global_state.config.default_display_posts,
-//             query.page,
-//         )
-//         .await
-//     } else if let Some(fcid) = query.fcid {
-//         pages::forum_category::get_fcid_render(
-//             context.page_context,
-//             fcid,
-//             context.global_state.config.default_display_threads,
-//             query.page,
-//         )
-//         .await
-//     } else {
-//         //This is main forum display, usually what we want (but unfortunately last)
-//         pages::forum_main::get_render(
-//             context.page_context,
-//             &context.global_state.config.forum_category_order,
-//         )
-//         .await
-//     }
-// }
+pub async fn forum_get(
+    context: RequestContext,
+    Query(query): Query<ForumFullQuery>,
+) -> StdResponse {
+    //Order goes from most precise to least
+    if let Some(fpid) = query.fpid {
+        crate::pages::redirect::get_fpid_redirect(context.page_context, fpid).await
+    } else if let Some(ftid) = query.ftid {
+        crate::pages::redirect::get_ftid_redirect(context.page_context, ftid, query.page).await
+    } else {
+        Err(Error::NotFound(format!("NOT YET")))
+    }
+    // else if let Some(fcid) = query.fcid {
+    //     pages::forum_category::get_fcid_render(
+    //         context.page_context,
+    //         fcid,
+    //         context.global_state.config.default_display_threads,
+    //         query.page,
+    //     )
+    //     .await
+    // } else {
+    //     //This is main forum display, usually what we want (but unfortunately last)
+    //     pages::forum_main::get_render(
+    //         context.page_context,
+    //         &context.global_state.config.forum_category_order,
+    //     )
+    //     .await
+    // }
+}

@@ -21,7 +21,7 @@ struct DocTreeContent {
 // Get any system content with given literaltype
 fn get_all_documentation(ctx: &PageContext) -> Result<Vec<DocTreeContent>, Error> {
     let query = format!(
-        "SELECT hash,name FROM content WHERE {} AND contentType = ? AND literalType = ?",
+        "SELECT id,hash,name FROM content WHERE {} AND contentType = ? AND literalType = ?",
         COMMONCONTENT
     );
     let mut stmt = ctx.dbcon.prepare(&query)?;

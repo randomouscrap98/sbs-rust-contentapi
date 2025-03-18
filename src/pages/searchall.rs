@@ -1,9 +1,15 @@
-use common::capi::*;
-use common::render::layout::*;
-use common::response::*;
-use common::{render::submissions::pageicon2, *};
+use super::common::contentapi::*;
+use super::common::render::*;
+use super::context::*;
+use crate::layout::*;
+use crate::links::*;
+use crate::opt_s;
+use crate::response::*;
+
+//use common::{render::submissions::pageicon2, *};
 use maud::*;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
@@ -11,8 +17,91 @@ pub struct SearchAllForm {
     pub search: Option<String>,
 }
 
+#[derive(Clone, Debug)]
+struct SearchAllUser {
+    //pub id: i64,
+    pub username: String,
+    pub avatar: String,
+}
+
+#[derive(Clone, Debug)]
+struct SearchAllContent {
+    //pub id: i64,
+    pub hash: String,
+    pub name: String,
+    pub literal_type: String,
+    pub values: HashMap<String, String>,
+    pub keywords: Vec<String>,
+}
+
+enum SearchAllResult {
+    User(SearchAllUser),
+    Content(SearchAllContent),
+}
+
+fn get_searchall(ctx: &PageContext, search: &str) -> Result<Vec<SearchAllResult>, Error> {
+    let mut result: Vec<SearchAllResult> = Vec::new();
+    let rsearch = if search.len() < 2 {
+        format!("{}%", search) // Short search length means more optimized "begins with"
+    } else {
+        format!("%{}%", search)
+    };
+
+    // First, search users
+    let query = format!(
+        "SELECT id,username,avatar FROM users WHERE {} AND username LIKE ?",
+        COMMONUSER
+    );
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    result.extend(easy_query(
+        (&mut stmt, &query),
+        rusqlite::params![&rsearch],
+        |row| {
+            Ok(SearchAllResult::User(SearchAllUser {
+                //id: row.get(0)?,
+                username: row.get(1)?,
+                avatar: row.get(2)?,
+            }))
+        },
+    )?);
+
+    // And then, content. It's a bit silly, but for I think slightly better performance,
+    // we query the set of all content that matches the keywords separately from querying
+    // the actual keyword list. There are better ways to do this, but I'm lazy, sorry
+    // future self?
+    let query = format!(
+        "SELECT id,hash,name,COALESCE(literalType, '') FROM content WHERE {} AND literalType IN ({}) AND (name LIKE ? OR id IN (SELECT contentId FROM content_keywords WHERE `value` LIKE ?))",
+        COMMONCONTENT,
+        params_list(THREADTYPES.len())
+    );
+
+    let mut params: Vec<&dyn rusqlite::types::ToSql> = Vec::new();
+    for tt in THREADTYPES.iter() {
+        params.push(tt);
+    }
+    params.push(&rsearch);
+    params.push(&rsearch);
+
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let mut vstmt = ctx.dbcon.prepare(VALUESELECT)?;
+    let mut kstmt = ctx.dbcon.prepare(KEYWORDSELECT)?;
+    result.extend(easy_query((&mut stmt, &query), params.as_slice(), |row| {
+        let id: i64 = row.get(0)?;
+        Ok(SearchAllResult::Content(SearchAllContent {
+            //id,
+            hash: row.get(1)?,
+            name: row.get(2)?,
+            literal_type: row.get(3)?,
+            values: gather_values(&mut vstmt, id)?,
+            keywords: gather_keywords(&mut kstmt, id)?,
+        }))
+    })?);
+
+    Ok(result)
+}
+
 //This will render the entire index! It's a handler WITH the template in it! Maybe that's kinda weird? who knows...
-pub fn render(
+fn render(
     data: MainLayoutData,
     search_results: Option<Vec<SearchAllResult>>,
     search_form: SearchAllForm,
@@ -43,7 +132,7 @@ pub fn render(
                                         a."pagetitle flatlink searchname" target="_top" href=(data.links.forum_thread_unsafe(&content.hash)) { (content.name) }
                                     },
                                     SearchAllResult::User(user) => {
-                                        span."searchicon" { img."avatar" src=(data.links.image(&user.avatar, contentapi::QueryImage::Cropped100)); }
+                                        span."searchicon" { img."avatar" src=(data.links.image(&user.avatar, QueryImage::Cropped100)); }
                                         a."username flatlink searchname" target="_top" href=(data.links.user_unsafe(&user.username)) { (user.username) }
                                     }
                                 }
@@ -70,7 +159,7 @@ pub async fn get_render(
     if let Some(ref search) = search_form.search {
         if search.len() > 0 {
             let searchlower = search.to_ascii_lowercase();
-            let mut result_raw = capi::get_searchall(&context, search)?;
+            let mut result_raw = get_searchall(&context, search)?;
             result_raw.sort_by(|a, b| {
                 search_score(b, &searchlower)
                     .partial_cmp(&search_score(a, &searchlower))

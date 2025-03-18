@@ -1,12 +1,8 @@
-//use common::constants::SBSPageType;
-//use common::render::layout::*;
-//use common::response::*;
-//use common::*;
 use maud::*;
 
+use super::common::contentapi::*;
+use super::context::*;
 use crate::layout::*;
-use crate::pages::common::contentapi::*;
-use crate::pages::context::*;
 use crate::response::*;
 
 static SYSTEMTYPE: i8 = 5;

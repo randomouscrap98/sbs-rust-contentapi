@@ -6,6 +6,28 @@ use super::contentapi::*;
 use super::*;
 use crate::links::*;
 
+#[macro_export]
+macro_rules! opt_s {
+    ($str:expr,$def:literal) => {
+        if let Some(ref thing) = $str {
+            if thing.trim().is_empty() {
+                $def
+            } else {
+                thing
+            }
+        } else {
+            $def
+        }
+    };
+    ($str:expr) => {
+        if let Some(ref thing) = $str {
+            thing
+        } else {
+            ""
+        }
+    };
+}
+
 pub fn timeago_future(time: &chrono::DateTime<chrono::Utc>) -> String {
     let duration = time.signed_duration_since(chrono::Utc::now());
     match duration.to_std() {
