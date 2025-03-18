@@ -1,17 +1,42 @@
-// use contentapi::conversion::*;
-// use contentapi::endpoints::ApiContext;
-// use contentapi::*;
-
-use common::capi::*;
-use common::constants::*;
-// use common::forum::*;
-use common::pagination::*;
-use common::render::forum::*;
-use common::render::layout::*;
-use common::render::*;
-use common::response::*;
-use common::*;
 use maud::*;
+
+use super::common::contentapi::*;
+use super::common::render::*;
+use super::context::*;
+use crate::box_to_ref;
+use crate::layout::*;
+use crate::links::*;
+use crate::response::*;
+
+// fn get_forum_category(ctx: &PageContext, hash: String) -> Result<Option<ForumCategory2>, Error> {
+//     let (mut query, mut params) = forum_categories_base_query();
+//     query.push_str(" AND c.hash = ?");
+//     params.push(Box::new(hash));
+//     let mut stmt = ctx.dbcon.prepare(&query)?;
+//     Ok(gather_forum_categories((&mut stmt, &query), box_to_ref!(params))?.pop())
+// }
+
+pub fn get_forum_category(
+    ctx: &PageContext,
+    cq: OldIdOrHash,
+) -> Result<Option<ForumCategory2>, Error> {
+    let (mut query, mut params) = forum_categories_base_query();
+    cq.mod_query("c", "fcid", &mut query, &mut params);
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    Ok(gather_forum_categories((&mut stmt, &query), box_to_ref!(params))?.pop())
+}
+
+pub fn get_threads(
+    ctx: &PageContext,
+    category_id: i64,
+    limits: QueryLimit,
+) -> Result<Vec<ForumThread2>, Error> {
+    let (mut query, mut params) = forum_theads_base_query();
+    query.push_str(" AND t.parentId = ? ORDER BY max_post DESC");
+    params.push(Box::new(category_id));
+    limits.mod_query(&mut query, &mut params);
+    gather_forum_threads(&query, ctx, box_to_ref!(params))
+}
 
 pub fn render(
     mut data: MainLayoutData,
@@ -104,21 +129,19 @@ pub fn thread_item(links: &LinkConfig, thread: &ForumThread2) -> Markup {
 
 async fn render_threads(
     context: PageContext,
-    idhash: Option<OldIdOrHash>,
+    idhash: OldIdOrHash,
     per_page: i32,
     page: Option<i32>,
 ) -> Result<Response, Error> {
-    let category = get_forum_categories(&context, idhash.clone())?
-        .pop()
-        .ok_or(Error::NotFound(String::from(
-            "Couldn't find that category (direct)",
-        )))?;
+    let category = get_forum_category(&context, idhash)?.ok_or(Error::NotFound(String::from(
+        "Couldn't find that category (direct)",
+    )))?;
 
     let page = page.unwrap_or(1) - 1;
 
     let threads = get_threads(
         &context,
-        Some(category.id),
+        category.id,
         QueryLimit {
             limit: Some(per_page),
             skip: Some(per_page * page),
@@ -147,7 +170,7 @@ pub async fn get_hash_render(
     per_page: i32,
     page: Option<i32>,
 ) -> Result<Response, Error> {
-    render_threads(context, Some(OldIdOrHash::Hash(hash)), per_page, page).await
+    render_threads(context, OldIdOrHash::Hash(hash), per_page, page).await
 }
 
 pub async fn get_fcid_render(
@@ -156,5 +179,5 @@ pub async fn get_fcid_render(
     per_page: i32,
     page: Option<i32>,
 ) -> Result<Response, Error> {
-    render_threads(context, Some(OldIdOrHash::Id(fcid)), per_page, page).await
+    render_threads(context, OldIdOrHash::Id(fcid), per_page, page).await
 }

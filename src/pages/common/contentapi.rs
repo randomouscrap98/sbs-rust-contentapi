@@ -138,6 +138,18 @@ pub fn select_childcount(idname: &str) -> String {
         COMMONCONTENT, idname
     );
 }
+pub fn select_postcount(idname: &str) -> String {
+    return format!(
+        "SELECT COUNT(*) FROM messages WHERE contentId = {} AND deleted=0",
+        idname
+    );
+}
+pub fn select_maxpost(idname: &str) -> String {
+    return format!(
+        "SELECT COALESCE(MAX(id),0) FROM messages WHERE contentId = {} AND deleted=0",
+        idname
+    );
+}
 
 pub fn easy_query<T, F>(
     stmt: (&mut rusqlite::Statement, &str),
@@ -595,6 +607,66 @@ pub fn forum_categories_base_query() -> (String, Vec<Box<dyn rusqlite::ToSql>>) 
     );
     let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![];
     for t in FORUMCATEGORYTYPES.iter() {
+        params.push(Box::new(*t));
+    }
+    (query, params)
+}
+
+#[derive(Clone, Debug)]
+pub struct ForumThread2 {
+    pub id: i64,
+    pub hash: String,
+    pub name: String,
+    pub literal_type: String,
+    pub content_type: i64,
+    pub parent_id: i64,
+    pub create_date: DateTime<Utc>,
+    pub create_user_id: i64,
+    pub text: String,
+    pub description: String,
+    pub posts_count: i32,
+    pub max_post_id: i64,
+    pub values: HashMap<String, String>,
+}
+
+pub fn gather_forum_threads(
+    query: &str,
+    ctx: &PageContext,
+    params: &[&dyn rusqlite::ToSql],
+) -> Result<Vec<ForumThread2>, Error> {
+    let mut stmt = ctx.dbcon.prepare(query)?;
+    let mut vstmt = ctx.dbcon.prepare(VALUESELECT)?;
+    easy_query((&mut stmt, query), params, |row| {
+        let id = row.get(0)?;
+        Ok(ForumThread2 {
+            id,
+            hash: row.get(1)?,
+            name: row.get(2)?,
+            literal_type: row.get(3)?,
+            content_type: row.get(4)?,
+            parent_id: row.get(5)?,
+            create_date: row.get(6)?,
+            create_user_id: row.get(7)?,
+            text: row.get(8)?,
+            description: row.get(9)?,
+            posts_count: row.get(10)?,
+            max_post_id: row.get(11)?,
+            values: gather_values(&mut vstmt, id)?,
+        })
+    })
+}
+
+pub fn forum_theads_base_query() -> (String, Vec<Box<dyn rusqlite::ToSql>>) {
+    let query = format!(
+        "SELECT {},({}),({}) AS max_post FROM content t WHERE {} AND t.contentType = ? AND t.literalType IN ({})",
+        "t.id,t.hash,t.name,COALESCE(t.literalType,''),t.contentType,t.parentId,t.createDate,t.createUserId,COALESCE(t.text,''),COALESCE(t.description,'')",
+        select_postcount("t.id"),
+        select_maxpost("t.id"),
+        COMMONCONTENT,
+        params_list(THREADTYPES.len())
+    );
+    let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![Box::new(ContentType::PAGE)];
+    for t in THREADTYPES.iter() {
         params.push(Box::new(*t));
     }
     (query, params)

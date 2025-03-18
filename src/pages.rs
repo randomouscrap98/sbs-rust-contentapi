@@ -2,6 +2,7 @@ pub mod about;
 pub mod common;
 pub mod context;
 pub mod documentation;
+pub mod forum_category;
 pub mod forum_main;
 pub mod index;
 pub mod redirect;

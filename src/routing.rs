@@ -109,21 +109,21 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router {
                 ),
             )
             .route("/forum", get(forum_get))
-            // .route(
-            //     "/forum/category/:hash",
-            //     get(
-            //         |context: RequestContext,
-            //          Path(hash): Path<String>,
-            //          Query(page): Query<SimplePage>| {
-            //             srender!(crate::pages::forum_category::get_hash_render(
-            //                 context.page_context,
-            //                 hash,
-            //                 context.global_state.config.default_display_threads,
-            //                 page.page
-            //             ))
-            //         },
-            //     ),
-            // )
+            .route(
+                "/forum/category/:hash",
+                get(
+                    |context: RequestContext,
+                     Path(hash): Path<String>,
+                     Query(page): Query<SimplePage>| {
+                        srender!(crate::pages::forum_category::get_hash_render(
+                            context.page_context,
+                            hash,
+                            context.global_state.config.default_display_threads,
+                            page.page
+                        ))
+                    },
+                ),
+            )
             // .route(
             //     "/forum/thread/:hash",
             //     get(
@@ -327,14 +327,14 @@ pub async fn forum_get(
         crate::pages::redirect::get_fpid_redirect(context.page_context, fpid).await
     } else if let Some(ftid) = query.ftid {
         crate::pages::redirect::get_ftid_redirect(context.page_context, ftid, query.page).await
-    // else if let Some(fcid) = query.fcid {
-    //     pages::forum_category::get_fcid_render(
-    //         context.page_context,
-    //         fcid,
-    //         context.global_state.config.default_display_threads,
-    //         query.page,
-    //     )
-    //     .await
+    } else if let Some(fcid) = query.fcid {
+        crate::pages::forum_category::get_fcid_render(
+            context.page_context,
+            fcid,
+            context.global_state.config.default_display_threads,
+            query.page,
+        )
+        .await
     } else {
         //This is main forum display, usually what we want (but unfortunately last)
         crate::pages::forum_main::get_render(

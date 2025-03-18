@@ -194,3 +194,84 @@ pub fn page_card2(links: &LinkConfig, page: &BrowseContent, users: &HashMap<i64,
         }
     }
 }
+
+// -------------------------------------------
+//            PAGINATION
+// -------------------------------------------
+
+pub struct PagelistItem {
+    pub text: String,
+    pub current: bool,
+    pub page: i32,
+}
+
+pub fn get_pagelist(total: i32, page_size: i32, current: i32) -> Vec<PagelistItem> {
+    let mut pagelist = Vec::new();
+
+    for i in (0..total).step_by(page_size as usize) {
+        let thispage = i / page_size;
+        pagelist.push(PagelistItem {
+            page: thispage + 1,
+            text: format!("{}", thispage + 1),
+            current: thispage == current,
+        });
+    }
+
+    pagelist
+}
+
+// -------------------------------------------
+//            FORUM
+// -------------------------------------------
+
+//To build the forum path at the top
+pub struct ForumPathItem {
+    pub link: String,
+    pub title: String,
+}
+
+impl ForumPathItem {
+    pub fn from_category2(category: &ForumCategory2) -> Self {
+        Self {
+            link: format!("/forum/category/{}", &category.hash),
+            title: category.name.clone(),
+        }
+    }
+    pub fn from_thread2(thread: &ForumThread2) -> Self {
+        Self {
+            link: format!("/forum/thread/{}", thread.hash),
+            title: thread.name.clone(),
+        }
+    }
+    pub fn root() -> Self {
+        Self {
+            link: String::from("/forum"),
+            title: String::from("Root"),
+        }
+    }
+}
+
+pub fn forum_path(config: &LinkConfig, path: &Vec<ForumPathItem>) -> Markup {
+    html! {
+        p."forumpath" {
+            @for (index, segment) in path.iter().enumerate() {
+                @let last = index == path.len() - 1;
+                a."flatlink" href={(config.http_root)(segment.link)} {
+                    @if last { "[.]" }
+                    @else { (segment.title) }
+                }
+                @if !last {
+                    span."pathseparator" { " / " }
+                }
+            }
+        }
+    }
+}
+
+pub fn threadicon2(config: &LinkConfig, thread: &ForumThread2) -> Markup {
+    html! {
+        div."threadicon smallseparate" {
+            (pageicon2(config, &thread.values, &thread.literal_type, 99))
+        }
+    }
+}
