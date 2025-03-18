@@ -82,12 +82,12 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router {
                     },
                 ),
             )
-            // .route(
-            //     "/user/:username",
-            //     get(|context: RequestContext, Path(username): Path<String>| {
-            //         srender!(pages::user::get_render(context.page_context, username))
-            //     }),
-            // )
+            .route(
+                "/user/:username",
+                get(|context: RequestContext, Path(username): Path<String>| {
+                    srender!(crate::pages::user::get_render(context.page_context, username))
+                }),
+            )
             .route(
                 "/sessionsettings",
                 get(|context: RequestContext| {

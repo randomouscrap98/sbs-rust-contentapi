@@ -7,3 +7,4 @@ pub mod redirect;
 pub mod search;
 pub mod searchall;
 pub mod sessionsettings;
+pub mod user;

@@ -65,6 +65,11 @@ byte_enum! { UserType => {
     (GROUP:2i8)
 }}
 
+byte_enum! { UserRelationType => {
+    (INGROUP:1i8),
+    (ASSIGNCONTENT:2i8)
+}}
+
 string_const! { SBSValue => {
     (DOWNLOADKEY:"dlkey"),
     (VERSION:"version"),
@@ -287,19 +292,6 @@ pub fn get_users(ctx: &PageContext, ids: Vec<i64>) -> Result<Vec<User2>, Error> 
     let mut stmt = ctx.dbcon.prepare(&query)?;
 
     gather_users((&mut stmt, &query), params.as_slice())
-}
-
-// Find user by name
-pub fn get_user_by_name(ctx: &PageContext, name: &str) -> Result<Option<User2>, Error> {
-    let query = format!(
-        "SELECT {} FROM users WHERE {} AND username = ?",
-        USER2FIELDS, COMMONUSER,
-    );
-    let params: Vec<&dyn rusqlite::types::ToSql> = vec![&name];
-    let mut stmt = ctx.dbcon.prepare(&query)?;
-
-    let mut users = gather_users((&mut stmt, &query), params.as_slice())?;
-    Ok(users.pop())
 }
 
 #[derive(Debug, Default, Clone)]
