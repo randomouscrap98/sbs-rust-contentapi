@@ -1,13 +1,38 @@
+use maud::*;
 use std::collections::HashMap;
 
-use common::capi::get_engagements;
-use common::constants::{DOWNVOTESTR, UPVOTESTR};
-use common::render::layout::*;
-use common::response::*;
-use common::*;
-use maud::*;
+use super::common::contentapi::*;
+use super::context::*;
+use crate::layout::*;
+use crate::response::*;
 
-pub fn render(data: MainLayoutData, engagement: HashMap<String, i32>) -> String {
+fn get_engagements(ctx: &PageContext, content: i64) -> Result<HashMap<String, i32>, Error> {
+    // WARN: you can get engagements for content that is private! You also get engagements
+    // for deleted users/etc!
+    let query = format!("SELECT `type`,engagement,count(*) FROM content_engagement WHERE contentId = ? GROUP BY `type`,engagement");
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let engagement_iter = stmt.query_map([&content], |row| {
+        let mut typ: String = row.get(0)?;
+        let eng: String = row.get(1)?;
+        typ.push_str(&eng);
+        let count: i32 = row.get(2)?;
+        Ok((typ, count))
+    })?;
+
+    #[cfg(feature = "querydump")]
+    println!("Query: {:?}", &query);
+
+    let mut result = HashMap::<String, i32>::new();
+
+    for engagement in engagement_iter {
+        let reng = engagement?;
+        result.insert(reng.0, reng.1);
+    }
+
+    Ok(result)
+}
+
+fn render(data: MainLayoutData, engagement: HashMap<String, i32>) -> String {
     let mut downvotes = 0;
     let mut upvotes = 0;
 

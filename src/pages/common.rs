@@ -7,6 +7,7 @@ use serde::*;
 pub const DEFAULTPAGESORT: &str = "upvotes";
 pub const ANYSYSTEM: &str = "any";
 pub const PTCSYSTEM: &str = "ptc";
+pub const MARKUPBBCODE: &str = "bbcode";
 
 pub const SBSSYSTEMS: &[(&str, &str)] = &[
     (ANYSYSTEM, "Any"),

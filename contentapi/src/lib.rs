@@ -104,6 +104,42 @@ macro_rules! byte_enum {
     };
 }
 
+#[derive(Debug, Clone)]
+pub struct AboutRequest {
+    //This is GET/POST/etc. I don't care for it to be an enum, since I'm just printing it
+    pub verb: String,
+    pub endpoint: String,
+    //Restricted data, which should probably not even be logged to the console! So what do
+    //we do with it? It's mostly just for debugging I think, there may be a flag to enable
+    //printing the restricted data
+    pub post_data: Option<String>,
+}
+
+/// This is needed so often: just convert any generic error into a "no request" error,
+/// assuming you have the AboutRequest...
+macro_rules! noreqerr {
+    ($result:expr, $req:ident) => {
+        $result.map_err(|e| ApiError::NonRequest($req.clone(), e.to_string()))
+    };
+}
+
+/// This isn't needed as often: just convert any generic error into a "network" error
+macro_rules! neterr {
+    ($result:expr, $req:ident) => {
+        $result.map_err(|e| ApiError::Network($req.clone(), e.to_string()))
+    };
+}
+
+/// This isn't needed as often: just convert any generic error into a "parse" error
+macro_rules! parseerr {
+    ($result:expr, $req:ident) => {
+        parseerr!($result, $req, None)
+    };
+    ($result:expr, $req:ident, $data:expr) => {
+        $result.map_err(|e| ApiError::Parse($req.clone(), e.to_string(), $data))
+    };
+}
+
 // --------------------
 // *    CONSTANTS     *
 // --------------------

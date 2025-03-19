@@ -286,6 +286,19 @@ pub fn map_users2(users: Vec<User2>) -> HashMap<i64, User2> {
         .map(|u| (u.id, u))
         .collect::<HashMap<i64, User2>>()
 }
+pub fn get_tagged_categories2(values: &HashMap<String, String>) -> Vec<i64> {
+    let mut result: Vec<i64> = Vec::new();
+
+    for (key, _value) in values {
+        if key.starts_with(CATEGORYPREFIX) {
+            if let Ok(category) = (&key[CATEGORYPREFIX.len()..]).parse::<i64>() {
+                result.push(category)
+            }
+        }
+    }
+
+    result
+}
 
 pub fn gather_users(
     stmt: (&mut rusqlite::Statement, &str),

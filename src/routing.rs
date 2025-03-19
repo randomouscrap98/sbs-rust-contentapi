@@ -124,34 +124,34 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router {
                     },
                 ),
             )
-            // .route(
-            //     "/forum/thread/:hash",
-            //     get(
-            //         |context: RequestContext,
-            //          Path(hash): Path<String>,
-            //          Query(page): Query<SimplePage>| {
-            //             srender!(pages::forum_thread::get_hash_render(
-            //                 context.page_context,
-            //                 hash,
-            //                 context.global_state.config.default_display_posts,
-            //                 page.page
-            //             ))
-            //         },
-            //     ),
-            // )
-            // .route(
-            //     "/forum/thread/:hash/:post",
-            //     get(
-            //         |context: RequestContext, Path((hash, post)): Path<(String, i64)>| {
-            //             srender!(pages::forum_thread::get_hash_postid_render(
-            //                 context.page_context,
-            //                 hash,
-            //                 post,
-            //                 context.global_state.config.default_display_posts
-            //             ))
-            //         },
-            //     ),
-            // )
+            .route(
+                "/forum/thread/:hash",
+                get(
+                    |context: RequestContext,
+                     Path(hash): Path<String>,
+                     Query(page): Query<SimplePage>| {
+                        srender!(crate::pages::forum_thread::get_hash_render(
+                            context.page_context,
+                            hash,
+                            context.global_state.config.default_display_posts,
+                            page.page
+                        ))
+                    },
+                ),
+            )
+            .route(
+                "/forum/thread/:hash/:post",
+                get(
+                    |context: RequestContext, Path((hash, post)): Path<(String, i64)>| {
+                        srender!(crate::pages::forum_thread::get_hash_postid_render(
+                            context.page_context,
+                            hash,
+                            post,
+                            context.global_state.config.default_display_posts
+                        ))
+                    },
+                ),
+            )
             .route(
                 "/page",
                 get(
@@ -175,12 +175,12 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router {
             //         },
             //     ),
             // )
-            // .route(
-            //     "/widget/votes/:id",
-            //     get(|context: RequestContext, Path(id): Path<i64>| {
-            //         srender!(pages::widget_votes::get_render(context.page_context, id))
-            //     }),
-            // )
+            .route(
+                "/widget/votes/:id",
+                get(|context: RequestContext, Path(id): Path<i64>| {
+                    srender!(crate::pages::widget_votes::get_render(context.page_context, id))
+                }),
+            )
             .route(
                 "/widget/qr/:hash",
                 get(

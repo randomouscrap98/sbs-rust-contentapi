@@ -34,6 +34,8 @@ onestop = { version = "0.0.2", features = ["utils"] }
 bbscope = { version = "0.2" }
 toml = "0.5.9"
 
+# TEMP
+hyper = { version = "0.14", features = ["http2", "client", "runtime"] }
 # contentapi = { path = "contentapi", features = [ "postdump" ] }
 # common = { path = "common"}
 # pages = { path = "pages" }
