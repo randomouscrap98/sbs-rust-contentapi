@@ -15,6 +15,13 @@ use crate::links::*;
 use crate::response::*;
 use crate::*;
 
+#[derive(Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct ThreadQuery {
+    pub reply: Option<i64>,
+    pub selected: Option<i64>,
+}
+
 // -----------------------------------------
 //             TEMP
 // -----------------------------------------
@@ -38,13 +45,6 @@ impl LinkConfig {
     pub fn user(&self, user: &User) -> String {
         format!("{}/user/{}", self.http_root, user.username)
     }
-}
-
-#[derive(Serialize, Deserialize, Default)]
-#[serde(default)]
-pub struct ThreadQuery {
-    pub reply: Option<i64>,
-    pub selected: Option<i64>,
 }
 
 #[macro_export]
@@ -534,6 +534,21 @@ pub struct AboutRequest {
     //we do with it? It's mostly just for debugging I think, there may be a flag to enable
     //printing the restricted data
     pub post_data: Option<String>,
+}
+
+/// Generate a request for ONLY messages and users for the given root post id. NO limits set on reply chain
+/// length (other than those imposed by the API)
+pub fn get_reply_request(root_post_id: i64) -> FullRequest {
+    //NOTE: valuein WAY WAY faster than valuelike! always prefer it!
+    let mut request = get_generic_message_request(
+        "!valuein(@root_key,@root_post) or id = @root_post",
+        Vec::new(),
+        0,
+        0,
+    );
+    add_value!(request, "root_key", vec!["re-top"]);
+    add_value!(request, "root_post", vec![root_post_id]);
+    request
 }
 
 /// Render a single post on a thread.
@@ -1496,4 +1511,91 @@ pub async fn get_hash_postid_render(
         None,
     )
     .await
+}
+
+// -------------------------------------
+//          Widget thread
+// -------------------------------------
+
+/// Rendering for the actual widget. The
+pub fn render_widget(context: &mut PageContext, config: PostsConfig) -> String {
+    let posts = render_mainview(context, config);
+    basic_skeleton(
+        &context.layout_data,
+        html! {
+            title { "SmileBASIC Source Thread Widget" }
+            meta name="description" content="Simple view into a thread";
+            (context.layout_data.links.style("/forpage/forum.css"))
+            style { r#"
+            body { 
+                /* This shrinks the WHOLE page! */
+                font-size: 0.85rem; 
+                padding: var(--space_medium);
+            }
+            @media screen and (max-width: 30em) {
+                font-size: 0.75rem; 
+            }
+        "# }
+        },
+        html! {
+            (posts)
+        },
+    )
+    .into_string()
+}
+
+fn get_thread_by_msgid(ctx: &PageContext, msgid: i64) -> Result<Option<ForumThread2>, Error> {
+    let (mut query, mut params) = forum_theads_base_query();
+    query.push_str(" AND t.id = (SELECT m.contentId FROM messages m WHERE m.id = ?)");
+    params.push(Box::new(msgid));
+    Ok(gather_forum_threads(&query, ctx, box_to_ref!(params))?.pop())
+}
+
+pub async fn get_render_widget(
+    mut context: PageContext,
+    query: ThreadQuery,
+) -> Result<Response, Error> {
+    if let Some(post_id) = query.reply {
+        let thread = get_thread_by_msgid(&context, post_id)?
+            .ok_or(Error::NotFound(String::from("Could not find thread!")))?;
+
+        let api_context = ApiContext::new(String::from("http://localhost:5000/api"));
+        //This is a WASTEFUL query for rendering this simple widget, at some point make this better!
+        //let pre_request = get_prepost_request(Some(post_id), None);
+
+        //Go lookup all the 'initial' data, which everything except posts and users
+        //let pre_result = context.api_context.post_request(&pre_request).await?;
+
+        //Pull out and parse all that stupid data. It's fun using strongly typed languages!! maybe...
+        //let mut threads_raw = cast_result_required::<Content>(&pre_result, THREADKEY)?;
+
+        // //There must be one category, and one thread, otherwise return 404
+        // let thread = threads_raw
+        //     .pop()
+        //     .ok_or(Error::NotFound(String::from("Could not find thread!")))?;
+
+        //OK NOW you can go lookup the posts, since we are sure about where in the postlist we want
+        let after_request = get_reply_request(post_id);
+        let after_result = api_context.post_request(&after_request).await?;
+
+        //Pull the data out of THAT request
+        let messages_raw = cast_result_required::<Message>(&after_result, "message")?;
+        let related_raw = cast_result_required::<Message>(&after_result, "related")?;
+        let users_raw = cast_result_required::<User>(&after_result, "user")?;
+
+        Ok(Response::Render(render_widget(
+            &mut context,
+            PostsConfig::reply_mode(
+                thread,
+                messages_raw,
+                map_messages(related_raw),
+                map_users(users_raw),
+                query.selected,
+            ),
+        )))
+    } else {
+        Err(Error::Other(String::from(
+            "No data provided; this widget requires at least 'reply'",
+        )))
+    }
 }

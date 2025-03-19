@@ -164,17 +164,17 @@ pub fn get_all_routes(gstate: Arc<GlobalState>) -> Router {
                     },
                 ),
             )
-            // .route(
-            //     "/widget/thread",
-            //     get(
-            //         |context: RequestContext, Query(query): Query<common::forms::ThreadQuery>| {
-            //             srender!(pages::widget_thread::get_render(
-            //                 context.page_context,
-            //                 query
-            //             ))
-            //         },
-            //     ),
-            // )
+            .route(
+                "/widget/thread",
+                get(
+                    |context: RequestContext, Query(query): Query<crate::pages::forum_thread::ThreadQuery>| {
+                        srender!(crate::pages::forum_thread::get_render_widget(
+                            context.page_context,
+                            query
+                        ))
+                    },
+                ),
+            )
             .route(
                 "/widget/votes/:id",
                 get(|context: RequestContext, Path(id): Path<i64>| {
