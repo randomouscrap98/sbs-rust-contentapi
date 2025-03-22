@@ -8,8 +8,8 @@ use axum;
 
 #[derive(Debug)]
 pub enum Response {
-    Render(String),                 //string is the markup
-    RenderWithStatus(String, u16),  //string is the markup, status is the status code returned
+    Render(String), //string is the markup
+    //RenderWithStatus(String, u16),  //string is the markup, status is the status code returned
     MessageWithStatus(String, u16), //Not an html page, just a message
     Redirect(String),
 }
@@ -17,10 +17,10 @@ pub enum Response {
 #[derive(Debug)]
 pub enum Error {
     //Api(contentapi::endpoints::ApiError),
-    Data(String, String), //First string is error to output, second is the data itself (don't print for user)
-    NotFound(String),     //Normal "not found" error
-    User(String),         //A user-generated error, usually related to request. Should produce 400
-    Other(String),        //Something "general" happened, who the heck knows?
+    // Data(String, String), //First string is error to output, second is the data itself (don't print for user)
+    NotFound(String), //Normal "not found" error
+    User(String),     //A user-generated error, usually related to request. Should produce 400
+    Other(String),    //Something "general" happened, who the heck knows?
 }
 
 // impl From<endpoints::ApiError> for Error {
@@ -47,17 +47,17 @@ impl From<Box<dyn std::error::Error>> for Error {
     }
 }
 
-impl Error {
-    pub fn to_user_string(&self) -> String {
-        match self {
-            //Self::Api(error) => error.to_user_string(),
-            Self::Other(error) => error.clone(),
-            Self::User(error) => error.clone(),
-            Self::NotFound(error) => error.clone(),
-            Self::Data(error, _data) => error.clone(),
-        }
-    }
-}
+// impl Error {
+//     pub fn to_user_string(&self) -> String {
+//         match self {
+//             //Self::Api(error) => error.to_user_string(),
+//             Self::Other(error) => error.clone(),
+//             Self::User(error) => error.clone(),
+//             Self::NotFound(error) => error.clone(),
+//             //Self::Data(error, _data) => error.clone(),
+//         }
+//     }
+// }
 
 /// Response is powerful enough to represent both errors and responses, so this function flattens
 /// a result of either response or error into just a response. Why have both? I don't know... sometimes something
@@ -72,10 +72,10 @@ pub fn flatten(result: Result<Response, Error>) -> Response {
             Error::Other(otherr) => Response::MessageWithStatus(otherr.clone(), 500),
             Error::NotFound(otherr) => Response::MessageWithStatus(otherr.clone(), 404),
             Error::User(otherr) => Response::MessageWithStatus(otherr.clone(), 400),
-            Error::Data(derr, data) => {
-                println!("DATA ERROR: {}\n{}", derr, data);
-                Response::MessageWithStatus(derr.clone(), 500)
-            }
+            // Error::Data(derr, data) => {
+            //     println!("DATA ERROR: {}\n{}", derr, data);
+            //     Response::MessageWithStatus(derr.clone(), 500)
+            // }
         },
     }
 }
@@ -84,12 +84,12 @@ impl axum::response::IntoResponse for Response {
     fn into_response(self) -> axum::response::Response {
         match self {
             Response::Render(html) => axum::response::Html(html).into_response(),
-            Response::RenderWithStatus(html, status) => (
-                axum::http::StatusCode::from_u16(status).unwrap(),
-                [(axum::http::header::CONTENT_TYPE, "text/html")],
-                html,
-            )
-                .into_response(),
+            // Response::RenderWithStatus(html, status) => (
+            //     axum::http::StatusCode::from_u16(status).unwrap(),
+            //     [(axum::http::header::CONTENT_TYPE, "text/html")],
+            //     html,
+            // )
+            //     .into_response(),
             Response::MessageWithStatus(msg, status) => {
                 (axum::http::StatusCode::from_u16(status).unwrap(), msg).into_response()
             }

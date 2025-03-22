@@ -28,15 +28,30 @@ macro_rules! opt_s {
     };
 }
 
-pub fn timeago_future(time: &chrono::DateTime<chrono::Utc>) -> String {
-    let duration = time.signed_duration_since(chrono::Utc::now());
-    match duration.to_std() {
-        Ok(stdur) => timeago::format(stdur, timeago::Style::HUMAN).replace(" ago", ""),
-        Err(error) => {
-            format!("PARSE-ERR({}):{}", duration, error)
-        }
-    }
-}
+// pub fn timeago_future(time: &chrono::DateTime<chrono::Utc>) -> String {
+//     let duration = time.signed_duration_since(chrono::Utc::now());
+//     match duration.to_std() {
+//         Ok(stdur) => timeago::format(stdur, timeago::Style::HUMAN).replace(" ago", ""),
+//         Err(error) => {
+//             format!("PARSE-ERR({}):{}", duration, error)
+//         }
+//     }
+// }
+//
+// pub fn b(boolean: bool) -> &'static str {
+//     if boolean {
+//         "true"
+//     } else {
+//         "false"
+//     }
+// }
+// pub fn i(int: &Option<i64>) -> String {
+//     if let Some(int) = int {
+//         format!("{}", int)
+//     } else {
+//         String::from("??")
+//     }
+// }
 
 pub fn timeago(time: &chrono::DateTime<chrono::Utc>) -> String {
     let duration = chrono::Utc::now().signed_duration_since(*time);
@@ -56,14 +71,6 @@ pub fn timeago_o(time: &Option<chrono::DateTime<chrono::Utc>>) -> String {
     }
 }
 
-pub fn b(boolean: bool) -> &'static str {
-    if boolean {
-        "true"
-    } else {
-        "false"
-    }
-}
-
 pub fn d(date: &Option<DateTime<Utc>>) -> String {
     if let Some(date) = date {
         dd(date)
@@ -74,14 +81,6 @@ pub fn d(date: &Option<DateTime<Utc>>) -> String {
 
 pub fn dd(date: &DateTime<Utc>) -> String {
     date.to_rfc3339_opts(SecondsFormat::Secs, true)
-}
-
-pub fn i(int: &Option<i64>) -> String {
-    if let Some(int) = int {
-        format!("{}", int)
-    } else {
-        String::from("??")
-    }
 }
 
 pub fn pageicon2(
