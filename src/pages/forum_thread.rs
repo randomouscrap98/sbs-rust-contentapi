@@ -26,27 +26,6 @@ pub struct ThreadQuery {
 //             TEMP
 // -----------------------------------------
 
-// static PREMESSAGEINDEXKEY: &str = "premessage_index";
-// static PREMESSAGEKEY: &str = "premessage";
-// static THREADKEY: &str = "threadvmf";
-
-impl LinkConfig {
-    // pub fn image(&self, hash: &str, query: &QueryImage) -> String
-    // {
-    //     match serde_urlencoded::to_string(&query) {
-    //         Ok(querystring) => format!("{}/{}?{}", self.file_root, hash, querystring),
-    //         Err(error) => {
-    //             println!("Serde_qs failed? Not printing link for {}. Error: {}", hash, error);
-    //             format!("#ERRORFOR-{}",hash)
-    //         }
-    //     }
-    // }
-
-    pub fn user(&self, user: &User) -> String {
-        format!("{}/user/{}", self.http_root, user.username)
-    }
-}
-
 #[macro_export]
 macro_rules! string_enum {
     ($name:ident => {
@@ -517,27 +496,30 @@ pub struct AboutRequest {
 
 /// Generate a request for ONLY messages and users for the given root post id. NO limits set on reply chain
 /// length (other than those imposed by the API)
-pub fn get_reply_request(root_post_id: i64) -> FullRequest {
-    //NOTE: valuein WAY WAY faster than valuelike! always prefer it!
-    let mut request = get_generic_message_request(
-        "!valuein(@root_key,@root_post) or id = @root_post",
-        Vec::new(),
-        0,
-        0,
-    );
-    add_value!(request, "root_key", vec!["re-top"]);
-    add_value!(request, "root_post", vec![root_post_id]);
-    request
-}
+// pub fn get_reply_request(root_post_id: i64) -> FullRequest {
+//     //NOTE: valuein WAY WAY faster than valuelike! always prefer it!
+//     let mut request = get_generic_message_request(
+//         "!valuein(@root_key,@root_post) or id = @root_post",
+//         Vec::new(),
+//         0,
+//         0,
+//     );
+//     add_value!(request, "root_key", vec!["re-top"]);
+//     add_value!(request, "root_post", vec![root_post_id]);
+//     request
+// }
 
 /// Render a single post on a thread.
 pub struct PostsConfig {
     /// The thread that holds all the posts to render
     pub thread: ForumThread2,
     pub categories: Vec<SubmissionCategory>,
-    pub posts: Vec<Message>,
-    pub related: HashMap<i64, Message>,
-    pub users: HashMap<i64, User>,
+    //pub posts: Vec<Message>,
+    pub posts: Vec<ForumPost>,
+    pub related: HashMap<i64, ForumPost>,
+    //pub related: HashMap<i64, Message>,
+    //pub users: HashMap<i64, User>,
+    pub users: HashMap<i64, User2>,
     /// The path to this thread; if not given, path not rendered. Thread must also be given
     pub path: Option<Vec<ForumPathItem>>,
     /// The pages to navigate posts; not displayed if not given
@@ -556,9 +538,9 @@ impl PostsConfig {
     pub fn thread_mode(
         thread: ForumThread2,
         categories: Vec<SubmissionCategory>,
-        posts: Vec<Message>,
-        related: HashMap<i64, Message>,
-        users: HashMap<i64, User>,
+        posts: Vec<ForumPost>,
+        related: HashMap<i64, ForumPost>,
+        users: HashMap<i64, User2>,
         path: Vec<ForumPathItem>,
         pages: Vec<PagelistItem>,
         start: i32,
@@ -585,9 +567,9 @@ impl PostsConfig {
     }
     pub fn reply_mode(
         thread: ForumThread2,
-        posts: Vec<Message>,
-        related: HashMap<i64, Message>,
-        users: HashMap<i64, User>,
+        posts: Vec<ForumPost>,
+        related: HashMap<i64, ForumPost>,
+        users: HashMap<i64, User2>,
         selected_post_id: Option<i64>,
     ) -> Self {
         //let posts = thread.posts.clone();
@@ -613,12 +595,12 @@ impl PostsConfig {
 
 pub const SHORTDESCRIPTION: usize = 200;
 
-pub fn short_post(message: &Message) -> String {
-    if let Some(ref text) = message.text {
-        text.chars().take(SHORTDESCRIPTION).collect::<String>()
-    } else {
-        String::from("")
-    }
+pub fn short_post(message: &ForumPost) -> String {
+    message
+        .text
+        .chars()
+        .take(SHORTDESCRIPTION)
+        .collect::<String>()
 }
 
 pub fn short_description2(thread: &ForumThread2) -> String {
@@ -807,16 +789,51 @@ fn forum_posts_base_query() -> (String, Vec<Box<dyn rusqlite::ToSql>>) {
         "m.id,m.contentId,m.createUserId,m.createDate,m.text,m.editDate,m.editUserId",
         COMMONMESSAGE,
     );
-    let params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![Box::new(ContentType::PAGE)];
+    let params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![]; //Box::new(ContentType::PAGE)];
     (query, params)
 }
 
-fn get_forumpost_by_id(ctx: &PageContext, id: i64) -> Result<Option<ForumPost>, Error> {
+fn get_forumposts_basic(
+    ctx: &PageContext,
+    content_id: i64,
+    ids: Option<Vec<i64>>,
+    limit: QueryLimit,
+) -> Result<Vec<ForumPost>, Error> {
     let (mut query, mut params) = forum_posts_base_query();
-    query.push_str(" AND m.id = ?");
-    params.push(Box::new(id));
-    Ok(gather_forum_posts(&query, ctx, box_to_ref!(params))?.pop())
+    query.push_str(" AND m.contentId = ?");
+    params.push(Box::new(content_id));
+    if let Some(ids) = ids {
+        query.push_str(" AND m.id IN (");
+        query.push_str(&params_list(ids.len()));
+        query.push_str(")");
+        for id in ids {
+            params.push(Box::new(id));
+        }
+    }
+    limit.mod_query(&mut query, &mut params);
+    gather_forum_posts(&query, ctx, box_to_ref!(params))
 }
+
+pub fn get_forumposts_replies(
+    ctx: &PageContext,
+    root_post_id: i64,
+) -> Result<Vec<ForumPost>, Error> {
+    let (mut query, mut params) = forum_posts_base_query();
+    query.push_str(
+        " AND m.id IN (SELECT messageId FROM message_values WHERE `key`=? AND `value`=?)",
+    );
+    //params.push(Box::new(root_post_id));
+    params.push(Box::new("re-top"));
+    params.push(Box::new(root_post_id));
+    gather_forum_posts(&query, ctx, box_to_ref!(params))
+}
+
+// fn get_forumpost_by_ids(ctx: &PageContext, id: i64) -> Result<Option<ForumPost>, Error> {
+//     let (mut query, mut params) = forum_posts_base_query();
+//     query.push_str(" AND m.id = ?");
+//     params.push(Box::new(id));
+//     Ok(gather_forum_posts(&query, ctx, box_to_ref!(params))?.pop())
+// }
 
 fn get_count_before_forumpost(ctx: &PageContext, id: i64) -> Result<i32, Error> {
     let query = format!(
@@ -831,44 +848,6 @@ fn get_count_before_forumpost(ctx: &PageContext, id: i64) -> Result<i32, Error> 
         "PROGRAM ERROR: No results on count(*)??",
     )))
 }
-
-//"prepost" means the main query before finding the main data before gathering the posts. The post offset
-//often depends on the prepost
-// pub fn get_prepost_request(post_id: i64) -> FullRequest {
-//     let mut request = FullRequest::new();
-//
-//     let mut post_query = String::from("!basiccomments()");
-//
-//     add_value!(request, "postId", post_id);
-//     post_query.push_str(" and id = @postId");
-//
-//     let mut message_request = build_request!(
-//         RequestType::message,
-//         //Dont' need values for fpid, you already know it was there if it exists
-//         String::from("id,contentId"),
-//         post_query
-//     );
-//     message_request.limit = 1; //Just in case
-//     message_request.name = Some(String::from(PREMESSAGEKEY));
-//     request.requests.push(message_request);
-//
-//     //OK one last ACTUAL thing: need to get the premessage index if it was there
-//     let mut index_request = build_request!(
-//         RequestType::message,
-//         String::from("specialCount,id,contentId"),
-//         //This query DOES NOT fail if no premessage is found (like on user error). It needs to be LESS THAN
-//         //while ordered by id (default) to produce a proper index. The first message will be 0, and the second
-//         //will have one message with id lower than it.
-//         format!(
-//             "!basiccomments() and contentId in @{}.id and id < @{}.id",
-//             THREADKEY, PREMESSAGEKEY
-//         )
-//     );
-//     index_request.name = Some(String::from(PREMESSAGEINDEXKEY));
-//     request.requests.push(index_request);
-//
-//     request
-// }
 
 fn get_generic_message_request(
     query: &str,
@@ -912,18 +891,18 @@ fn get_generic_message_request(
     request
 }
 
-//Apparently can't decide on transfered ownership or not
-pub fn get_finishpost_request(
-    thread_id: i64,
-    extra_uids: Vec<i64>,
-    limit: i32,
-    skip: i32,
-) -> FullRequest {
-    let mut request =
-        get_generic_message_request("contentId = @thread_id", extra_uids, limit, skip);
-    add_value!(request, "thread_id", thread_id);
-    request
-}
+// //Apparently can't decide on transfered ownership or not
+// pub fn get_finishpost_request(
+//     thread_id: i64,
+//     extra_uids: Vec<i64>,
+//     limit: i32,
+//     skip: i32,
+// ) -> FullRequest {
+//     let mut request =
+//         get_generic_message_request("contentId = @thread_id", extra_uids, limit, skip);
+//     add_value!(request, "thread_id", thread_id);
+//     request
+// }
 
 pub fn get_thumbnail_hash2(content: &ForumThread2) -> Option<String> {
     if let Some(ref images) = get_value_safe!(&content.values, SBSValue::IMAGES, Vec<String>) {
@@ -950,12 +929,10 @@ pub struct ReplyData {
 // }
 
 /// Compute the flattened reply data for the given message
-pub fn get_replydata(post: &Message) -> Option<ReplyData> {
-    if let Some(values) = &post.values {
-        if let Some(top) = values.get("re-top").and_then(|v| v.as_i64()) {
-            if let Some(direct) = values.get("re").and_then(|v| v.as_i64()) {
-                return Some(ReplyData { top, direct });
-            }
+pub fn get_replydata(post: &ForumPost) -> Option<ReplyData> {
+    if let Some(top) = get_value_safe!(post.values, "re-top", i64) {
+        if let Some(direct) = get_value_safe!(post.values, "re", i64) {
+            return Some(ReplyData { top, direct });
         }
     }
     return None;
@@ -981,21 +958,21 @@ pub fn get_replydata(post: &Message) -> Option<ReplyData> {
 #[derive(Clone, Debug)]
 pub struct ReplyTree<'a> {
     pub id: i64,
-    pub post: &'a Message,
+    pub post: &'a ForumPost,
     pub children: Vec<ReplyTree<'a>>,
 }
 
 impl<'a> ReplyTree<'a> {
-    pub fn new(message: &'a Message) -> Self {
+    pub fn new(message: &'a ForumPost) -> Self {
         ReplyTree {
-            id: message.id.unwrap_or_else(|| 0),
+            id: message.id,
             post: message,
             children: Vec::new(),
         }
     }
 
     /// Insert the given post as a node in this tree. Modifies the tree, and returns the node (if it was inserted)
-    pub fn insert_post(&mut self, post: &'a Message, data: &ReplyData) -> Option<&ReplyTree> {
+    pub fn insert_post(&mut self, post: &'a ForumPost, data: &ReplyData) -> Option<&ReplyTree> {
         //If this is the node to insert into, return ourselves
         if self.id == data.direct {
             self.children.push(ReplyTree::new(post));
@@ -1016,7 +993,7 @@ impl<'a> ReplyTree<'a> {
 }
 
 /// Convert a list of posts into a tree. ASSUMES THE FIRST POST IS THE ROOT!!
-pub fn posts_to_replytree(posts: &Vec<Message>) -> Vec<ReplyTree> {
+pub fn posts_to_replytree(posts: &Vec<ForumPost>) -> Vec<ReplyTree> {
     if posts.len() == 0 {
         return Vec::new();
     }
@@ -1028,8 +1005,7 @@ pub fn posts_to_replytree(posts: &Vec<Message>) -> Vec<ReplyTree> {
             if root.insert_post(post, &data).is_none() {
                 println!(
                     "WARN: could not find place for message {}, reply to {}",
-                    i(&post.id),
-                    data.direct
+                    post.id, data.direct
                 );
             }
         }
@@ -1123,7 +1099,7 @@ pub fn render_mainview(context: &mut PageContext, config: PostsConfig) -> Markup
                     @if thread_type != SBSPageType::DOCUMENTATION {
                         span {
                             @if let Some(user) = config.users.get(&thread.create_user_id) {
-                                a."flatlink" target="_top" href=(data.links.user(user)){ (user.username) }
+                                a."flatlink" target="_top" href=(data.links.user_unsafe(&user.username)){ (user.username) }
                             }
                         }
                     }
@@ -1170,17 +1146,17 @@ pub fn post_item(
     layout_data: &MainLayoutData,
     bbcode: &mut BBCode,
     config: &PostsConfig,
-    post: &Message,
+    post: &ForumPost,
     sequence: Option<i32>,
 ) -> Markup {
     let users = &config.users;
-    let user = user_or_default(users.get(&post.createUserId.unwrap_or(0)));
+    let user = user_or_default2(users.get(&post.create_user_id));
     let mut class = String::from("post");
-    if config.selected_post_id == post.id {
+    if config.selected_post_id == Some(post.id) {
         class.push_str(" current")
     }
     let mut reply_chain_link: Option<String> = None;
-    let mut reply_post: Option<&Message> = None;
+    let mut reply_post: Option<&ForumPost> = None;
 
     if let Some(replies) = get_replydata(post) {
         reply_post = config.related.get(&replies.direct);
@@ -1190,14 +1166,14 @@ pub fn post_item(
         if config.render_reply_link {
             let query = ThreadQuery {
                 reply: Some(replies.top),
-                selected: post.id,
+                selected: Some(post.id),
             };
             match serde_urlencoded::to_string(query) {
                 Ok(query) => {
                     reply_chain_link = Some(format!(
                         "{}/widget/thread?{}",
                         &layout_data.links.http_root, query
-                    )); //, forum_post_hash(post)));
+                    ));
                 }
                 Err(error) => println!("ERROR: couldn't encode thread query!: {}", error),
             }
@@ -1205,24 +1181,22 @@ pub fn post_item(
     }
 
     html! {
-        div.(class) #{"post_"(i(&post.id))} {
+        div.(class) #{"post_"(post.id)} {
             div."postleft" {
                 img."avatar" src=(layout_data.links.image(&user.avatar, QueryImage::Cropped100 ));
             }
             div."postright" {
                 div."postheader" {
-                    a."flatlink username" target="_top" href=(layout_data.links.user(&user)) { (&user.username) }
+                    a."flatlink username" target="_top" href=(layout_data.links.user_unsafe(&user.username)) { (&user.username) }
                     @if let Some(sequence) = sequence {
-                        a."sequence" target="_top" title=(i(&post.id)) href=(layout_data.links.forum_post_unsafe(post.id.unwrap_or_default(), &config.thread.hash)){ "#" (sequence) }
+                        a."sequence" target="_top" title=(post.id) href=(layout_data.links.forum_post_unsafe(post.id, &config.thread.hash)){ "#" (sequence) }
                     }
                 }
                 @if let Some(reply_post) = reply_post {
                     //TODO: can't decide between consuming or not. spoilers are the important bit
                     (post_reply(layout_data, bbcode, reply_post, &config.thread.hash, &config.users))
                 }
-                @if let Some(text) = &post.text {
-                    div."content bbcode" data-postid=(i(&post.id)) { (PreEscaped(bbcode.parse_profiled_opt(text, format!("post-{}",i(&post.id))))) }
-                }
+                div."content bbcode" data-postid=(post.id) { (PreEscaped(bbcode.parse(&post.text))) }
                 div."postfooter mediumseparate" {
                     @if let Some(reply_link) = reply_chain_link {
                         details."repliesview aside" style="display:none" {
@@ -1231,12 +1205,12 @@ pub fn post_item(
                         }
                     }
                     div."history" {
-                        time."aside" datetime=(d(&post.createDate)) { (timeago_o(&post.createDate)) }
-                        @if let Some(edit_user_id) = post.editUserId {
-                            time."aside" datetime=(d(&post.editDate)) {
-                                "Edited "(timeago_o(&post.editDate))" by "
+                        time."aside" datetime=(dd(&post.create_date)) { (timeago(&post.create_date)) }
+                        @if let Some(edit_user_id) = post.edit_user_id {
+                            time."aside" datetime=(d(&post.edit_date)) {
+                                "Edited "(timeago_o(&post.edit_date))" by "
                                 @if let Some(edit_user) = users.get(&edit_user_id) {
-                                    a."flatlink" target="_top" href=(layout_data.links.user(&edit_user)){ (&edit_user.username) }
+                                    a."flatlink" target="_top" href=(layout_data.links.user_unsafe(&edit_user.username)){ (&edit_user.username) }
                                 }
                             }
                         }
@@ -1250,19 +1224,17 @@ pub fn post_item(
 pub fn post_reply(
     layout_data: &MainLayoutData,
     bbcode: &mut BBCode,
-    post: &Message,
+    post: &ForumPost,
     thash: &str,
-    users: &HashMap<i64, User>,
+    users: &HashMap<i64, User2>,
 ) -> Markup {
-    let user = user_or_default(users.get(&post.createUserId.unwrap_or(0)));
+    let user = user_or_default2(users.get(&post.create_user_id));
     html! {
         div."reply aside" {
-            a."replylink" target="_top" href=(layout_data.links.forum_post_unsafe(post.id.unwrap_or_default(), thash)) { "Replying to:" }
+            a."replylink" target="_top" href=(layout_data.links.forum_post_unsafe(post.id, thash)) { "Replying to:" }
             img src=(layout_data.links.image(&user.avatar, QueryImage::Cropped100 ));
-            a."flatlink username" href=(layout_data.links.user(&user)) { (&user.username) }
-            @if let Some(text) = &post.text {
-                div."content bbcode postpreview" { (PreEscaped(bbcode.parse_profiled_opt(text, format!("reply-{}",i(&post.id))))) }
-            }
+            a."flatlink username" href=(layout_data.links.user_unsafe(&user.username)) { (&user.username) }
+            div."content bbcode postpreview" { (PreEscaped(bbcode.parse(&post.text))) }
         }
     }
 }
@@ -1283,18 +1255,24 @@ pub fn user_or_default(user: Option<&User>) -> User {
     }
 }
 
-pub fn map_users(users: Vec<User>) -> HashMap<i64, User> {
-    users
+// pub fn map_users(users: Vec<User>) -> HashMap<i64, User> {
+//     users
+//         .into_iter()
+//         .map(|u| (u.id, u))
+//         .collect::<HashMap<i64, User>>()
+// }
+/// Convert a vector of messages into a hashmap (id is key)
+// pub fn map_messages(messages: Vec<Message>) -> HashMap<i64, Message> {
+//     messages
+//         .into_iter()
+//         .map(|u| (u.id.unwrap_or_else(|| 0), u))
+//         .collect::<HashMap<i64, Message>>()
+// }
+pub fn map_forumposts(posts: Vec<ForumPost>) -> HashMap<i64, ForumPost> {
+    posts
         .into_iter()
         .map(|u| (u.id, u))
-        .collect::<HashMap<i64, User>>()
-}
-/// Convert a vector of messages into a hashmap (id is key)
-pub fn map_messages(messages: Vec<Message>) -> HashMap<i64, Message> {
-    messages
-        .into_iter()
-        .map(|u| (u.id.unwrap_or_else(|| 0), u))
-        .collect::<HashMap<i64, Message>>()
+        .collect::<HashMap<i64, ForumPost>>()
 }
 
 #[derive(Deserialize, Debug)]
@@ -1323,13 +1301,13 @@ pub fn render(mut context: PageContext, config: PostsConfig) -> String {
     //If the literal type is a forumthread, we generally want to pull text from posts
     if config.thread.literal_type == SBSPageType::FORUMTHREAD {
         if let Some(selected_id) = config.selected_post_id {
-            if let Some(post) = config.posts.iter().find(|p| p.id == Some(selected_id)) {
+            if let Some(post) = config.posts.iter().find(|p| p.id == selected_id) {
                 meta.description = short_post(post);
                 meta.canonical = Some(
                     context
                         .layout_data
                         .links
-                        .forum_post_unsafe(post.id.unwrap_or_default(), &config.thread.hash),
+                        .forum_post_unsafe(post.id, &config.thread.hash),
                 );
             }
         } else if let Some(start) = config.start_num {
@@ -1365,6 +1343,15 @@ pub fn get_forum_category_by_id(
     Ok(result.pop())
 }
 
+fn add_uids_from_posts(messages: &Vec<ForumPost>, existing: &mut Vec<i64>) {
+    for message in messages {
+        existing.push(message.create_user_id);
+        if let Some(edit_uid) = message.edit_user_id {
+            existing.push(edit_uid);
+        }
+    }
+}
+
 async fn render_thread(
     context: PageContext,
     hash: &str,
@@ -1373,8 +1360,6 @@ async fn render_thread(
     page: Option<i32>,
 ) -> Result<Response, Error> {
     let mut page = page.unwrap_or(1) - 1; //we assume 1-based pages
-
-    let api_context = ApiContext::new(String::from("http://localhost:5000/api"));
 
     let thread = get_thread_by_hash(&context, hash)?
         .ok_or(Error::NotFound(String::from("Could not find thread!")))?;
@@ -1402,15 +1387,31 @@ async fn render_thread(
 
     let sequence_start = page * per_page;
 
-    //OK NOW you can go lookup the posts, since we are sure about where in the postlist we want
-    let after_request =
-        get_finishpost_request(thread_id, vec![thread_create_uid], per_page, sequence_start);
-    let after_result = api_context.post_request(&after_request).await?;
-
-    //Pull the data out of THAT request
-    let messages_raw = cast_result_required::<Message>(&after_result, "message")?;
-    let related_raw = cast_result_required::<Message>(&after_result, "related")?;
-    let users_raw = cast_result_required::<User>(&after_result, "user")?;
+    let messages_raw = get_forumposts_basic(
+        &context,
+        thread_id,
+        None,
+        QueryLimit {
+            limit: Some(per_page),
+            skip: Some(sequence_start),
+        },
+    )?;
+    let mut related_ids: Vec<i64> = Vec::new();
+    for message in &messages_raw {
+        if let Some(data) = get_replydata(message) {
+            related_ids.push(data.direct);
+        }
+    }
+    let related_raw = get_forumposts_basic(
+        &context,
+        thread_id,
+        Some(related_ids),
+        QueryLimit::default(),
+    )?;
+    let mut user_ids: Vec<i64> = vec![thread_create_uid];
+    add_uids_from_posts(&messages_raw, &mut user_ids);
+    add_uids_from_posts(&related_raw, &mut user_ids);
+    let users_raw = get_users(&context, user_ids)?;
 
     //Construct before borrowing
     let path = vec![
@@ -1418,27 +1419,18 @@ async fn render_thread(
         ForumPathItem::from_category2(&category),
         ForumPathItem::from_thread2(&thread),
     ];
-    //let thread_tags_ids = get_tagged_categories(&thread);
-    // let mut full_thread = ForumThread::from_content(thread, &messages_raw)?;
-    // full_thread.categories = Some(get_submission_categories(
-    //     &mut context,
-    //     Some(thread_tags_ids),
-    // )?);
     let post_config = PostsConfig::thread_mode(
         thread,
         subcategories,
         messages_raw,
-        map_messages(related_raw),
-        map_users(users_raw),
+        map_forumposts(related_raw),
+        map_users2(users_raw),
         path,
         get_pagelist(comment_count as i32, per_page, page),
         1 + per_page * page,
         post_id,
         //selected_post.and_then(|m| m.id),
     );
-    // if post_config.thread.thread.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION) {
-    //     post_config.docs_content = Some(get_all_documentation(&mut context.api_context).await?);
-    // }
     Ok(Response::Render(render(context, post_config)))
 }
 
@@ -1510,24 +1502,27 @@ pub async fn get_render_widget(
         let thread = get_thread_by_msgid(&context, post_id)?
             .ok_or(Error::NotFound(String::from("Could not find thread!")))?;
 
-        let api_context = ApiContext::new(String::from("http://localhost:5000/api"));
+        //let api_context = ApiContext::new(String::from("http://localhost:5000/api"));
 
-        //OK NOW you can go lookup the posts, since we are sure about where in the postlist we want
-        let after_request = get_reply_request(post_id);
-        let after_result = api_context.post_request(&after_request).await?;
-
-        //Pull the data out of THAT request
-        let messages_raw = cast_result_required::<Message>(&after_result, "message")?;
-        let related_raw = cast_result_required::<Message>(&after_result, "related")?;
-        let users_raw = cast_result_required::<User>(&after_result, "user")?;
+        let messages_raw = get_forumposts_basic(
+            &context,
+            thread.id,
+            Some(vec![post_id]),
+            QueryLimit::default(),
+        )?;
+        let related_raw = get_forumposts_replies(&context, post_id)?;
+        let mut user_ids: Vec<i64> = Vec::new();
+        add_uids_from_posts(&messages_raw, &mut user_ids);
+        add_uids_from_posts(&related_raw, &mut user_ids);
+        let users_raw = get_users(&context, user_ids)?;
 
         Ok(Response::Render(render_widget(
             &mut context,
             PostsConfig::reply_mode(
                 thread,
                 messages_raw,
-                map_messages(related_raw),
-                map_users(users_raw),
+                map_forumposts(related_raw),
+                map_users2(users_raw),
                 query.selected,
             ),
         )))
