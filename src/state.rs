@@ -6,8 +6,6 @@ use crate::pages::context::*;
 use crate::response::*;
 
 use bbscope::BBCode;
-//use common::{LinkConfig, MainLayoutData, PageContext, UserConfig};
-//use contentapi::endpoints::ApiContext;
 
 use crate::Config;
 
@@ -34,17 +32,12 @@ fn open_dbcon(db_path: &str) -> Result<rusqlite::Connection, Error> {
     }
 }
 
-//fn open_dbcon() -> Result
-//let dbcon = rusqlite::Connection::open(state.config.db_file)?;
-
 impl RequestContext {
     pub async fn generate(
         state: Arc<GlobalState>,
         path: &str,
         config_raw: Option<String>,
     ) -> Result<Self, Error> {
-        //let context = ApiContext::new(state.config.api_endpoint.clone());
-
         let user_config = if let Some(config) = config_raw {
             serde_json::from_str::<UserConfig>(&config)?
         } else {

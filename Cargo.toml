@@ -3,9 +3,6 @@ name = "sbs-rust-contentapi"
 version = "2.0.0"
 edition = "2021"
 
-# [workspace]
-# members = [ "contentapi", "pages", "common" ]
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -32,13 +29,6 @@ serde_json = "1.0"
 onestop = { version = "0.0.2", features = ["utils"] }
 bbscope = { version = "0.2" }
 toml = "0.5.9"
-
-# TEMP
-# sqlite = "0.36.2"
-# hyper = { version = "0.14", features = ["http2", "client", "runtime"] }
-# contentapi = { path = "contentapi", features = [ "postdump" ] }
-# common = { path = "common"}
-# pages = { path = "pages" }
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator = "0.5.4"

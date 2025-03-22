@@ -27,7 +27,6 @@ static CONFIGNAME: &str = "settings";
 //it produces a config object that can load from a chain of json files
 onestop::create_config! {
     Config, OptConfig => {
-        api_endpoint: String,
         upload_dir: String,
         db_file: String,
         thumbnail_dir: String,
