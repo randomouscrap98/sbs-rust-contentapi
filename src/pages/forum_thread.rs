@@ -26,9 +26,9 @@ pub struct ThreadQuery {
 //             TEMP
 // -----------------------------------------
 
-static PREMESSAGEINDEXKEY: &str = "premessage_index";
-static PREMESSAGEKEY: &str = "premessage";
-static THREADKEY: &str = "threadvmf";
+// static PREMESSAGEINDEXKEY: &str = "premessage_index";
+// static PREMESSAGEKEY: &str = "premessage";
+// static THREADKEY: &str = "threadvmf";
 
 impl LinkConfig {
     // pub fn image(&self, hash: &str, query: &QueryImage) -> String
@@ -799,11 +799,13 @@ pub fn gather_forum_posts(
     })
 }
 
+static COMMONMESSAGE: &str = "m.deleted = 0 AND m.module IS NULL AND m.contentId IN (SELECT contentId FROM content_permissions WHERE read=1 AND userId=0)";
+
 fn forum_posts_base_query() -> (String, Vec<Box<dyn rusqlite::ToSql>>) {
     let query = format!(
-        "SELECT {} FROM messages m WHERE m.deleted = 0 AND m.module IS NULL AND m.contentId IN ({})",
-        "SELECT contentId FROM content_permissions WHERE read=1 AND userId=0",
-        "m.id,m.contentId,m.createUserId,m.createDate,m.text,m.editDate,m.editUserId"
+        "SELECT {} FROM messages m WHERE {}",
+        "m.id,m.contentId,m.createUserId,m.createDate,m.text,m.editDate,m.editUserId",
+        COMMONMESSAGE,
     );
     let params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![Box::new(ContentType::PAGE)];
     (query, params)
@@ -816,74 +818,57 @@ fn get_forumpost_by_id(ctx: &PageContext, id: i64) -> Result<Option<ForumPost>, 
     Ok(gather_forum_posts(&query, ctx, box_to_ref!(params))?.pop())
 }
 
+fn get_count_before_forumpost(ctx: &PageContext, id: i64) -> Result<i32, Error> {
+    let query = format!(
+        "SELECT COUNT(*) FROM messages m WHERE {} AND m.id < ? AND m.contentId = (SELECT contentId FROM messages WHERE id = ?)",
+        COMMONMESSAGE
+    );
+    let mut stmt = ctx.dbcon.prepare(&query)?;
+    let mut result = easy_query((&mut stmt, &query), rusqlite::params![id, id], |row| {
+        row.get::<usize, i32>(0)
+    })?;
+    result.pop().ok_or(Error::NotFound(String::from(
+        "PROGRAM ERROR: No results on count(*)??",
+    )))
+}
+
 //"prepost" means the main query before finding the main data before gathering the posts. The post offset
 //often depends on the prepost
-pub fn get_prepost_request(post_id: Option<i64>, thread_hash: Option<String>) -> FullRequest {
-    let mut request = FullRequest::new();
-
-    let mut post_limited = false;
-    let mut post_query = String::from("!basiccomments()");
-
-    if let Some(post_id) = post_id {
-        add_value!(request, "postId", post_id);
-        post_query.push_str(" and id = @postId");
-        post_limited = true;
-    }
-
-    add_value!(request, "allowed_types", THREADTYPES);
-    let mut thread_query = String::from("!notdeleted() and literalType in @allowed_types");
-
-    //Add the pre-lookup post get so we can limit the thread by it. This will prevent users
-    //from sending random hashes but with valid post ids, since the thread won't be found
-    if post_limited {
-        let mut message_request = build_request!(
-            RequestType::message,
-            //Dont' need values for fpid, you already know it was there if it exists
-            String::from("id,contentId"),
-            post_query
-        );
-        message_request.limit = 1; //Just in case
-        message_request.name = Some(String::from(PREMESSAGEKEY));
-        request.requests.push(message_request);
-        thread_query = format!("{} and id in @{}.contentId", thread_query, PREMESSAGEKEY);
-    }
-
-    if let Some(thread_hash) = thread_hash {
-        add_value!(request, "hash", thread_hash);
-        thread_query = format!("{} and hash = @hash", thread_query);
-    } else if !post_limited {
-        //Is this acceptable? I mean you called it wrong...
-        panic!("You must pass at least one of either 'thread_hash' or 'post_id' to get_prepost_request()!");
-    }
-
-    let mut thread_request = build_request!(
-        RequestType::content,
-        String::from("*"), //Here we ask for "everything" because we will be rendering all the thread data now
-        thread_query
-    );
-    thread_request.expensive = true;
-    thread_request.name = Some(String::from(THREADKEY));
-    request.requests.push(thread_request);
-
-    //OK one last ACTUAL thing: need to get the premessage index if it was there
-    if post_limited {
-        let mut index_request = build_request!(
-            RequestType::message,
-            String::from("specialCount,id,contentId"),
-            //This query DOES NOT fail if no premessage is found (like on user error). It needs to be LESS THAN
-            //while ordered by id (default) to produce a proper index. The first message will be 0, and the second
-            //will have one message with id lower than it.
-            format!(
-                "!basiccomments() and contentId in @{}.id and id < @{}.id",
-                THREADKEY, PREMESSAGEKEY
-            )
-        );
-        index_request.name = Some(String::from(PREMESSAGEINDEXKEY));
-        request.requests.push(index_request);
-    }
-
-    request
-}
+// pub fn get_prepost_request(post_id: i64) -> FullRequest {
+//     let mut request = FullRequest::new();
+//
+//     let mut post_query = String::from("!basiccomments()");
+//
+//     add_value!(request, "postId", post_id);
+//     post_query.push_str(" and id = @postId");
+//
+//     let mut message_request = build_request!(
+//         RequestType::message,
+//         //Dont' need values for fpid, you already know it was there if it exists
+//         String::from("id,contentId"),
+//         post_query
+//     );
+//     message_request.limit = 1; //Just in case
+//     message_request.name = Some(String::from(PREMESSAGEKEY));
+//     request.requests.push(message_request);
+//
+//     //OK one last ACTUAL thing: need to get the premessage index if it was there
+//     let mut index_request = build_request!(
+//         RequestType::message,
+//         String::from("specialCount,id,contentId"),
+//         //This query DOES NOT fail if no premessage is found (like on user error). It needs to be LESS THAN
+//         //while ordered by id (default) to produce a proper index. The first message will be 0, and the second
+//         //will have one message with id lower than it.
+//         format!(
+//             "!basiccomments() and contentId in @{}.id and id < @{}.id",
+//             THREADKEY, PREMESSAGEKEY
+//         )
+//     );
+//     index_request.name = Some(String::from(PREMESSAGEINDEXKEY));
+//     request.requests.push(index_request);
+//
+//     request
+// }
 
 fn get_generic_message_request(
     query: &str,
@@ -1383,16 +1368,13 @@ pub fn get_forum_category_by_id(
 async fn render_thread(
     context: PageContext,
     hash: &str,
-    pre_request: FullRequest,
+    post_id: Option<i64>,
     per_page: i32,
     page: Option<i32>,
 ) -> Result<Response, Error> {
     let mut page = page.unwrap_or(1) - 1; //we assume 1-based pages
 
     let api_context = ApiContext::new(String::from("http://localhost:5000/api"));
-
-    //Go lookup all the 'initial' data, which everything except posts and users
-    let pre_result = api_context.post_request(&pre_request).await?;
 
     let thread = get_thread_by_hash(&context, hash)?
         .ok_or(Error::NotFound(String::from("Could not find thread!")))?;
@@ -1401,19 +1383,16 @@ async fn render_thread(
     let thread_subcat_ids = get_tagged_categories2(&thread.values);
     let subcategories = get_submission_categories(&context, Some(thread_subcat_ids))?;
 
-    //Pull out and parse all that stupid data. It's fun using strongly typed languages!! maybe...
-    let selected_post = cast_result_safe::<Message>(&pre_result, PREMESSAGEKEY)?.pop();
-    if let Some(message_index) =
-        cast_result_safe::<SpecialCount>(&pre_result, PREMESSAGEINDEXKEY)?.pop()
-    {
+    if let Some(post_id) = post_id {
+        let precount = get_count_before_forumpost(&context, post_id)?;
         //The index is the special count. This means we change the page given. If page wasn't already 0, we warn
         if page != 0 {
             println!(
                 "Page was nonzero ({}) while there was a message index ({})",
-                page, message_index.specialCount
+                page, precount
             );
         }
-        page = message_index.specialCount / per_page;
+        page = precount / per_page;
     }
 
     //Also I need some fields to exist.
@@ -1454,7 +1433,8 @@ async fn render_thread(
         path,
         get_pagelist(comment_count as i32, per_page, page),
         1 + per_page * page,
-        selected_post.and_then(|m| m.id),
+        post_id,
+        //selected_post.and_then(|m| m.id),
     );
     // if post_config.thread.thread.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION) {
     //     post_config.docs_content = Some(get_all_documentation(&mut context.api_context).await?);
@@ -1470,14 +1450,7 @@ pub async fn get_hash_render(
     page: Option<i32>,
 ) -> Result<Response, Error> {
     let hurgh = hash.clone();
-    render_thread(
-        context,
-        &hurgh,
-        get_prepost_request(None, Some(hash)),
-        per_page,
-        page,
-    )
-    .await
+    render_thread(context, &hurgh, None, per_page, page).await
 }
 
 /// The normal endpoint for pinpointing a post
@@ -1488,14 +1461,7 @@ pub async fn get_hash_postid_render(
     per_page: i32,
 ) -> Result<Response, Error> {
     let hurgh = hash.clone();
-    render_thread(
-        context,
-        &hurgh,
-        get_prepost_request(Some(post_id), Some(hash)),
-        per_page,
-        None,
-    )
-    .await
+    render_thread(context, &hurgh, Some(post_id), per_page, None).await
 }
 
 // -------------------------------------
