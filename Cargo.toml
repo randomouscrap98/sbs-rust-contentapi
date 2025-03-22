@@ -9,7 +9,8 @@ edition = "2021"
 maud = "0.24.0"
 timeago = "=0.0.2"  # Says to use this one if you want simple; may upgrade later
 base64 = "0.21.0"
-qrcode = "0.12.0"
+qrcode = "0.14.1"
+# qrcode = "0.12.0"
 md5 = "0.7.0"
 flate2 = "1.0.25"
 chrono = { version = "0.4", features = ["serde"] }
@@ -30,8 +31,8 @@ onestop = { version = "0.0.2", features = ["utils"] }
 bbscope = { version = "0.2" }
 toml = "0.5.9"
 
-[target.'cfg(not(target_env = "msvc"))'.dependencies]
-tikv-jemallocator = "0.5.4"
+# [target.'cfg(not(target_env = "msvc"))'.dependencies]
+# tikv-jemallocator = "0.5.4"
 
 [features]
 default = [ "querydump" ]
