@@ -445,24 +445,6 @@ impl ApiContext {
         }
     }
 
-    //Construct a basic GET request to the given endpoint (including ?params) using the given
-    //request context. Automatically add bearer headers and all that. Errors on the appropriate
-    //status codes, message is assumed to be parsed from body
-    pub async fn basic_get_request<T: DeserializeOwned>(
-        &self,
-        request: AboutRequest,
-    ) -> Result<T, ApiError> {
-        let reqbuilder = self.get_request_builder(&request, hyper::Method::GET)?;
-        let req = noreqerr!(reqbuilder.body(hyper::Body::empty()), request)?;
-
-        //Mapping the request error to a string is PERFECTLY ok in this library because these errors are
-        //NOT from stuff like 400 or 500 statuses, they're JUST from network errors (it's localhost so
-        //it should never happen, and I'm fine with funky output for the few times there are downtimes)
-        let response = neterr!(self.client.request(req).await, request)?;
-
-        Self::handle_response(response, request).await
-    }
-
     //Construct a basic POST request to the given endpoint (including ?params) using the given
     //request context. Automatically add bearer headers and all that
     pub async fn basic_post_request<U: Serialize + Debug, T: DeserializeOwned>(
@@ -475,9 +457,6 @@ impl ApiContext {
             .header("Content-Type", "application/json");
         let json = noreqerr!(serde_json::ser::to_string(data), request)?; //Even though this is serde, it's not a parse error because it's before the request
         let req = noreqerr!(reqbuilder.body(hyper::Body::from(json)), request)?;
-
-        #[cfg(feature = "postdump")]
-        println!("Request: {:?}", &req);
 
         let response = self
             .client
@@ -679,7 +658,6 @@ pub fn render_page(
     bbcode: &mut BBCode,
     thread: &ForumThread2,
     categories: &Vec<SubmissionCategory>,
-    //_docs_content: &Option<Vec<Content>>,
 ) -> Markup {
     let values = &thread.values;
     let systems = get_systems2(&values);
@@ -732,20 +710,6 @@ pub fn render_page(
                     }
                 }
             }
-            //Snail says he doesn't want the doctree on pages
-            //@if thread.thread.literalType.as_deref() == Some(SBSPageType::DOCUMENTATION) {
-            //    @if let Some(docs) = docs_content {
-            //        (display_doctree(data, docs, 0))
-            //    }
-            //    @else {
-            //        div."error" {
-            //            ({
-            //                println!("Tried to render documentation without a doctree!");
-            //                "NO DOCTREE FOUND!"
-            //            })
-            //        }
-            //    }
-            //}
             (render_textcontent(&thread.text, &thread.values, bbcode))
             //Documentation has no categories
             @if thread.literal_type != SBSPageType::DOCUMENTATION {
@@ -769,13 +733,6 @@ pub fn render_textcontent(
     if let Some(mkup) = get_value_safe!(values, SBSValue::MARKUP, &str) {
         markup = mkup;
     }
-    // if let Some(ref values) = content.values {
-    //     if let Some(mk) = values.get(SBSValue::MARKUP) {
-    //         if let Some(mk) = mk.as_str() {
-    //             markup = mk;
-    //         }
-    //     }
-    // }
     html!(
         div."content" data-markup=(markup) data-prerendered[markup == MARKUPBBCODE] {
             @if markup == MARKUPBBCODE {
@@ -788,27 +745,85 @@ pub fn render_textcontent(
     )
 }
 
+// #[derive(Serialize, Deserialize, Default, Clone, Debug)]
+// #[serde(default)]
+// pub struct Message {
+//     pub id: Option<i64>,
+//     pub contentId: Option<i64>,
+//     pub createUserId: Option<i64>,
+//     pub createDate: Option<DateTime<Utc>>,
+//     pub text: Option<String>,
+//     pub values: Option<HashMap<String, serde_json::Value>>,
+//     pub engagement: Option<HashMap<String, HashMap<String, i64>>>,
+//     pub editDate: Option<DateTime<Utc>>,
+//     pub editUserId: Option<i64>,
+//     pub module: Option<String>,
+//     pub content_literalType: Option<String>,
+//     pub content_contentType: Option<i8>,
+// }
+
+pub static MSGFIELDS: &str = "";
+pub static MSGVALUESELECT: &str = "SELECT `key`,`value` FROM message_values WHERE messageId=?";
+
+#[derive(Clone, Debug)]
+pub struct ForumPost {
+    pub id: i64,
+    pub content_id: i64,
+    pub create_user_id: i64,
+    pub create_date: DateTime<Utc>,
+    pub text: String,
+    pub edit_date: Option<DateTime<Utc>>,
+    pub edit_user_id: Option<i64>,
+    pub values: HashMap<String, String>,
+}
+
+pub fn gather_forum_posts(
+    query: &str,
+    ctx: &PageContext,
+    params: &[&dyn rusqlite::ToSql],
+) -> Result<Vec<ForumPost>, Error> {
+    let mut stmt = ctx.dbcon.prepare(query)?;
+    let mut vstmt = ctx.dbcon.prepare(MSGVALUESELECT)?;
+    easy_query((&mut stmt, query), params, |row| {
+        let id = row.get(0)?;
+        Ok(ForumPost {
+            id,
+            content_id: row.get(1)?,
+            create_user_id: row.get(2)?,
+            create_date: row.get(3)?,
+            text: row.get(4)?,
+            edit_date: row.get(5)?,
+            edit_user_id: row.get(6)?,
+            values: gather_values(&mut vstmt, id)?,
+        })
+    })
+}
+
+fn forum_posts_base_query() -> (String, Vec<Box<dyn rusqlite::ToSql>>) {
+    let query = format!(
+        "SELECT {} FROM messages m WHERE m.deleted = 0 AND m.module IS NULL AND m.contentId IN ({})",
+        "SELECT contentId FROM content_permissions WHERE read=1 AND userId=0",
+        "m.id,m.contentId,m.createUserId,m.createDate,m.text,m.editDate,m.editUserId"
+    );
+    let params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![Box::new(ContentType::PAGE)];
+    (query, params)
+}
+
+fn get_forumpost_by_id(ctx: &PageContext, id: i64) -> Result<Option<ForumPost>, Error> {
+    let (mut query, mut params) = forum_posts_base_query();
+    query.push_str(" AND m.id = ?");
+    params.push(Box::new(id));
+    Ok(gather_forum_posts(&query, ctx, box_to_ref!(params))?.pop())
+}
+
 //"prepost" means the main query before finding the main data before gathering the posts. The post offset
 //often depends on the prepost
-pub fn get_prepost_request(
-    //fpid: Option<i64>,
-    post_id: Option<i64>,
-    //ftid: Option<i64>,
-    thread_hash: Option<String>,
-) -> FullRequest {
+pub fn get_prepost_request(post_id: Option<i64>, thread_hash: Option<String>) -> FullRequest {
     let mut request = FullRequest::new();
 
     let mut post_limited = false;
     let mut post_query = String::from("!basiccomments()");
 
-    //If you call it with both, it will limit to both (chances are that's not what you want)
-    // if let Some(fpid) = fpid {
-    //     add_value!(request, "fpidkey", vec!["fpid"]);
-    //     add_value!(request, "fpid", vec![fpid]);
-    //     //Remember: valuein way faster! eventually add "valueis"
-    //     post_query.push_str(" and !valuein(@fpidkey, @fpid)");
-    //     post_limited = true;
-    // }
     if let Some(post_id) = post_id {
         add_value!(request, "postId", post_id);
         post_query.push_str(" and id = @postId");
@@ -833,11 +848,6 @@ pub fn get_prepost_request(
         thread_query = format!("{} and id in @{}.contentId", thread_query, PREMESSAGEKEY);
     }
 
-    //Take hashes over ftid if you gave both. Fail if neither are given
-    // if let Some(ftid) = ftid {
-    //     add_value!(request, "ftidkey", vec!["ftid"]);
-    //     add_value!(request, "ftid", vec![ftid]);
-    //     thread_query = format!("{} and !valuein(@ftidkey, @ftid)", thread_query);
     if let Some(thread_hash) = thread_hash {
         add_value!(request, "hash", thread_hash);
         thread_query = format!("{} and hash = @hash", thread_query);
@@ -854,15 +864,6 @@ pub fn get_prepost_request(
     thread_request.expensive = true;
     thread_request.name = Some(String::from(THREADKEY));
     request.requests.push(thread_request);
-
-    //And one last thing: you still need the category of course
-    // let mut category_request = build_request!(
-    //     RequestType::content,
-    //     String::from(CATEGORYFIELDS),
-    //     format!("!notdeleted() and id in @{}.parentId", THREADKEY) //format!("literalType = @category_literal and !notdeleted() and id in @{}.parentId", THREADKEY)
-    // );
-    // category_request.name = Some(String::from(CATEGORYKEY));
-    // request.requests.push(category_request);
 
     //OK one last ACTUAL thing: need to get the premessage index if it was there
     if post_limited {
@@ -956,12 +957,12 @@ pub struct ReplyData {
     pub direct: i64,
 }
 
-impl ReplyData {
-    pub fn write_to_values(&self, values: &mut HashMap<String, serde_json::Value>) {
-        values.insert(String::from("re-top"), self.top.into());
-        values.insert(String::from("re"), self.direct.into());
-    }
-}
+// impl ReplyData {
+//     pub fn write_to_values(&self, values: &mut HashMap<String, serde_json::Value>) {
+//         values.insert(String::from("re-top"), self.top.into());
+//         values.insert(String::from("re"), self.direct.into());
+//     }
+// }
 
 /// Compute the flattened reply data for the given message
 pub fn get_replydata(post: &Message) -> Option<ReplyData> {
@@ -976,21 +977,21 @@ pub fn get_replydata(post: &Message) -> Option<ReplyData> {
 }
 
 /// Given a post, regenerate the new reply data that would properly point to this post
-pub fn get_new_replydata(post: &Message) -> ReplyData {
-    let id = post.id.unwrap_or_default();
-
-    let mut reply_data = ReplyData {
-        top: id,
-        direct: id,
-    };
-
-    //Oh but if we can parse existing reply data off the message, that one's top becomes our top too
-    if let Some(existing) = get_replydata(post) {
-        reply_data.top = existing.top;
-    }
-
-    reply_data
-}
+// pub fn get_new_replydata(post: &Message) -> ReplyData {
+//     let id = post.id.unwrap_or_default();
+//
+//     let mut reply_data = ReplyData {
+//         top: id,
+//         direct: id,
+//     };
+//
+//     //Oh but if we can parse existing reply data off the message, that one's top becomes our top too
+//     if let Some(existing) = get_replydata(post) {
+//         reply_data.top = existing.top;
+//     }
+//
+//     reply_data
+// }
 
 #[derive(Clone, Debug)]
 pub struct ReplyTree<'a> {
@@ -1399,10 +1400,8 @@ async fn render_thread(
         .ok_or(Error::NotFound(String::from("Could not find category!")))?;
     let thread_subcat_ids = get_tagged_categories2(&thread.values);
     let subcategories = get_submission_categories(&context, Some(thread_subcat_ids))?;
-    //let thread_sub_categories= get_submission_categories(&thread);
 
     //Pull out and parse all that stupid data. It's fun using strongly typed languages!! maybe...
-    //let mut threads_raw = cast_result_required::<Content>(&pre_result, THREADKEY)?;
     let selected_post = cast_result_safe::<Message>(&pre_result, PREMESSAGEKEY)?.pop();
     if let Some(message_index) =
         cast_result_safe::<SpecialCount>(&pre_result, PREMESSAGEINDEXKEY)?.pop()
@@ -1417,24 +1416,10 @@ async fn render_thread(
         page = message_index.specialCount / per_page;
     }
 
-    //There must be one category, and one thread, otherwise return 404
-    // let thread = threads_raw
-    //     .pop()
-    //     .ok_or(Error::NotFound(String::from("Could not find thread!")))?;
-
     //Also I need some fields to exist.
     let thread_id = thread.id;
     let thread_create_uid = thread.create_user_id;
     let comment_count = thread.posts_count;
-    // let thread_id = thread.id.ok_or(Error::Other(String::from(
-    //     "Thread result did not have id field?!",
-    // )))?;
-    // let thread_create_uid = thread.createUserId.ok_or(Error::Other(String::from(
-    //     "Thread result did not have createUserId field!",
-    // )))?;
-    // let comment_count = thread.commentCount.ok_or(Error::Other(String::from(
-    //     "Thread result did not have commentCount field!",
-    // )))?;
 
     let sequence_start = page * per_page;
 
@@ -1560,19 +1545,6 @@ pub async fn get_render_widget(
             .ok_or(Error::NotFound(String::from("Could not find thread!")))?;
 
         let api_context = ApiContext::new(String::from("http://localhost:5000/api"));
-        //This is a WASTEFUL query for rendering this simple widget, at some point make this better!
-        //let pre_request = get_prepost_request(Some(post_id), None);
-
-        //Go lookup all the 'initial' data, which everything except posts and users
-        //let pre_result = context.api_context.post_request(&pre_request).await?;
-
-        //Pull out and parse all that stupid data. It's fun using strongly typed languages!! maybe...
-        //let mut threads_raw = cast_result_required::<Content>(&pre_result, THREADKEY)?;
-
-        // //There must be one category, and one thread, otherwise return 404
-        // let thread = threads_raw
-        //     .pop()
-        //     .ok_or(Error::NotFound(String::from("Could not find thread!")))?;
 
         //OK NOW you can go lookup the posts, since we are sure about where in the postlist we want
         let after_request = get_reply_request(post_id);
