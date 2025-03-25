@@ -35,9 +35,16 @@ function editor_onsubmit()
 function editor_onsubmit_check()
 {
     if (mode === "ptc") {
-        if(!refresh_raw_ptc_list()) {
+        const ptc_list = refresh_raw_ptc_list(true);
+        if(!ptc_list.length) {
             alert("You must upload at least one PTC file!")
             return false;
+        }
+        for (ptc in ptc_list){
+            if (/[A-Z0-9_]{1,8}/.test(ptc["name"])){
+                alert("PTC file name must be 1-8 captial letters, numbers, or underscores!")
+                return false;
+            }
         }
     }
     var systems_checklist = document.getElementById(SYSTEMCHECKLISTID);
@@ -119,7 +126,7 @@ function make_checklist(data, original, id)
     return container;
 }
 
-function refresh_raw_ptc_list()
+function refresh_raw_ptc_list(result_as_list)
 {
     //need to get all the ptcfiles and pull the data out
     var elements = ptc_file_list.querySelectorAll(".ptcfile") 
@@ -127,7 +134,10 @@ function refresh_raw_ptc_list()
     for(var i = 0; i < elements.length; i++)
         result.push(elements[i].getData());
     pageedit_ptc_files.textContent = JSON.stringify(result);
-    return result.length;
+    if (result_as_list === true)
+        return result;
+    else
+        return result.length;
 }
 
 function preparse_ptc_list() 
