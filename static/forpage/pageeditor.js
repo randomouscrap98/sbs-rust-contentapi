@@ -40,8 +40,8 @@ function editor_onsubmit_check()
             alert("You must upload at least one PTC file!")
             return false;
         }
-        for (ptc in ptc_list){
-            if (/[A-Z0-9_]{1,8}/.test(ptc["name"])){
+        for (var i = 0; i < ptc_list.length; i++) {
+            if (!/^[A-Z0-9_]{1,8}$/.test(ptc_list[i]["name"])){
                 alert("PTC file name must be 1-8 captial letters, numbers, or underscores!")
                 return false;
             }
