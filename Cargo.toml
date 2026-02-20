@@ -35,6 +35,6 @@ toml = "0.5.9"
 # tikv-jemallocator = "0.5.4"
 
 [features]
-default = [ "querydump" ]
-querydump = []
+# default = [ "querydump" ]
+# querydump = []
 perf = ["bbscope/perf"]
